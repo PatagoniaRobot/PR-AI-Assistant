@@ -33,5 +33,15 @@ namespace PRImager.AIAssistant.Services.Models
         // UI
         public double WindowWidth { get; set; } = 1200;
         public double WindowHeight { get; set; } = 800;
+
+        // Búsqueda web (E2)
+        /// <summary>
+        /// API key de Brave Search. Vive solo en la configuración de usuario
+        /// (%APPDATA%), nunca en el repositorio.
+        /// </summary>
+        public string BraveApiKey { get; set; } = "";
+
+        /// <summary>Ventana de frescura por defecto: 0=sin filtro, 1=día, 2=semana, 3=mes.</summary>
+        public int WebSearchFreshness { get; set; } = 2;
     }
 }

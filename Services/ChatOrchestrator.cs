@@ -170,14 +170,23 @@ public class ChatOrchestrator : IDisposable
     /// Envía un mensaje a la IA y sincroniza todo en el archivo de auditoría Forense.
     /// Retorna la respuesta generada.
     /// </summary>
-    public async Task<string> SendMessageAsync(string userMessage, List<string>? imagePaths = null, CancellationToken ct = default)
+    /// <param name="historyContent">
+    /// Texto a guardar en el historial en lugar de <paramref name="userMessage"/>.
+    /// Lo usa la búsqueda web: el modelo recibe la consulta enriquecida con las fuentes,
+    /// pero el historial conserva la pregunta original para no arrastrar miles de tokens
+    /// de páginas web a los turnos siguientes.
+    /// </param>
+    public async Task<string> SendMessageAsync(string userMessage, List<string>? imagePaths = null, string? historyContent = null, CancellationToken ct = default)
     {
         if (IsProcessing) throw new InvalidOperationException("Ya existe una operación de inferencia en curso.");
         if (!IsServerReady) throw new InvalidOperationException("El servidor no está disponible.");
 
         IsProcessing = true;
         _currentCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        
+
+        // Declarado fuera del try para poder restaurarlo en finally
+        ChatMessage? newMsg = null;
+
         try
         {
             _logger.LogUserQuery(userMessage);
@@ -205,7 +214,7 @@ public class ChatOrchestrator : IDisposable
                 }
             }
 
-            var newMsg = new ChatMessage
+            newMsg = new ChatMessage
             {
                 Role = "user",
                 Content = userMessage,
@@ -313,6 +322,23 @@ public class ChatOrchestrator : IDisposable
         }
         finally
         {
+            // El request ya se envió con el texto enriquecido: el historial se queda
+            // con la pregunta original. En finally para que valga también si hubo
+            // error o cancelación. ChatMessage es inmutable, así que se reemplaza.
+            if (historyContent != null && newMsg != null)
+            {
+                int idx = _sessionHistory.IndexOf(newMsg);
+                if (idx >= 0)
+                {
+                    _sessionHistory[idx] = new ChatMessage
+                    {
+                        Role = newMsg.Role,
+                        Content = historyContent,
+                        Images = newMsg.Images
+                    };
+                }
+            }
+
             _currentCts?.Dispose();
             _currentCts = null;
             IsProcessing = false;

@@ -414,6 +414,10 @@ public class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(IsProfilePromptOverridden));
         OnPropertyChanged(nameof(ProfileOverrideNotice));
 
+        // Si el perfil nuevo no habilita web, el toggle queda apagado por el getter
+        OnPropertyChanged(nameof(IsWebSearchOn));
+        OnPropertyChanged(nameof(WebSearchToggleTooltip));
+
         UsageProfileApplied?.Invoke(this, profile);
         UpdateContextUsage();
     }
@@ -437,6 +441,123 @@ public class MainViewModel : ObservableObject
     public string ProfileOverrideNotice => IsProfilePromptOverridden
         ? "El Modo Investigación tiene precedencia: se usa el prompt institucional y se fuerza el registro de auditoría."
         : "";
+
+    // === Búsqueda web (E2) ===
+
+    /// <summary>
+    /// True si el subsistema de búsqueda web fue compilado en este binario.
+    /// En la configuración Forense es false y el código de red directamente no existe.
+    /// El XAML no puede evaluar #if, así que lo consulta por acá.
+    /// </summary>
+    public bool IsWebSearchCompiledIn =>
+#if WEB_SEARCH
+        true;
+#else
+        false;
+#endif
+
+    private bool _isWebSearchOn;
+
+    /// <summary>
+    /// Toggle 🌐: el usuario decide cuándo buscar. El modelo nunca lo decide.
+    /// No se puede encender si el perfil efectivo no lo habilita.
+    /// </summary>
+    public bool IsWebSearchOn
+    {
+        get => _isWebSearchOn && IsWebSearchAvailable;
+        set
+        {
+            bool effective = value && IsWebSearchAvailable;
+            if (SetProperty(ref _isWebSearchOn, effective))
+                OnPropertyChanged(nameof(WebSearchToggleTooltip));
+        }
+    }
+
+    /// <summary>Explica por qué el toggle está como está.</summary>
+    public string WebSearchToggleTooltip
+    {
+        get
+        {
+            if (!IsWebSearchCompiledIn)
+                return "Esta compilación no incluye búsqueda web.";
+            if (IsProfilePromptOverridden)
+                return "Búsqueda web deshabilitada: el Modo Investigación no permite acceso a red.";
+            if (!IsWebSearchAvailable)
+                return $"El perfil «{ProfileName}» no habilita la búsqueda web.";
+            return IsWebSearchOn
+                ? "Búsqueda web activa: la consulta se enriquecerá con resultados frescos."
+                : "Activar búsqueda web para esta consulta.";
+        }
+    }
+
+    private string _webSearchStatus = string.Empty;
+
+    /// <summary>Texto de progreso: "Buscando…" → "Leyendo 3 páginas…".</summary>
+    public string WebSearchStatus
+    {
+        get => _webSearchStatus;
+        private set
+        {
+            if (SetProperty(ref _webSearchStatus, value))
+                OnPropertyChanged(nameof(IsWebSearchRunning));
+        }
+    }
+
+    /// <summary>True mientras el pipeline está trabajando.</summary>
+    public bool IsWebSearchRunning => !string.IsNullOrEmpty(_webSearchStatus);
+
+    /// <summary>Opciones de frescura para el ComboBox.</summary>
+    public List<FreshnessOption> FreshnessOptions { get; } = new()
+    {
+        new FreshnessOption(1, "Último día"),
+        new FreshnessOption(2, "Última semana"),
+        new FreshnessOption(3, "Último mes"),
+        new FreshnessOption(0, "Sin filtro")
+    };
+
+    private FreshnessOption? _selectedFreshness;
+
+    /// <summary>Ventana de frescura seleccionada.</summary>
+    public FreshnessOption? SelectedFreshness
+    {
+        get => _selectedFreshness;
+        set
+        {
+            if (SetProperty(ref _selectedFreshness, value) && value != null)
+            {
+                _settings.WebSearchFreshness = value.Value;
+                _configManager.Save(_settings);
+            }
+        }
+    }
+
+    /// <summary>
+    /// API key de Brave. Se expone para el campo password del panel lateral;
+    /// se persiste en la configuración de usuario, nunca en el repositorio.
+    /// </summary>
+    public string BraveApiKey
+    {
+        get => _settings.BraveApiKey;
+        set
+        {
+            if (_settings.BraveApiKey != value)
+            {
+                _settings.BraveApiKey = value ?? "";
+                _configManager.Save(_settings);
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsWebSearchConfigured));
+                OnPropertyChanged(nameof(WebSearchConfigStatus));
+            }
+        }
+    }
+
+    /// <summary>True si hay API key cargada.</summary>
+    public bool IsWebSearchConfigured => !string.IsNullOrWhiteSpace(_settings.BraveApiKey);
+
+    /// <summary>Estado de configuración de la búsqueda web, para el panel lateral.</summary>
+    public string WebSearchConfigStatus => IsWebSearchConfigured
+        ? "API key cargada."
+        : "Sin API key. Obtené una gratis en brave.com/search/api.";
 
     // === Propiedades de modo de operación ===
 
@@ -548,6 +669,10 @@ public class MainViewModel : ObservableObject
         // Seleccionar opción de MaxTokens según configuración guardada
         _selectedMaxTokens = MaxTokensOptions.FirstOrDefault(o => o.Value == _settings.MaxTokens)
             ?? MaxTokensOptions[2]; // Default: 8192
+
+        // Frescura de búsqueda web según configuración guardada
+        _selectedFreshness = FreshnessOptions.FirstOrDefault(f => f.Value == _settings.WebSearchFreshness)
+            ?? FreshnessOptions[1]; // Default: última semana
 
         SendMessageCommand = new AsyncRelayCommand(ExecuteSendMessageAsync, CanExecuteSendMessage);
         CancelCommand = new RelayCommand(ExecuteCancel, CanExecuteCancel);
@@ -697,14 +822,95 @@ public class MainViewModel : ObservableObject
         };
         _thinkingTimer.Start();
 
+        // Enriquecimiento web: solo si el usuario lo pidió con el toggle.
+        // El modelo no decide cuándo buscar.
+        string promptToSend = message;
+        string? historyContent = null;
+
+        if (IsWebSearchOn)
+        {
+            var enriched = await RunWebSearchAsync(message, assistantViewModel);
+            if (enriched != null)
+            {
+                promptToSend = enriched;
+                historyContent = message;
+            }
+        }
+
         try
         {
-            await _orchestrator.SendMessageAsync(message, imagesToSend.Any() ? imagesToSend : null);
+            await _orchestrator.SendMessageAsync(
+                promptToSend, imagesToSend.Any() ? imagesToSend : null, historyContent);
         }
         catch
         {
             // Logging occurs at the orchestrator layer, handled.
         }
+    }
+
+    /// <summary>
+    /// Ejecuta el pipeline de búsqueda y adjunta las fuentes al mensaje del asistente.
+    /// Devuelve la consulta enriquecida, o null si no se pudo enriquecer (en cuyo caso
+    /// la consulta original sigue su curso normal).
+    /// </summary>
+    private async Task<string?> RunWebSearchAsync(string message, ChatMessageViewModel assistantViewModel)
+    {
+#if WEB_SEARCH
+        var provider = new Services.WebSearch.BraveSearchProvider(() => _settings.BraveApiKey);
+        using var pipeline = new Services.WebSearch.WebSearchPipeline(provider);
+
+        pipeline.ProgressChanged += (_, status) =>
+            System.Windows.Application.Current.Dispatcher.InvokeAsync(() => WebSearchStatus = status);
+
+        try
+        {
+            var freshness = (Services.WebSearch.SearchFreshness)(_selectedFreshness?.Value ?? 2);
+            var context = await pipeline.BuildContextAsync(message, freshness);
+
+            if (!context.Success)
+            {
+                // Sin fuentes utilizables se avisa y se sigue sin enriquecer:
+                // es preferible una respuesta del modelo que un error opaco.
+                Messages.Insert(Messages.Count - 1, new ChatMessageViewModel("system",
+                    $"⚠️ Búsqueda web: {context.ErrorMessage} Se responde sin fuentes web."));
+
+                if (context.Sources.Count > 0)
+                    assistantViewModel.WebSources = context.Sources;
+
+                _orchestrator.Logger.LogCustom("WEB_SEARCH_FAILED", $"motivo=\"{context.ErrorMessage}\"");
+                return null;
+            }
+
+            assistantViewModel.WebSources = context.Sources;
+
+            _orchestrator.Logger.LogCustom("WEB_SEARCH",
+                $"proveedor={provider.Name} leidas={context.PagesRead}/{context.PagesAttempted} " +
+                $"frescura={freshness}");
+
+            if (context.PagesRead < context.PagesAttempted)
+            {
+                Messages.Insert(Messages.Count - 1, new ChatMessageViewModel("system",
+                    $"ℹ️ Se leyeron {context.PagesRead} de {context.PagesAttempted} fuentes. " +
+                    "Las que fallaron figuran en el panel de fuentes."));
+            }
+
+            return context.EnrichedQuery;
+        }
+        catch (Exception ex)
+        {
+            Messages.Insert(Messages.Count - 1, new ChatMessageViewModel("system",
+                $"⚠️ Búsqueda web interrumpida: {ex.Message}. Se responde sin fuentes web."));
+            _orchestrator.Logger.LogCustom("WEB_SEARCH_ERROR", ex.Message);
+            return null;
+        }
+        finally
+        {
+            WebSearchStatus = string.Empty;
+        }
+#else
+        await Task.CompletedTask;
+        return null;
+#endif
     }
 
     // Despachar actualizaciones de streaming al hilo de UI desde hilos de background
@@ -1148,6 +1354,15 @@ public class MainViewModel : ObservableObject
 /// Opción predefinida de MaxTokens para el ComboBox de la UI.
 /// </summary>
 public record MaxTokensOption(int Value, string Label)
+{
+    public override string ToString() => Label;
+}
+
+/// <summary>
+/// Opción de ventana temporal para la búsqueda web.
+/// Value coincide con SearchFreshness: 0=sin filtro, 1=día, 2=semana, 3=mes.
+/// </summary>
+public record FreshnessOption(int Value, string Label)
 {
     public override string ToString() => Label;
 }

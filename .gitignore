@@ -9,6 +9,7 @@ Logs/
 
 # Salidas de publicación y descargas locales (varios GB, no versionables)
 Publish/
+Publish-Forense/
 Downloads/
 
 # Visual Studio

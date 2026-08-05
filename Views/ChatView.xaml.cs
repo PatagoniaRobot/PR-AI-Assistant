@@ -14,6 +14,49 @@ public partial class ChatView : UserControl
     public ChatView()
     {
         InitializeComponent();
+        DataContextChanged += (_, _) => SyncApiKeyBox();
+    }
+
+    /// <summary>
+    /// Refleja la API key guardada en el PasswordBox. PasswordBox no soporta binding
+    /// (por diseño: no expone la contraseña como DependencyProperty), así que se
+    /// sincroniza a mano en ambos sentidos.
+    /// </summary>
+    private void SyncApiKeyBox()
+    {
+        if (BraveApiKeyBox == null) return;
+        if (DataContext is MainViewModel vm && BraveApiKeyBox.Password != vm.BraveApiKey)
+            BraveApiKeyBox.Password = vm.BraveApiKey;
+    }
+
+    /// <summary>
+    /// Persiste la API key de Brave al escribirla. Va a la configuración de usuario
+    /// en %APPDATA%, nunca al repositorio.
+    /// </summary>
+    private void BraveApiKey_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm && sender is System.Windows.Controls.PasswordBox box)
+            vm.BraveApiKey = box.Password;
+    }
+
+    /// <summary>
+    /// Abre una fuente web en el navegador predeterminado, para que el usuario verifique.
+    /// </summary>
+    private void Source_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = e.Uri.AbsoluteUri,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception)
+        {
+            // Una URL malformada o sin handler no debe tumbar la vista
+        }
+        e.Handled = true;
     }
 
     // --- UX Event Handlers (migrados desde MainWindow.xaml.cs) ---

@@ -24,7 +24,46 @@
 
     <!-- Ícono de aplicación -->
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+
+    <Configurations>Debug;Release;Forense</Configurations>
   </PropertyGroup>
+
+  <!--
+    Búsqueda web (E2): doble barrera.
+    1) Barrera de compilación: la configuración "Forense" no compila los fuentes de
+       Services/WebSearch ni referencia AngleSharp. En ese binario la ausencia de red
+       es literal y verificable, no un flag que alguien pueda editar en un JSON.
+    2) Barrera de perfil (en runtime): UsageProfile.WebSearchEnabled, siempre pisado
+       a false por OperationMode.Investigation. Ver EffectiveProfile.
+
+    Compilar el build institucional:  dotnet build -c Forense
+  -->
+  <PropertyGroup>
+    <EnableWebSearch Condition="'$(Configuration)' != 'Forense'">true</EnableWebSearch>
+    <EnableWebSearch Condition="'$(Configuration)' == 'Forense'">false</EnableWebSearch>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(EnableWebSearch)' == 'true'">
+    <DefineConstants>$(DefineConstants);WEB_SEARCH</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Forense'">
+    <InformationalVersion>1.0.0-forense</InformationalVersion>
+    <!-- Reutiliza la configuración de Release, sin la superficie de red -->
+    <Optimize>true</Optimize>
+    <DebugType>portable</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(EnableWebSearch)' == 'true'">
+    <PackageReference Include="AngleSharp" Version="1.7.1" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(EnableWebSearch)' != 'true'">
+    <Compile Remove="Services\WebSearch\**" />
+    <Page Remove="Views\WebSearch\**" />
+    <Compile Remove="Views\WebSearch\**" />
+    <Compile Remove="ViewModels\WebSearch\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <Resource Include="Assets\app.ico" />

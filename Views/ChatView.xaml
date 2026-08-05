@@ -432,6 +432,59 @@
                                                 <TextBlock Grid.Column="1" Text="▌" Foreground="#00D4AA" FontSize="15" Visibility="{Binding IsStreaming, Converter={StaticResource BoolToVis}}" VerticalAlignment="Bottom" Margin="2,0,0,0" />
                                             </Grid>
 
+                                            <!-- Fuentes web usadas: colapsable, con URL clickeable para verificar -->
+                                            <Expander Margin="0,10,0,0"
+                                                      IsExpanded="{Binding AreSourcesExpanded}"
+                                                      Visibility="{Binding HasWebSources, Converter={StaticResource BoolToVis}}"
+                                                      Foreground="#93c5fd" Background="Transparent">
+                                                <Expander.Header>
+                                                    <TextBlock Text="{Binding WebSourcesHeader}" Foreground="#93c5fd"
+                                                               FontSize="12" FontWeight="SemiBold" />
+                                                </Expander.Header>
+                                                <ItemsControl ItemsSource="{Binding WebSources}" Margin="0,8,0,0">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="#111827" BorderBrush="#1e293b" BorderThickness="1"
+                                                                    CornerRadius="4" Padding="8" Margin="0,0,0,6">
+                                                                <StackPanel>
+                                                                    <StackPanel Orientation="Horizontal">
+                                                                        <TextBlock Text="{Binding Index, StringFormat=[{0}]}"
+                                                                                   Foreground="#3B82F6" FontWeight="Bold"
+                                                                                   FontSize="12" Margin="0,0,6,0" />
+                                                                        <TextBlock Text="{Binding Title}" Foreground="#e2e8f0"
+                                                                                   FontSize="12" TextTrimming="CharacterEllipsis"
+                                                                                   MaxWidth="600" />
+                                                                    </StackPanel>
+                                                                    <TextBlock Margin="22,2,0,0">
+                                                                        <Hyperlink NavigateUri="{Binding Url}"
+                                                                                   RequestNavigate="Source_RequestNavigate"
+                                                                                   Foreground="#60a5fa">
+                                                                            <Run Text="{Binding Url, Mode=OneWay}" FontSize="11" />
+                                                                        </Hyperlink>
+                                                                    </TextBlock>
+                                                                    <StackPanel Orientation="Horizontal" Margin="22,2,0,0">
+                                                                        <TextBlock Text="{Binding PublishedDate}" Foreground="#64748b" FontSize="10" />
+                                                                        <TextBlock Text=" · " Foreground="#64748b" FontSize="10" />
+                                                                        <TextBlock Text="{Binding StatusText}" FontSize="10">
+                                                                            <TextBlock.Style>
+                                                                                <Style TargetType="TextBlock">
+                                                                                    <Setter Property="Foreground" Value="#10B981" />
+                                                                                    <Style.Triggers>
+                                                                                        <DataTrigger Binding="{Binding WasRead}" Value="False">
+                                                                                            <Setter Property="Foreground" Value="#F59E0B" />
+                                                                                        </DataTrigger>
+                                                                                    </Style.Triggers>
+                                                                                </Style>
+                                                                            </TextBlock.Style>
+                                                                        </TextBlock>
+                                                                    </StackPanel>
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Expander>
+
                                             <StackPanel Visibility="{Binding HasDisclaimer, Converter={StaticResource BoolToVis}}" Margin="0,8,0,0">
                                                 <Rectangle Height="1" Fill="#334155" Margin="0,0,0,8" />
                                                 <TextBlock Foreground="#475569" FontSize="11" FontFamily="{StaticResource MainFont}" TextWrapping="Wrap">
@@ -463,8 +516,19 @@
 
             <!-- Barra de input -->
             <Border Grid.Row="3" Background="#16213E" Padding="12">
+                <StackPanel>
+                <!-- Progreso de la búsqueda web: Buscando… / Leyendo N páginas… -->
+                <Border Background="#1e3a5f" CornerRadius="6" Padding="10,6" Margin="0,0,0,8"
+                        Visibility="{Binding IsWebSearchRunning, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🌐" FontSize="13" Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding WebSearchStatus}" Foreground="#93c5fd" FontSize="12"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                </Border>
                 <Grid>
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
@@ -478,7 +542,52 @@
                             Style="{StaticResource TransparentHoverButton}" Width="40" Height="40" FontSize="18" Margin="0,0,10,0"
                             Visibility="{Binding ShowFileButtons, Converter={StaticResource BoolToVis}}"/>
 
-                    <Border Grid.Column="2" Background="#1E293B" CornerRadius="8" BorderBrush="#334155" BorderThickness="1">
+                    <!-- Toggle de búsqueda web: el usuario decide cuándo buscar, no el modelo.
+                         Solo existe si el binario la incluye; solo se habilita si el perfil efectivo la permite. -->
+                    <ToggleButton Grid.Column="2" x:Name="WebSearchToggle"
+                                  AutomationProperties.AutomationId="WebSearchToggle"
+                                  IsChecked="{Binding IsWebSearchOn}"
+                                  IsEnabled="{Binding IsWebSearchAvailable}"
+                                  ToolTip="{Binding WebSearchToggleTooltip}"
+                                  Visibility="{Binding IsWebSearchCompiledIn, Converter={StaticResource BoolToVis}}"
+                                  Width="40" Height="40" Margin="0,0,10,0" Cursor="Hand">
+                        <ToggleButton.Style>
+                            <Style TargetType="ToggleButton">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="Foreground" Value="#64748b"/>
+                                <Setter Property="BorderThickness" Value="1"/>
+                                <Setter Property="BorderBrush" Value="#334155"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ToggleButton">
+                                            <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                                    CornerRadius="8">
+                                                <TextBlock Text="🌐" FontSize="18" HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           Foreground="{TemplateBinding Foreground}"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="#1E293B"/>
+                                                </Trigger>
+                                                <Trigger Property="IsChecked" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="#1D4ED8"/>
+                                                    <Setter TargetName="bd" Property="BorderBrush" Value="#3B82F6"/>
+                                                </Trigger>
+                                                <Trigger Property="IsEnabled" Value="False">
+                                                    <Setter TargetName="bd" Property="Opacity" Value="0.35"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ToggleButton.Style>
+                    </ToggleButton>
+
+                    <Border Grid.Column="3" Background="#1E293B" CornerRadius="8" BorderBrush="#334155" BorderThickness="1">
                         <Grid>
                             <TextBlock Text="Escriba una consulta o cargue archivos para analizar..." 
                                        Foreground="#64748b" FontFamily="{StaticResource MainFont}" FontSize="15"
@@ -508,7 +617,7 @@
                     </Border>
 
                     <!-- Botón Enviar / Cancelar -->
-                    <Button Grid.Column="3" Width="40" Height="40" Margin="10,0,0,0"
+                    <Button Grid.Column="4" Width="40" Height="40" Margin="10,0,0,0"
                             AutomationProperties.AutomationId="SendButton">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource CircularActionButtonStyle}">
@@ -526,6 +635,7 @@
                         </Button.Style>
                     </Button>
                 </Grid>
+                </StackPanel>
             </Border>
         </Grid>
 
@@ -692,6 +802,38 @@
 
                                 <TextBlock Text="Máx. respuesta:" Foreground="#E0E0E0" FontSize="10" Margin="0,10,0,5" />
                                 <ComboBox ItemsSource="{Binding MaxTokensOptions}" Style="{StaticResource ModernComboBox}" SelectedItem="{Binding SelectedMaxTokens}" DisplayMemberPath="Label" />
+                            </StackPanel>
+
+                            <!-- Búsqueda web: solo si el binario la incluye -->
+                            <StackPanel Margin="0,0,0,16"
+                                        Visibility="{Binding IsWebSearchCompiledIn, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="BÚSQUEDA WEB" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
+
+                                <TextBlock Text="API key de Brave Search:" Foreground="#E0E0E0" FontSize="10" Margin="0,0,0,4" />
+                                <PasswordBox x:Name="BraveApiKeyBox"
+                                             AutomationProperties.AutomationId="BraveApiKeyBox"
+                                             PasswordChanged="BraveApiKey_PasswordChanged"
+                                             Background="#1E293B" Foreground="#E0E0E0"
+                                             BorderBrush="#334155" BorderThickness="1" Padding="6,4" />
+                                <TextBlock Text="{Binding WebSearchConfigStatus}" FontSize="9" Margin="0,4,0,0" TextWrapping="Wrap">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="#F59E0B" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsWebSearchConfigured}" Value="True">
+                                                    <Setter Property="Foreground" Value="#10B981" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+
+                                <TextBlock Text="Frescura de resultados:" Foreground="#E0E0E0" FontSize="10" Margin="0,10,0,4" />
+                                <ComboBox ItemsSource="{Binding FreshnessOptions}" Style="{StaticResource ModernComboBox}"
+                                          SelectedItem="{Binding SelectedFreshness}" DisplayMemberPath="Label" />
+
+                                <TextBlock Text="{Binding WebSearchToggleTooltip}" Foreground="#64748b" FontSize="9"
+                                           TextWrapping="Wrap" Margin="0,8,0,0" />
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using PRImager.AIAssistant.Helpers;
 
 namespace PRImager.AIAssistant.ViewModels;
@@ -63,6 +64,49 @@ public class ChatMessageViewModel : ObservableObject
     /// Indica el modo de renderizado: "streaming" durante la generación, "markdown" al finalizar.
     /// </summary>
     public string RenderMode => IsStreaming ? "streaming" : "markdown";
+
+    // === Fuentes web (E2) ===
+
+    private List<Services.Models.WebSource>? _webSources;
+
+    /// <summary>
+    /// Fuentes web que alimentaron esta respuesta. El usuario debe poder verificarlas.
+    /// </summary>
+    public List<Services.Models.WebSource>? WebSources
+    {
+        get => _webSources;
+        set
+        {
+            if (SetProperty(ref _webSources, value))
+            {
+                OnPropertyChanged(nameof(HasWebSources));
+                OnPropertyChanged(nameof(WebSourcesHeader));
+            }
+        }
+    }
+
+    /// <summary>True si esta respuesta se construyó con búsqueda web.</summary>
+    public bool HasWebSources => _webSources is { Count: > 0 };
+
+    /// <summary>Encabezado del panel de fuentes, con cuántas se leyeron efectivamente.</summary>
+    public string WebSourcesHeader
+    {
+        get
+        {
+            if (_webSources == null || _webSources.Count == 0) return "";
+            int read = _webSources.Count(s => s.WasRead);
+            return $"🌐 Fuentes web ({read} de {_webSources.Count} leídas)";
+        }
+    }
+
+    private bool _areSourcesExpanded;
+
+    /// <summary>Estado del panel colapsable de fuentes.</summary>
+    public bool AreSourcesExpanded
+    {
+        get => _areSourcesExpanded;
+        set => SetProperty(ref _areSourcesExpanded, value);
+    }
 
     public ChatMessageViewModel(string role, string content, List<string>? imagePaths = null)
     {
