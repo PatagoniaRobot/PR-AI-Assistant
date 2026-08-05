@@ -21,6 +21,7 @@ public class MainViewModel : ObservableObject
     private readonly IFileDialogService _fileDialogService;
     private readonly ConfigManager _configManager;
     private readonly ModelProfileService _profileService;
+    private readonly UsageProfileService _usageProfileService;
     private readonly ContextIngestionService _ingestionService;
     private readonly ContextWindowManager _contextWindowManager;
     private AppSettings _settings;
@@ -40,6 +41,9 @@ public class MainViewModel : ObservableObject
     private InvestigationSession? _currentSession;
     private bool _isSidebarOpen;
     private string _startupError = string.Empty;
+    private UsageProfile? _selectedUsageProfile;
+    private EffectiveProfile? _effectiveProfile;
+    private bool _isRevertingProfileSelection;
 
     public ObservableCollection<ChatMessageViewModel> Messages { get; }
     public ObservableCollection<string> AvailableModels { get; }
@@ -215,13 +219,19 @@ public class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Temperatura efectiva de la sesión. La fija el perfil al activarse; moverla acá
+    /// la sobrescribe solo para la sesión en curso, sin alterar el perfil (los de fábrica
+    /// son inmutables).
+    /// </summary>
     public double Temperature
     {
-        get => _settings.Temperature;
+        get => _orchestrator.TemperatureOverride ?? _settings.Temperature;
         set
         {
-            if (Math.Abs(_settings.Temperature - value) > 0.01)
+            if (Math.Abs(Temperature - value) > 0.01)
             {
+                _orchestrator.TemperatureOverride = value;
                 _settings.Temperature = (float)value;
                 OnPropertyChanged();
                 _configManager.Save(_settings);
@@ -298,6 +308,135 @@ public class MainViewModel : ObservableObject
         get => _startupError;
         set => SetProperty(ref _startupError, value);
     }
+
+    // === Propiedades de perfil de uso ===
+
+    /// <summary>Perfiles de uso disponibles para el selector de la barra superior.</summary>
+    public ObservableCollection<UsageProfile> AvailableUsageProfiles { get; } = new();
+
+    /// <summary>
+    /// Prompt institucional del modo de operación. Lo fija NavigationViewModel al crear la vista
+    /// y tiene precedencia sobre el prompt del perfil en modo Investigación.
+    /// </summary>
+    public string InstitutionalSystemPrompt { get; set; } = string.Empty;
+
+    /// <summary>Se dispara al aplicarse un perfil, para que la ventana actualice su título.</summary>
+    public event EventHandler<UsageProfile>? UsageProfileApplied;
+
+    /// <summary>
+    /// Perfil de uso activo. Cambiarlo con conversación en curso pide confirmación
+    /// y ofrece limpiar el historial.
+    /// </summary>
+    public UsageProfile? SelectedUsageProfile
+    {
+        get => _selectedUsageProfile;
+        set
+        {
+            // Reversión programada tras un "Cancelar": solo reposicionar el ComboBox
+            if (_isRevertingProfileSelection)
+            {
+                SetProperty(ref _selectedUsageProfile, value);
+                return;
+            }
+
+            if (value == null || ReferenceEquals(value, _selectedUsageProfile)) return;
+
+            var previous = _selectedUsageProfile;
+            if (previous != null && Messages.Count > 0)
+            {
+                var choice = System.Windows.MessageBox.Show(
+                    $"Vas a cambiar el perfil de «{previous.Name}» a «{value.Name}».\n\n" +
+                    "La conversación en curso se generó con el perfil anterior.\n\n" +
+                    "Sí — cambiar y limpiar el historial\n" +
+                    "No — cambiar y conservar el historial\n" +
+                    "Cancelar — seguir con el perfil actual",
+                    "Cambio de perfil",
+                    System.Windows.MessageBoxButton.YesNoCancel,
+                    System.Windows.MessageBoxImage.Question);
+
+                if (choice == System.Windows.MessageBoxResult.Cancel)
+                {
+                    RevertProfileSelection(previous);
+                    return;
+                }
+
+                if (choice == System.Windows.MessageBoxResult.Yes)
+                    ExecuteClearHistory();
+            }
+
+            SetProperty(ref _selectedUsageProfile, value);
+            ApplyUsageProfile(value);
+        }
+    }
+
+    /// <summary>
+    /// Devuelve el ComboBox al perfil anterior. Se difiere porque la UI ya movió
+    /// la selección cuando el setter se ejecuta.
+    /// </summary>
+    private void RevertProfileSelection(UsageProfile previous)
+    {
+        System.Windows.Application.Current.Dispatcher.BeginInvoke(
+            System.Windows.Threading.DispatcherPriority.Background,
+            new Action(() =>
+            {
+                _isRevertingProfileSelection = true;
+                SelectedUsageProfile = previous;
+                _isRevertingProfileSelection = false;
+            }));
+    }
+
+    /// <summary>
+    /// Aplica el perfil: resuelve la precedencia contra el modo, empuja prompt y temperatura
+    /// al orquestador y persiste el perfil como activo.
+    /// </summary>
+    private void ApplyUsageProfile(UsageProfile profile)
+    {
+        _usageProfileService.SetActiveProfile(profile.Id);
+
+        var effective = EffectiveProfile.Resolve(profile, CurrentMode);
+        _effectiveProfile = effective;
+
+        _orchestrator.BaseSystemPrompt = effective.ResolveSystemPrompt(InstitutionalSystemPrompt);
+        _orchestrator.TemperatureOverride = effective.Temperature;
+
+        // Cultura invariante: el log de auditoría debe ser parseable sin depender del locale
+        _orchestrator.Logger.LogCustom("PROFILE_APPLIED", string.Format(
+            System.Globalization.CultureInfo.InvariantCulture,
+            "id={0} mode={1} temp={2:F2} web={3} descargas={4} log_obligatorio={5} prompt_pisado={6}",
+            profile.Id, CurrentMode, effective.Temperature, effective.WebSearchEnabled,
+            effective.ModelDownloadEnabled, effective.MandatoryLog, effective.IsSystemPromptOverridden));
+
+        OnPropertyChanged(nameof(Temperature));
+        OnPropertyChanged(nameof(AccentColor));
+        OnPropertyChanged(nameof(ProfileName));
+        OnPropertyChanged(nameof(IsWebSearchAvailable));
+        OnPropertyChanged(nameof(IsModelDownloadAvailable));
+        OnPropertyChanged(nameof(IsProfilePromptOverridden));
+        OnPropertyChanged(nameof(ProfileOverrideNotice));
+
+        UsageProfileApplied?.Invoke(this, profile);
+        UpdateContextUsage();
+    }
+
+    /// <summary>Color de acento del perfil activo, para la franja de identificación visual.</summary>
+    public string AccentColor => _selectedUsageProfile?.AccentColor ?? "#64748B";
+
+    /// <summary>Nombre del perfil activo.</summary>
+    public string ProfileName => _selectedUsageProfile?.Name ?? "";
+
+    /// <summary>Búsqueda web efectivamente disponible (perfil + modo). Consumido por E2.</summary>
+    public bool IsWebSearchAvailable => _effectiveProfile?.WebSearchEnabled ?? false;
+
+    /// <summary>Descarga de modelos efectivamente disponible (perfil + modo). Consumido por E3.</summary>
+    public bool IsModelDownloadAvailable => _effectiveProfile?.ModelDownloadEnabled ?? false;
+
+    /// <summary>True si el modo institucional pisó el prompt del perfil.</summary>
+    public bool IsProfilePromptOverridden => _effectiveProfile?.IsSystemPromptOverridden ?? false;
+
+    /// <summary>Aviso para la UI cuando el perfil está parcialmente pisado por el modo.</summary>
+    public string ProfileOverrideNotice => IsProfilePromptOverridden
+        ? "El Modo Investigación tiene precedencia: se usa el prompt institucional y se fuerza el registro de auditoría."
+        : "";
 
     // === Propiedades de modo de operación ===
 
@@ -380,14 +519,18 @@ public class MainViewModel : ObservableObject
     /// <summary>Comando para volver a la pantalla de selección de modo. Asignado por NavigationViewModel.</summary>
     public ICommand? GoBackCommand { get; set; }
 
+    /// <summary>Abre la ventana de gestión de perfiles de uso.</summary>
+    public ICommand ManageProfilesCommand { get; }
+
     public ICommand ToggleSidebarCommand { get; }
 
-    public MainViewModel(ChatOrchestrator orchestrator, IFileDialogService fileDialogService, ConfigManager configManager, ModelProfileService profileService)
+    public MainViewModel(ChatOrchestrator orchestrator, IFileDialogService fileDialogService, ConfigManager configManager, ModelProfileService profileService, UsageProfileService usageProfileService)
     {
         _orchestrator = orchestrator;
         _fileDialogService = fileDialogService;
         _configManager = configManager;
         _profileService = profileService;
+        _usageProfileService = usageProfileService;
         _ingestionService = new ContextIngestionService();
         _settings = _configManager.Load();
 
@@ -417,6 +560,7 @@ public class MainViewModel : ObservableObject
         ExportSessionCommand = new RelayCommand(ExecuteExportSession, CanExecuteExportSession);
         SelectExecutionProfileCommand = new RelayCommand<ExecutionProfileItem>(ep => { if (ep != null) SelectedExecutionProfile = ep; });
         ToggleSidebarCommand = new RelayCommand(() => IsSidebarOpen = !IsSidebarOpen);
+        ManageProfilesCommand = new RelayCommand(ExecuteManageProfiles);
 
         _orchestrator.ServerStatusChanged += (s, status) =>
             System.Windows.Application.Current.Dispatcher.Invoke(() => ServerStatus = status);
@@ -445,6 +589,66 @@ public class MainViewModel : ObservableObject
         if (ServerStatus == ServerStatus.Stopped && _selectedModelItem != null && _selectedModelItem.IsAvailable)
         {
             _ = ExecuteStartServerAsync();
+        }
+    }
+
+    /// <summary>
+    /// Completa la inicialización que depende del modo de operación.
+    /// NavigationViewModel debe invocarlo después de fijar <see cref="CurrentMode"/> e
+    /// <see cref="InstitutionalSystemPrompt"/>: la precedencia se resuelve contra ambos.
+    /// </summary>
+    public void InitializeUsageProfile()
+    {
+        AvailableUsageProfiles.Clear();
+        foreach (var p in _usageProfileService.Profiles)
+            AvailableUsageProfiles.Add(p);
+
+        var active = _usageProfileService.ActiveProfile;
+
+        // Asignación directa al campo: en el arranque no corresponde pedir confirmación
+        _selectedUsageProfile = AvailableUsageProfiles.FirstOrDefault(p => p.Id == active.Id)
+            ?? AvailableUsageProfiles.FirstOrDefault();
+        OnPropertyChanged(nameof(SelectedUsageProfile));
+
+        if (_selectedUsageProfile != null)
+            ApplyUsageProfile(_selectedUsageProfile);
+    }
+
+    /// <summary>
+    /// Abre la gestión de perfiles y recarga la lista al cerrarse, conservando el activo
+    /// si sigue existiendo.
+    /// </summary>
+    private void ExecuteManageProfiles()
+    {
+        var vm = new ProfileManagerViewModel(_usageProfileService);
+        var window = new Views.ProfileManagerWindow
+        {
+            DataContext = vm,
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+        vm.CloseRequested += (_, _) => window.Close();
+        window.ShowDialog();
+
+        string? activeId = _selectedUsageProfile?.Id;
+
+        AvailableUsageProfiles.Clear();
+        foreach (var p in _usageProfileService.Profiles)
+            AvailableUsageProfiles.Add(p);
+
+        var restored = AvailableUsageProfiles.FirstOrDefault(p => p.Id == activeId);
+        if (restored != null)
+        {
+            // Mismo perfil: refrescar la referencia sin disparar el diálogo de cambio
+            _selectedUsageProfile = restored;
+            OnPropertyChanged(nameof(SelectedUsageProfile));
+            ApplyUsageProfile(restored);
+        }
+        else
+        {
+            // El perfil activo fue eliminado: el servicio ya movió el foco a otro
+            _selectedUsageProfile = null;
+            SelectedUsageProfile = AvailableUsageProfiles
+                .FirstOrDefault(p => p.Id == _usageProfileService.ActiveProfile.Id);
         }
     }
 

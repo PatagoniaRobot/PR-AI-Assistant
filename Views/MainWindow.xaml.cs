@@ -81,13 +81,19 @@ public partial class MainWindow : Window
         string catalogPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "model_catalog.json");
         string modelsDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Models");
         var profileService = new ModelProfileService(catalogPath, modelsDir);
-        _navigationVm = new NavigationViewModel(_serverManager, _chatClient, _logger, _configManager, fileDialogService, profileService);
-        DataContext = _navigationVm;
 
-        // Título dinámico con versión desde AssemblyInfo
+        // Perfiles de uso: si profiles.json no existe se generan los dos de fábrica
+        var usageProfileService = new UsageProfileService();
+        usageProfileService.Load();
+
+        _navigationVm = new NavigationViewModel(_serverManager, _chatClient, _logger, _configManager, fileDialogService, profileService, usageProfileService);
+
+        // Título dinámico con versión desde AssemblyInfo. NavigationViewModel le agrega el perfil.
         var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
         string versionText = version != null ? $"v{version.Major}.{version.Minor}.{version.Build}" : "v1.0.0";
-        Title = $"PR-AI Assistant {versionText} — Patagonia Robot";
+        _navigationVm.BaseWindowTitle = $"PR-AI Assistant {versionText} — Patagonia Robot";
+
+        DataContext = _navigationVm;
 
         // Forzar título oscuro en Windows 10/11
         try

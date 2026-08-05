@@ -27,6 +27,7 @@ public class NavigationViewModel : ObservableObject
     private readonly ConfigManager _configManager;
     private readonly IFileDialogService _fileDialogService;
     private readonly ModelProfileService _profileService;
+    private readonly UsageProfileService _usageProfileService;
 
     // Sesión de investigación activa (null si no hay)
     private InvestigationSession? _currentSession;
@@ -34,13 +35,40 @@ public class NavigationViewModel : ObservableObject
     // Modo actual
     public OperationMode? CurrentMode { get; private set; }
 
+    private string _windowTitle = "PR-AI Assistant";
+
+    /// <summary>
+    /// Título de la ventana. Incluye el perfil activo entre corchetes: es parte del
+    /// control de identificación visual exigido por E1.
+    /// </summary>
+    public string WindowTitle
+    {
+        get => _windowTitle;
+        private set => SetProperty(ref _windowTitle, value);
+    }
+
+    private string _baseWindowTitle = "PR-AI Assistant";
+    private UsageProfile? _titleProfile;
+
+    /// <summary>Texto base del título, sin el perfil. Lo fija MainWindow con la versión.</summary>
+    public string BaseWindowTitle
+    {
+        get => _baseWindowTitle;
+        set
+        {
+            _baseWindowTitle = value;
+            UpdateWindowTitle(_titleProfile);
+        }
+    }
+
     public NavigationViewModel(
         LlamaServerManager serverManager,
         LlamaChatClient chatClient,
         ForensicLogger logger,
         ConfigManager configManager,
         IFileDialogService fileDialogService,
-        ModelProfileService profileService)
+        ModelProfileService profileService,
+        UsageProfileService usageProfileService)
     {
         _serverManager = serverManager;
         _chatClient = chatClient;
@@ -48,9 +76,19 @@ public class NavigationViewModel : ObservableObject
         _configManager = configManager;
         _fileDialogService = fileDialogService;
         _profileService = profileService;
+        _usageProfileService = usageProfileService;
 
         // Iniciar en pantalla de selección
         NavigateToModeSelection();
+    }
+
+    /// <summary>Refleja el perfil activo en el título de la ventana.</summary>
+    private void UpdateWindowTitle(UsageProfile? profile)
+    {
+        _titleProfile = profile;
+        WindowTitle = profile == null
+            ? _baseWindowTitle
+            : $"{_baseWindowTitle} — [{profile.Name}]";
     }
 
     /// <summary>
@@ -60,6 +98,7 @@ public class NavigationViewModel : ObservableObject
     {
         CurrentMode = null;
         _currentSession = null;
+        UpdateWindowTitle(null);
 
         var vm = new ModeSelectionViewModel(_configManager, _profileService);
         vm.ModeSelected += OnModeSelected;
@@ -114,12 +153,18 @@ public class NavigationViewModel : ObservableObject
     {
         // Crear ChatOrchestrator con system prompt de investigación
         var orchestrator = new ChatOrchestrator(_serverManager, _chatClient, _logger, _configManager);
-        orchestrator.SystemPrompt = SystemPrompts.GetInvestigationPrompt(session);
+        string institutionalPrompt = SystemPrompts.GetInvestigationPrompt(session);
+        orchestrator.BaseSystemPrompt = institutionalPrompt;
 
-        var vm = new MainViewModel(orchestrator, _fileDialogService, _configManager, _profileService);
+        var vm = new MainViewModel(orchestrator, _fileDialogService, _configManager, _profileService, _usageProfileService);
         vm.CurrentMode = OperationMode.Investigation;
         vm.CurrentSession = session;
+        vm.InstitutionalSystemPrompt = institutionalPrompt;
         vm.GoBackCommand = new RelayCommand(() => NavigateToModeSelection());
+        vm.UsageProfileApplied += (_, profile) => UpdateWindowTitle(profile);
+
+        // El perfil se resuelve contra el modo, así que va después de fijarlo
+        vm.InitializeUsageProfile();
 
         var view = new Views.ChatView { DataContext = vm };
         CurrentView = view;
@@ -132,13 +177,19 @@ public class NavigationViewModel : ObservableObject
     {
         // Crear ChatOrchestrator con system prompt de consulta
         var orchestrator = new ChatOrchestrator(_serverManager, _chatClient, _logger, _configManager);
-        orchestrator.SystemPrompt = SystemPrompts.GetConsultationPrompt();
+        string institutionalPrompt = SystemPrompts.GetConsultationPrompt();
+        orchestrator.BaseSystemPrompt = institutionalPrompt;
 
         _logger.LogCustom("SESSION_START", "mode=CONSULTATION");
 
-        var vm = new MainViewModel(orchestrator, _fileDialogService, _configManager, _profileService);
+        var vm = new MainViewModel(orchestrator, _fileDialogService, _configManager, _profileService, _usageProfileService);
         vm.CurrentMode = OperationMode.Consultation;
+        vm.InstitutionalSystemPrompt = institutionalPrompt;
         vm.GoBackCommand = new RelayCommand(() => NavigateToModeSelection());
+        vm.UsageProfileApplied += (_, profile) => UpdateWindowTitle(profile);
+
+        // En consulta el perfil manda: su prompt reemplaza al institucional
+        vm.InitializeUsageProfile();
 
         var view = new Views.ChatView { DataContext = vm };
         CurrentView = view;

@@ -15,6 +15,7 @@
         <conv:BoolToVisibilityConverter x:Key="BoolToVis" />
         <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
         <conv:ServerStatusToColorConverter x:Key="StatusToColor" />
+        <conv:HexToBrushConverter x:Key="HexToBrush" />
         <helpers:MarkdownMultiConverter x:Key="MarkdownMulti" />
 
         <Style TargetType="TextBlock">
@@ -155,24 +156,47 @@
         <Grid Grid.Column="0" Background="#1A1A2E">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- A. Header Mínimo -->
-            <Border Grid.Row="0" Background="#0f172a" BorderBrush="#334155" BorderThickness="0,0,0,1" Height="48">
-                <Grid>
-                    <!-- Izquierda: Hamburger Button -->
-                    <Button HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,0,0,0"
-                            Style="{StaticResource HeaderIconButton}" Padding="12,8"
-                            Command="{Binding ToggleSidebarCommand}">
-                        <TextBlock Text="☰" FontSize="20" FontFamily="Segoe UI Symbol" />
-                    </Button>
+            <!-- Franja de acento del perfil activo: identificación visual inconfundible (E1) -->
+            <Border Grid.Row="0" Height="4"
+                    Background="{Binding AccentColor, Converter={StaticResource HexToBrush}}"
+                    ToolTip="{Binding ProfileName, StringFormat=Perfil activo: {0}}" />
 
-                    <!-- Centro: Título -->
-                    <TextBlock Text="PR-AI Assistant" 
-                               FontWeight="SemiBold" FontSize="14" Foreground="#94a3b8" 
-                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <!-- A. Header Mínimo -->
+            <Border Grid.Row="1" Background="#0f172a" BorderBrush="#334155" BorderThickness="0,0,0,1" Height="48">
+                <Grid>
+                    <!-- Izquierda: Hamburger + selector de perfil -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,0,0,0">
+                        <Button Style="{StaticResource HeaderIconButton}" Padding="12,8"
+                                Command="{Binding ToggleSidebarCommand}">
+                            <TextBlock Text="☰" FontSize="20" FontFamily="Segoe UI Symbol" />
+                        </Button>
+
+                        <!-- Punto de color: repite el acento junto al nombre del perfil -->
+                        <Ellipse Width="10" Height="10" Margin="12,0,6,0" VerticalAlignment="Center"
+                                 Fill="{Binding AccentColor, Converter={StaticResource HexToBrush}}" />
+                        <ComboBox Style="{StaticResource ModernComboBox}"
+                                  AutomationProperties.AutomationId="ProfileSelector"
+                                  ItemsSource="{Binding AvailableUsageProfiles}"
+                                  SelectedItem="{Binding SelectedUsageProfile}"
+                                  DisplayMemberPath="Name"
+                                  MinWidth="140" VerticalAlignment="Center"
+                                  ToolTip="Perfil de uso activo" />
+                        <Button Content="⚙" Style="{StaticResource HeaderIconButton}" Padding="8,4" FontSize="14"
+                                AutomationProperties.AutomationId="ManageProfilesButton"
+                                Margin="4,0,0,0" Command="{Binding ManageProfilesCommand}"
+                                ToolTip="Gestionar perfiles" />
+                    </StackPanel>
+
+                    <!-- Centro: nombre del perfil activo, en grande -->
+                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
+                               FontWeight="Bold" FontSize="14"
+                               Foreground="{Binding AccentColor, Converter={StaticResource HexToBrush}}"
+                               Text="{Binding ProfileName, StringFormat=● {0}}" />
 
                     <!-- Derecha: Pills y Botones -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0">
@@ -198,7 +222,7 @@
             </Border>
 
             <!-- Área de chat -->
-            <Grid Grid.Row="1">
+            <Grid Grid.Row="2">
                 <Grid Style="{StaticResource EmptyChatWelcomeStyle}" HorizontalAlignment="Center" VerticalAlignment="Center">
                     
                     <!-- Estado 1: Servidor iniciando -->
@@ -438,7 +462,7 @@
             </Grid>
 
             <!-- Barra de input -->
-            <Border Grid.Row="2" Background="#16213E" Padding="12">
+            <Border Grid.Row="3" Background="#16213E" Padding="12">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -474,6 +498,7 @@
                                 </TextBlock.Style>
                             </TextBlock>
                             <TextBox Text="{Binding UserInput, UpdateSourceTrigger=PropertyChanged}"
+                                     AutomationProperties.AutomationId="ChatInput"
                                      Background="Transparent" BorderThickness="0" Foreground="#E0E0E0"
                                      TextWrapping="Wrap" AcceptsReturn="True" MaxHeight="120"
                                      FontSize="15" FontFamily="{StaticResource MainFont}"
@@ -483,7 +508,8 @@
                     </Border>
 
                     <!-- Botón Enviar / Cancelar -->
-                    <Button Grid.Column="3" Width="40" Height="40" Margin="10,0,0,0">
+                    <Button Grid.Column="3" Width="40" Height="40" Margin="10,0,0,0"
+                            AutomationProperties.AutomationId="SendButton">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource CircularActionButtonStyle}">
                                 <Setter Property="Command" Value="{Binding SendMessageCommand}" />
@@ -544,6 +570,23 @@
 
                     <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
                         <StackPanel>
+                            <!-- Perfil de uso activo -->
+                            <StackPanel Margin="0,0,0,24">
+                                <TextBlock Text="PERFIL DE USO" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <Rectangle Width="4" Height="16" Margin="0,0,8,0"
+                                               Fill="{Binding AccentColor, Converter={StaticResource HexToBrush}}" />
+                                    <TextBlock Text="{Binding ProfileName}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                                </StackPanel>
+                                <TextBlock Text="{Binding ProfileOverrideNotice}" Foreground="#F59E0B" FontSize="10"
+                                           TextWrapping="Wrap" Margin="0,0,0,8"
+                                           Visibility="{Binding IsProfilePromptOverridden, Converter={StaticResource BoolToVis}}" />
+                                <Button Command="{Binding ManageProfilesCommand}" Style="{StaticResource SecondaryButtonStyle}"
+                                        Background="#1E1E3A" MinHeight="28">
+                                    <TextBlock Text="Gestionar perfiles" FontSize="11" />
+                                </Button>
+                            </StackPanel>
+
                             <!-- 3. Sección Estado del Servidor -->
                             <StackPanel Margin="0,0,0,24">
                                 <TextBlock Text="ESTADO DEL SERVIDOR" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />

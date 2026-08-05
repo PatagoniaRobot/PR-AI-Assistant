@@ -105,6 +105,7 @@
             <WrapPanel HorizontalAlignment="Center" MaxWidth="680" ItemWidth="320">
                 <!-- CARD IZQUIERDA - Modo Investigación -->
                 <Button Style="{StaticResource CardButtonStyle}"
+                        AutomationProperties.AutomationId="ModeInvestigationCard"
                         Command="{Binding SelectInvestigationCommand}"
                         Margin="0,0,20,20">
                     <StackPanel Margin="32">
@@ -123,6 +124,7 @@
 
                 <!-- CARD DERECHA - Modo Consulta -->
                 <Button Style="{StaticResource CardButtonStyle}"
+                        AutomationProperties.AutomationId="ModeConsultationCard"
                         Command="{Binding SelectConsultationCommand}"
                         Margin="0,0,0,20">
                     <StackPanel Margin="32">

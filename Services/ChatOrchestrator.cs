@@ -74,7 +74,34 @@ public class ChatOrchestrator : IDisposable
 
     public event EventHandler<string>? MetricsCalculated;
 
-    public string SystemPrompt { get; set; } = string.Empty;
+    private string _baseSystemPrompt = string.Empty;
+    private readonly List<string> _additionalContext = new();
+
+    /// <summary>
+    /// Prompt de sistema base (institucional o del perfil de uso).
+    /// Se puede reemplazar en caliente al cambiar de perfil sin perder el contexto
+    /// forense ya cargado, que vive aparte en <see cref="_additionalContext"/>.
+    /// </summary>
+    public string BaseSystemPrompt
+    {
+        get => _baseSystemPrompt;
+        set => _baseSystemPrompt = value ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Prompt efectivo enviado al modelo: base + artefactos cargados en la sesión.
+    /// </summary>
+    public string SystemPrompt =>
+        _additionalContext.Count == 0
+            ? _baseSystemPrompt
+            : _baseSystemPrompt + string.Concat(_additionalContext);
+
+    /// <summary>
+    /// Temperatura impuesta por el perfil de uso activo. Null = usar la de AppSettings.
+    /// Se aplica por request, así que un cambio de perfil rige desde la inferencia siguiente
+    /// sin reiniciar llama-server.
+    /// </summary>
+    public double? TemperatureOverride { get; set; }
 
     /// <summary>
     /// Configura el sistema, carga el prompt base e inicia el servidor llama-server.
@@ -89,12 +116,12 @@ public class ChatOrchestrator : IDisposable
         string serverExePath = ResolvePath(baseDir, _currentSettings.LlamaServerExecutable);
 
         // Cargar prompt base desde archivo solo si no se asignó uno programáticamente
-        if (string.IsNullOrEmpty(SystemPrompt))
+        if (string.IsNullOrEmpty(_baseSystemPrompt))
         {
             string promptFile = Path.Combine(promptsPath, "system_forense.txt");
             if (File.Exists(promptFile))
             {
-                SystemPrompt = await File.ReadAllTextAsync(promptFile, ct);
+                BaseSystemPrompt = await File.ReadAllTextAsync(promptFile, ct);
             }
         }
 
@@ -206,7 +233,7 @@ public class ChatOrchestrator : IDisposable
             {
                 SystemPrompt = SystemPrompt,
                 Messages = trimmedHistory,
-                Temperature = _currentSettings.Temperature,
+                Temperature = (float)(TemperatureOverride ?? _currentSettings.Temperature),
                 MaxTokens = _currentSettings.MaxTokens,
                 Stream = true,
                 EnableThinking = _currentSettings.EnableThinking
@@ -306,7 +333,10 @@ public class ChatOrchestrator : IDisposable
     public void ClearHistory()
     {
         _sessionHistory.Clear();
-        _logger.LogCustom("HISTORY_CLEARED", "Historial de sesión borrado");
+        // El contexto forense se descarta junto con el historial: la UI ya vacía la lista
+        // de artefactos, y dejarlo en el prompt filtraría evidencia a la sesión siguiente.
+        _additionalContext.Clear();
+        _logger.LogCustom("HISTORY_CLEARED", "Historial de sesión y contexto forense borrados");
     }
 
     /// <summary>
@@ -314,11 +344,11 @@ public class ChatOrchestrator : IDisposable
     /// </summary>
     public void LoadForensicContext(string contextJson)
     {
-        // Se concatena al prompt del sistema base
-        SystemPrompt += $"\n\n--- CONTEXTO FORENSE ADICIONAL ---\n{contextJson}";
-        
+        // Se acumula aparte del prompt base para sobrevivir a un cambio de perfil
+        _additionalContext.Add($"\n\n--- CONTEXTO FORENSE ADICIONAL ---\n{contextJson}");
+
         int estimatedLength = contextJson.Length / 4;
-        _logger.LogContextLoaded(1, estimatedLength); 
+        _logger.LogContextLoaded(1, estimatedLength);
     }
 
     /// <summary>
