@@ -1,0 +1,29 @@
+# .NET Core components
+[Bb]in/
+[Oo]bj/
+
+# Models and sessions (Forensic)
+Models/*.gguf
+Sessions/
+Logs/
+
+# Salidas de publicación y descargas locales (varios GB, no versionables)
+Publish/
+Downloads/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# VS Code
+.vscode/
+
+# Build artifacts
+*.exe
+*.dll
+*.pdb
+*.msi
+*.nupkg

@@ -1,0 +1,10 @@
+{
+  "model_path": "Models",
+  "llama_server_executable": "Tools\\llama-server.exe",
+  "port": 8787,
+  "host": "127.0.0.1",
+  "ctx_size": 8192,
+  "threads": 4,
+  "temperature": 0.7,
+  "gpu_layers": 99
+}

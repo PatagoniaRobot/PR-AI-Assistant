@@ -1,0 +1,114 @@
+using System;
+using System.IO;
+using System.Windows;
+using PRImager.AIAssistant.Services;
+using PRImager.AIAssistant.ViewModels;
+using System.Runtime.InteropServices;
+
+namespace PRImager.AIAssistant.Views;
+
+/// <summary>
+/// Servicio concreto para diálogos de archivo (WPF).
+/// </summary>
+public class FileDialogService : IFileDialogService
+{
+    public string[]? OpenFiles(string title, string filter)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = title,
+            Filter = filter,
+            Multiselect = true
+        };
+        return dialog.ShowDialog() == true ? dialog.FileNames : null;
+    }
+
+    public string[]? OpenImages(string title)
+    {
+        return OpenFiles(title, "Imágenes|*.jpg;*.jpeg;*.png;*.bmp;*.gif|Todos los archivos|*.*");
+    }
+
+    public string[]? OpenTextFiles(string title)
+    {
+        return OpenFiles(title, "Archivos de texto|*.txt;*.csv;*.json;*.xml;*.log;*.html;*.md|Todos los archivos|*.*");
+    }
+
+    public string? SaveFile(string title, string filter, string defaultFileName)
+    {
+        var dialog = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = title,
+            Filter = filter,
+            FileName = defaultFileName
+        };
+        return dialog.ShowDialog() == true ? dialog.FileName : null;
+    }
+}
+
+/// <summary>
+/// MainWindow actúa como contenedor de navegación.
+/// Crea los servicios compartidos una sola vez y delega la navegación a NavigationViewModel.
+/// </summary>
+public partial class MainWindow : Window
+{
+    [DllImport("dwmapi.dll", PreserveSig = true)]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
+    private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+
+    private readonly ConfigManager _configManager;
+    private readonly ForensicLogger _logger;
+    private readonly LlamaServerManager _serverManager;
+    private readonly LlamaChatClient _chatClient;
+    private readonly NavigationViewModel _navigationVm;
+
+    public MainWindow()
+    {
+        InitializeComponent();
+
+        // Inicializando servicios base que conforman la app forense standalone (una sola vez)
+        string appDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PRImager", "AIAssistant");
+        string configFile = Path.Combine(appDataFolder, "settings.json");
+        string logsDir = Path.Combine(appDataFolder, "Logs");
+
+        _configManager = new ConfigManager(configFile);
+        _logger = new ForensicLogger(logsDir);
+        _serverManager = new LlamaServerManager();
+        _chatClient = new LlamaChatClient();
+
+        // Crear navegación con todos los servicios compartidos
+        var fileDialogService = new FileDialogService();
+        string catalogPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "model_catalog.json");
+        string modelsDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Models");
+        var profileService = new ModelProfileService(catalogPath, modelsDir);
+        _navigationVm = new NavigationViewModel(_serverManager, _chatClient, _logger, _configManager, fileDialogService, profileService);
+        DataContext = _navigationVm;
+
+        // Título dinámico con versión desde AssemblyInfo
+        var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+        string versionText = version != null ? $"v{version.Major}.{version.Minor}.{version.Build}" : "v1.0.0";
+        Title = $"PR-AI Assistant {versionText} — Patagonia Robot";
+
+        // Forzar título oscuro en Windows 10/11
+        try
+        {
+            var hwnd = new System.Windows.Interop.WindowInteropHelper(this).EnsureHandle();
+            int darkMode = 1;
+            DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref darkMode, sizeof(int));
+        }
+        catch
+        {
+            // Silenciar en sistemas que no soporten la API
+        }
+    }
+
+    /// <summary>
+    /// Limpieza de todos los subprocesos e I/O al cerrar la ventana.
+    /// </summary>
+    private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+    {
+        _serverManager?.Dispose();
+        _chatClient?.Dispose();
+        _logger?.Dispose();
+    }
+}

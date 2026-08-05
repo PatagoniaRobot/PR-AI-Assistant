@@ -1,0 +1,46 @@
+{
+  "version": 2,
+  "models": [
+    {
+      "id": "e2b",
+      "display_name": "Gemma 4 E2B (2.3B efectivos)",
+      "model_file_name": "gemma-4-E2B-it-Q4_K_M.gguf",
+      "mmproj_file_name": "mmproj-E2B-BF16.gguf",
+      "requires_gpu": true,
+      "hardware_tag": "⚡ GPU recomendada",
+      "capabilities": ["Vision"]
+    },
+    {
+      "id": "e4b",
+      "display_name": "Gemma 4 E4B (4.5B efectivos)",
+      "model_file_name": "gemma-4-E4B-it-Q4_K_M.gguf",
+      "mmproj_file_name": "mmproj-E4B-BF16.gguf",
+      "requires_gpu": true,
+      "hardware_tag": "⚡ GPU recomendada",
+      "capabilities": ["Vision", "Audio"]
+    }
+  ],
+  "execution_profiles": [
+    {
+      "id": "performance",
+      "display_name": "Rendimiento",
+      "gpu_layers": 0,
+      "ctx_size": 8192,
+      "threads": 0
+    },
+    {
+      "id": "balanced",
+      "display_name": "Equilibrado",
+      "gpu_layers": 99,
+      "ctx_size": 32768,
+      "threads": 4
+    },
+    {
+      "id": "quality",
+      "display_name": "Máx. Calidad",
+      "gpu_layers": 99,
+      "ctx_size": 65536,
+      "threads": 4
+    }
+  ]
+}

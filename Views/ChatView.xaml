@@ -1,0 +1,775 @@
+<UserControl x:Class="PRImager.AIAssistant.Views.ChatView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:conv="clr-namespace:PRImager.AIAssistant.Views.Converters"
+             xmlns:vm="clr-namespace:PRImager.AIAssistant.ViewModels"
+             xmlns:helpers="clr-namespace:PRImager.AIAssistant.Helpers"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+             Background="#1A1A2E" FontFamily="{StaticResource MainFont}"
+             AllowDrop="True" Drop="ChatView_Drop">
+
+    <UserControl.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVis" />
+        <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
+        <conv:ServerStatusToColorConverter x:Key="StatusToColor" />
+        <helpers:MarkdownMultiConverter x:Key="MarkdownMulti" />
+
+        <Style TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource MainFont}" />
+            <Setter Property="Foreground" Value="#E0E0E0" />
+        </Style>
+
+        <Style x:Key="EmptyChatWelcomeStyle" TargetType="FrameworkElement">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Messages.Count}" Value="0">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Estilos de botones básicos -->
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#10B981"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontFamily" Value="{StaticResource MainFont}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="border" Property="Background" Value="#34D399"/></Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#059669"/>
+                                <Setter TargetName="border" Property="Margin" Value="1,1,-1,-1"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Background" Value="#374151"/>
+                                <Setter Property="Foreground" Value="#6B7280"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DangerButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#EF4444"/>
+            <Setter Property="BorderBrush" Value="#EF4444"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#1A0000"/></Trigger>
+                <Trigger Property="IsPressed" Value="True"><Setter Property="Background" Value="#330000"/></Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+            <Setter Property="Background" Value="#3B82F6"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#60A5FA"/></Trigger>
+                <Trigger Property="IsPressed" Value="True"><Setter Property="Background" Value="#2563EB"/></Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="CircularActionButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="20" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="border" Property="Background" Value="#34D399"/></Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#059669"/>
+                                <Setter TargetName="border" Property="Margin" Value="1,1,-1,-1"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Background" Value="#374151"/>
+                                <Setter Property="Foreground" Value="#6B7280"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TransparentHoverButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="border" Property="Background" Value="#2A2A4A"/></Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="border" Property="Background" Value="#1A1A2E"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="HeaderIconButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#e2e8f0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="border" Property="Background" Value="#1e293b"/></Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="border" Property="Background" Value="#0f172a"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="0" x:Name="RightPanelColumn" />
+        </Grid.ColumnDefinitions>
+
+        <!-- PANEL CENTRAL (Chat principal) -->
+        <Grid Grid.Column="0" Background="#1A1A2E">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- A. Header Mínimo -->
+            <Border Grid.Row="0" Background="#0f172a" BorderBrush="#334155" BorderThickness="0,0,0,1" Height="48">
+                <Grid>
+                    <!-- Izquierda: Hamburger Button -->
+                    <Button HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,0,0,0"
+                            Style="{StaticResource HeaderIconButton}" Padding="12,8"
+                            Command="{Binding ToggleSidebarCommand}">
+                        <TextBlock Text="☰" FontSize="20" FontFamily="Segoe UI Symbol" />
+                    </Button>
+
+                    <!-- Centro: Título -->
+                    <TextBlock Text="PR-AI Assistant" 
+                               FontWeight="SemiBold" FontSize="14" Foreground="#94a3b8" 
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+                    <!-- Derecha: Pills y Botones -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <!-- Pill Sandbox -->
+                        <Border Background="#92400e" Padding="12,4" CornerRadius="12" Margin="0,0,12,0"
+                                Visibility="{Binding ShowModeBadge, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="🔒 SANDBOX — Sin acceso a evidencia" Foreground="White" FontWeight="SemiBold" FontSize="12" FontFamily="{StaticResource MainFont}" />
+                        </Border>
+                        <!-- Pill Investigación -->
+                        <Border Background="#065f46" Padding="12,4" CornerRadius="12" Margin="0,0,12,0"
+                                Visibility="{Binding IsInvestigationMode, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="🔍 INVESTIGACIÓN — Modo forense activo" Foreground="White" FontWeight="SemiBold" FontSize="12" FontFamily="{StaticResource MainFont}" />
+                        </Border>
+
+                        <Button Content="❓" Style="{StaticResource HeaderIconButton}" Padding="8,4" FontSize="16" Click="OpenHelp_Click" ToolTip="Ayuda" />
+                        
+                        <Button Content="Contexto Forense ☰" Margin="8,0,0,0"
+                                Foreground="#00D4AA" Style="{StaticResource HeaderIconButton}" Padding="8,4"
+                                Click="ToggleRightPanel_Click"
+                                Visibility="Collapsed"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Área de chat -->
+            <Grid Grid.Row="1">
+                <Grid Style="{StaticResource EmptyChatWelcomeStyle}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    
+                    <!-- Estado 1: Servidor iniciando -->
+                    <StackPanel>
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ServerStatus}" Value="Starting">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding ServerStatus}" Value="LoadingModel">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,16">
+                            <Ellipse Width="10" Height="10" Fill="#10B981" Margin="0,0,8,0">
+                                <Ellipse.Triggers>
+                                    <EventTrigger RoutedEvent="Loaded">
+                                        <BeginStoryboard>
+                                            <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.3" To="1" Duration="0:0:0.6" BeginTime="0:0:0.0" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </EventTrigger>
+                                </Ellipse.Triggers>
+                            </Ellipse>
+                            <Ellipse Width="10" Height="10" Fill="#10B981" Margin="0,0,8,0">
+                                <Ellipse.Triggers>
+                                    <EventTrigger RoutedEvent="Loaded">
+                                        <BeginStoryboard>
+                                            <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.3" To="1" Duration="0:0:0.6" BeginTime="0:0:0.2" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </EventTrigger>
+                                </Ellipse.Triggers>
+                            </Ellipse>
+                            <Ellipse Width="10" Height="10" Fill="#10B981">
+                                <Ellipse.Triggers>
+                                    <EventTrigger RoutedEvent="Loaded">
+                                        <BeginStoryboard>
+                                            <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.3" To="1" Duration="0:0:0.6" BeginTime="0:0:0.4" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </EventTrigger>
+                                </Ellipse.Triggers>
+                            </Ellipse>
+                        </StackPanel>
+
+                        <TextBlock Text="Iniciando modelo..." FontFamily="{StaticResource MainFont}" FontSize="16" FontWeight="SemiBold" Foreground="#94a3b8" HorizontalAlignment="Center" />
+                        <TextBlock Text="{Binding SelectedModelItem.DisplayName}" FontFamily="{StaticResource MainFont}" FontSize="13" Foreground="#64748b" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                    </StackPanel>
+
+                    <!-- Estado 2: Servidor listo -->
+                    <TextBlock Foreground="#64748b" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ServerStatus}" Value="Ready">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                    <!-- Fallback en caso de ServerStatus == Stopped sin error -->
+                                    <DataTrigger Binding="{Binding ServerStatus}" Value="Stopped">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                        <Run Text="🖥 PR-AI Assistant listo." FontSize="16" FontFamily="{StaticResource MainFont}" />
+                        <LineBreak />
+                        <Run Text="Escriba una consulta o cargue archivos para analizar." FontSize="14" FontFamily="{StaticResource MainFont}" />
+                    </TextBlock>
+
+                    <!-- Estado 3: Error al iniciar -->
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ServerStatus}" Value="Error">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        
+                        <TextBlock Text="⚠ No se pudo iniciar el servidor" FontFamily="{StaticResource MainFont}" FontSize="16" FontWeight="SemiBold" Foreground="#ef4444" HorizontalAlignment="Center" />
+                        <TextBlock Text="{Binding StartupError}" FontFamily="{StaticResource MonoFont}" FontSize="13" Foreground="#94a3b8" HorizontalAlignment="Center" Margin="0,8,0,16" TextWrapping="Wrap" MaxWidth="600" TextAlignment="Center" />
+                        <TextBlock Text="Abra el menú (☰) para revisar la configuración." FontFamily="{StaticResource MainFont}" FontSize="13" Foreground="#64748b" HorizontalAlignment="Center" />
+                    </StackPanel>
+
+                </Grid>
+
+                <ScrollViewer x:Name="ChatScrollViewer" ScrollChanged="ScrollViewer_ScrollChanged" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Messages}" Margin="20">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,15,0,15">
+                                    <Grid.Style>
+                                        <Style TargetType="Grid">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsUser}" Value="True">
+                                                    <Setter Property="HorizontalAlignment" Value="Right" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsSystem}" Value="True">
+                                                    <Setter Property="HorizontalAlignment" Value="Center" />
+                                                </DataTrigger>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding IsUser}" Value="False" />
+                                                        <Condition Binding="{Binding IsSystem}" Value="False" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="HorizontalAlignment" Value="Left" />
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Grid.Style>
+
+                                    <!-- User Bubble -->
+                                    <Border CornerRadius="12,12,2,12" Padding="16,12,16,12" MaxWidth="800" Visibility="{Binding IsUser, Converter={StaticResource BoolToVis}}">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#1e3a5f" />
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel>
+                                            <ItemsControl ItemsSource="{Binding ImagePaths}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Rectangle Width="40" Height="40" Fill="#1E1E3A" Margin="0,0,5,5" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+
+                                            <TextBlock Text="{Binding Content}" Foreground="#e2e8f0" FontSize="15" FontFamily="{StaticResource MainFont}" TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}" Foreground="#64748b" FontSize="11" FontFamily="{StaticResource MainFont}" HorizontalAlignment="Right" Margin="0,4,0,0" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Assistant Bubble -->
+                                    <Border CornerRadius="12,12,12,2" Padding="16,12,16,12" MaxWidth="850" Visibility="{Binding IsAssistant, Converter={StaticResource BoolToVis}}" Background="#0f172a" BorderBrush="#1e293b" BorderThickness="1">
+                                        <StackPanel>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="Pensando..." Foreground="#10B981" FontFamily="{StaticResource MainFont}" FontStyle="Italic" FontSize="14" Visibility="{Binding IsWaitingForFirstToken, Converter={StaticResource BoolToVis}}" Margin="0,0,0,6">
+                                                    <TextBlock.Triggers>
+                                                        <EventTrigger RoutedEvent="Loaded">
+                                                            <BeginStoryboard>
+                                                                <Storyboard RepeatBehavior="Forever">
+                                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity" From="1.0" To="0.3" Duration="0:0:1" AutoReverse="True" />
+                                                                </Storyboard>
+                                                            </BeginStoryboard>
+                                                        </EventTrigger>
+                                                    </TextBlock.Triggers>
+                                                </TextBlock>
+
+                                                <RichTextBox Grid.Column="0"
+                                                             Background="Transparent"
+                                                             BorderThickness="0"
+                                                             IsReadOnly="True"
+                                                             IsDocumentEnabled="False"
+                                                             Foreground="#cbd5e1"
+                                                             FontFamily="{StaticResource MainFont}"
+                                                             FontSize="15"
+                                                             Padding="0"
+                                                             IsTabStop="False"
+                                                             FocusVisualStyle="{x:Null}"
+                                                             Visibility="{Binding IsWaitingForFirstToken, Converter={StaticResource InverseBoolToVis}}">
+                                                    <helpers:RichTextBoxHelper.Document>
+                                                        <MultiBinding Converter="{StaticResource MarkdownMulti}">
+                                                            <Binding Path="Content" />
+                                                            <Binding Path="RenderMode" />
+                                                        </MultiBinding>
+                                                    </helpers:RichTextBoxHelper.Document>
+                                                    <RichTextBox.Resources>
+                                                        <Style TargetType="Paragraph">
+                                                            <Setter Property="Margin" Value="0,0,0,8" />
+                                                        </Style>
+                                                        <Style TargetType="Table">
+                                                            <Setter Property="CellSpacing" Value="0" />
+                                                            <Setter Property="BorderThickness" Value="1" />
+                                                            <Setter Property="BorderBrush" Value="#334155" />
+                                                            <Setter Property="Margin" Value="0,8,0,8" />
+                                                            <Setter Property="Foreground" Value="#e2e8f0" />
+                                                        </Style>
+                                                        <Style TargetType="TableCell">
+                                                            <Setter Property="BorderThickness" Value="0,0,1,1" />
+                                                            <Setter Property="BorderBrush" Value="#334155" />
+                                                            <Setter Property="Padding" Value="8,6" />
+                                                        </Style>
+                                                    </RichTextBox.Resources>
+                                                </RichTextBox>
+                                                <TextBlock Grid.Column="1" Text="▌" Foreground="#00D4AA" FontSize="15" Visibility="{Binding IsStreaming, Converter={StaticResource BoolToVis}}" VerticalAlignment="Bottom" Margin="2,0,0,0" />
+                                            </Grid>
+
+                                            <StackPanel Visibility="{Binding HasDisclaimer, Converter={StaticResource BoolToVis}}" Margin="0,8,0,0">
+                                                <Rectangle Height="1" Fill="#334155" Margin="0,0,0,8" />
+                                                <TextBlock Foreground="#475569" FontSize="11" FontFamily="{StaticResource MainFont}" TextWrapping="Wrap">
+                                                    <Run Text="[PR-AI Assistant — Generado por IA] " FontWeight="SemiBold" />
+                                                    <Run Text="{Binding DisclaimerText, Mode=OneWay}" />
+                                                </TextBlock>
+                                            </StackPanel>
+                                            
+                                            <Grid Margin="0,4,0,0">
+                                                <TextBlock Text="{Binding GenerationMetrics}" FontFamily="{StaticResource MonoFont}" Foreground="#10B981" FontSize="11" HorizontalAlignment="Left" />
+                                                <TextBlock Text="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}" Foreground="#64748b" FontSize="11" FontFamily="{StaticResource MainFont}" HorizontalAlignment="Right" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- System Bubble -->
+                                    <Border CornerRadius="8" Padding="12" MaxWidth="600" Visibility="{Binding IsSystem, Converter={StaticResource BoolToVis}}" Background="#2A2A4A" BorderBrush="#777777" BorderThickness="1">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Content}" Foreground="#E0E0E0" FontSize="11" FontStyle="Italic" TextWrapping="Wrap" TextAlignment="Center" />
+                                            <TextBlock Text="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}" Foreground="#AAAAAA" FontSize="9" HorizontalAlignment="Center" Margin="0,5,0,0" />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- Barra de input -->
+            <Border Grid.Row="2" Background="#16213E" Padding="12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Button Grid.Column="0" Command="{Binding LoadFilesCommand}" Content="📎"
+                            Style="{StaticResource TransparentHoverButton}" Width="40" Height="40" FontSize="18" Margin="0,0,5,0"
+                            Visibility="{Binding ShowFileButtons, Converter={StaticResource BoolToVis}}"/>
+                    <Button Grid.Column="1" Command="{Binding LoadImagesCommand}" Content="🖼️"
+                            Style="{StaticResource TransparentHoverButton}" Width="40" Height="40" FontSize="18" Margin="0,0,10,0"
+                            Visibility="{Binding ShowFileButtons, Converter={StaticResource BoolToVis}}"/>
+
+                    <Border Grid.Column="2" Background="#1E293B" CornerRadius="8" BorderBrush="#334155" BorderThickness="1">
+                        <Grid>
+                            <TextBlock Text="Escriba una consulta o cargue archivos para analizar..." 
+                                       Foreground="#64748b" FontFamily="{StaticResource MainFont}" FontSize="15"
+                                       Margin="12,10,12,10" IsHitTestVisible="False" VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding UserInput}" Value="">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding UserInput}" Value="{x:Null}">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBox Text="{Binding UserInput, UpdateSourceTrigger=PropertyChanged}"
+                                     Background="Transparent" BorderThickness="0" Foreground="#E0E0E0"
+                                     TextWrapping="Wrap" AcceptsReturn="True" MaxHeight="120"
+                                     FontSize="15" FontFamily="{StaticResource MainFont}"
+                                     Padding="12,10,12,10" VerticalScrollBarVisibility="Auto"
+                                     PreviewKeyDown="ChatInput_PreviewKeyDown" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Botón Enviar / Cancelar -->
+                    <Button Grid.Column="3" Width="40" Height="40" Margin="10,0,0,0">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource CircularActionButtonStyle}">
+                                <Setter Property="Command" Value="{Binding SendMessageCommand}" />
+                                <Setter Property="Content" Value="➤" />
+                                <Setter Property="FontSize" Value="16" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsProcessing}" Value="True">
+                                        <Setter Property="Command" Value="{Binding CancelCommand}" />
+                                        <Setter Property="Content" Value="⬛" />
+                                        <Setter Property="Background" Value="#EF4444" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- B. Overlay Sidebar -->
+        <Grid Grid.Column="0" Visibility="{Binding IsSidebarOpen, Converter={StaticResource BoolToVis}}" Panel.ZIndex="100">
+            <!-- Capa oscura -->
+            <Button Background="#99000000" BorderThickness="0" Command="{Binding ToggleSidebarCommand}" Cursor="Arrow">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"/>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+            
+            <!-- Panel Drawer -->
+            <Border Width="280" HorizontalAlignment="Left" Background="#0f172a" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="16">
+                <!-- Se puede agregar animación con EventTriggers, pero por simplicidad de compatibilidad usamos Visibility standard -->
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Botón Cerrar (X) -->
+                    <Button Grid.Row="0" Command="{Binding ToggleSidebarCommand}" Style="{StaticResource HeaderIconButton}" HorizontalAlignment="Right" Padding="8,4" Margin="0,0,-8,0">
+                        <TextBlock Text="✕" FontSize="16" />
+                    </Button>
+
+                    <!-- Info de sesión de investigación (solo visible en modo investigación) -->
+                    <StackPanel Grid.Row="1" Margin="0,0,0,24" Visibility="{Binding HasSession, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{Binding SessionPeritoText}" Foreground="#AAAAAA" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding SessionCaseText}" Foreground="#AAAAAA" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+
+                    <!-- Botón Nueva Sesión -->
+                    <Button Grid.Row="2" Command="{Binding ClearHistoryCommand}" Style="{StaticResource ActionButtonStyle}" MinHeight="35" Margin="0,0,0,24">
+                        <TextBlock Text="+ Nueva sesión" FontWeight="SemiBold" />
+                    </Button>
+
+                    <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <!-- 3. Sección Estado del Servidor -->
+                            <StackPanel Margin="0,0,0,24">
+                                <TextBlock Text="ESTADO DEL SERVIDOR" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <Ellipse Width="12" Height="12" Fill="{Binding ServerStatus, Converter={StaticResource StatusToColor}}" Margin="0,0,10,0" />
+                                    <TextBlock Text="{Binding ServerStatusText}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="5" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Command="{Binding StartServerCommand}" Content="▶ Iniciar" Style="{StaticResource ActionButtonStyle}" MinHeight="25" />
+                                    <Button Grid.Column="2" Command="{Binding StopServerCommand}" Content="■ Detener" Style="{StaticResource DangerButtonStyle}" MinHeight="25" />
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- 4. Sección Modelo + Parámetros -->
+                            <StackPanel Margin="0,0,0,16">
+                                <TextBlock Text="MODELO" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="30" />
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox Grid.Column="0"
+                                              Style="{StaticResource ModernComboBox}"
+                                              ItemsSource="{Binding AvailableModelItems}"
+                                              SelectedItem="{Binding SelectedModelItem}"
+                                              DisplayMemberPath="DisplayName"
+                                              Margin="0,0,5,0" />
+                                    <Button Grid.Column="1" Command="{Binding RefreshModelsCommand}" Content="↻"
+                                            Style="{StaticResource SecondaryButtonStyle}" Background="#1E1E3A" />
+                                </Grid>
+                                <!-- Info del modelo seleccionado -->
+                                <TextBlock Foreground="#00D4AA" FontSize="9" Margin="0,6,0,0">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="#00D4AA"/>
+                                        </Style>
+                                    </TextBlock.Style>
+                                    <Run Text="{Binding SelectedModelHardwareTag, Mode=OneWay}"/>
+                                </TextBlock>
+                                <TextBlock Text="{Binding SelectedModelCapabilitiesText}" Foreground="#3B82F6" FontSize="9" Margin="0,2,0,0" />
+                                <TextBlock Text="{Binding SelectedModelContextInfo}" Foreground="#777777" FontFamily="{StaticResource MonoFont}" FontSize="9" Margin="0,2,0,0" />
+
+                                <!-- Perfil de ejecución: toggle buttons -->
+                                <TextBlock Text="EJECUCIÓN" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,16,0,8" />
+                                <ItemsControl ItemsSource="{Binding AvailableExecutionProfiles}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Rows="1" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Content="{Binding DisplayName}"
+                                                    Command="{Binding DataContext.SelectExecutionProfileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Cursor="Hand" FontSize="9" FontWeight="SemiBold" Margin="1,0" MinHeight="26">
+                                                <Button.Style>
+                                                    <Style TargetType="Button">
+                                                        <Setter Property="Foreground" Value="#e2e8f0"/>
+                                                        <Setter Property="Background" Value="Transparent"/>
+                                                        <Setter Property="BorderThickness" Value="1"/>
+                                                        <Setter Property="BorderBrush" Value="#334155"/>
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="Button">
+                                                                    <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="4,3">
+                                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                    </Border>
+                                                                    <ControlTemplate.Triggers>
+                                                                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="bd" Property="Background" Value="#1E293B"/></Trigger>
+                                                                    </ControlTemplate.Triggers>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                <Setter Property="Background" Value="#10B981"/>
+                                                                <Setter Property="Foreground" Value="#0f172a"/>
+                                                                <Setter Property="BorderBrush" Value="#10B981"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <TextBlock Text="PARÁMETROS" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,16,0,8" />
+                                <CheckBox IsChecked="{Binding EnableThinking}" Foreground="#E0E0E0" Margin="0,0,0,15">
+                                    <TextBlock Text="Thinking Mode" Margin="5,0,0,0" />
+                                </CheckBox>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                    <TextBlock Text="Temperatura: " Foreground="#AAAAAA" />
+                                    <TextBlock Text="{Binding Temperature, StringFormat={}{0:F2}}" Foreground="#00D4AA" />
+                                </StackPanel>
+                                <Slider Minimum="0.0" Maximum="2.0" Value="{Binding Temperature}" TickFrequency="0.1" IsSnapToTickEnabled="True" />
+
+                                <TextBlock Text="Máx. respuesta:" Foreground="#E0E0E0" FontSize="10" Margin="0,10,0,5" />
+                                <ComboBox ItemsSource="{Binding MaxTokensOptions}" Style="{StaticResource ModernComboBox}" SelectedItem="{Binding SelectedMaxTokens}" DisplayMemberPath="Label" />
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Footer de sidebar -->
+                    <StackPanel Grid.Row="4" Margin="0,16,0,0">
+                        <Button Command="{Binding GoBackCommand}" Style="{StaticResource TransparentHoverButton}" HorizontalAlignment="Left" Padding="8,4" Margin="-8,0,0,8">
+                            <TextBlock Text="← Volver al inicio" Foreground="#AAAAAA" FontSize="12"/>
+                        </Button>
+                        <TextBlock Text="{Binding GpuInfo}" Foreground="#777777" FontFamily="{StaticResource MonoFont}" FontSize="10" VerticalAlignment="Bottom" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- PANEL DERECHO (solo visible en modo investigación) -->
+        <Border Grid.Column="1" Background="#16213E" BorderBrush="#2A2A4A" BorderThickness="1,0,0,0" Padding="15"
+                Visibility="Collapsed">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- Header Contexto -->
+                <Grid Grid.Row="0" Margin="0,0,0,20">
+                    <TextBlock Text="Contexto Forense" Foreground="#00D4AA" FontWeight="Bold" />
+                    <Button HorizontalAlignment="Right" Content="✕" Style="{StaticResource TransparentHoverButton}" Click="CollapseRightPanel_Click" />
+                </Grid>
+
+                <Grid Grid.Row="1">
+                    <!-- Placeholder cuando no hay artefactos -->
+                    <Grid>
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding LoadedArtifactsList.Count}" Value="0">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+                        <Rectangle Stroke="#777777" StrokeThickness="1" StrokeDashArray="4 4" Fill="Transparent" />
+                        <TextBlock Text="Arrastre archivos aquí&#x0a;o use los botones de carga" Foreground="#777777" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" />
+                    </Grid>
+
+                    <!-- Lista de artefactos cargados -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ScrollViewer.Style>
+                            <Style TargetType="ScrollViewer">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding LoadedArtifactsList.Count}" Value="0">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ScrollViewer.Style>
+                        <ItemsControl ItemsSource="{Binding LoadedArtifactsList}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#1E1E3A" CornerRadius="4" Padding="8" Margin="0,0,0,4">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="{Binding FileName}" Foreground="#E0E0E0" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding FileType}" Foreground="#10B981" FontSize="9" Margin="0,2,8,0"/>
+                                                    <TextBlock Text="{Binding FileSizeFormatted}" Foreground="#777777" FontSize="9" Margin="0,2,0,0"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                            <Button Grid.Column="1" Content="✕" Command="{Binding RemoveCommand}"
+                                                    Style="{StaticResource TransparentHoverButton}"
+                                                    Foreground="#EF4444" FontSize="12"
+                                                    Width="24" Height="24" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Footer métricas -->
+                <StackPanel Grid.Row="2" Margin="0,20,0,0">
+                    <TextBlock Text="{Binding EstimatedTokens, StringFormat=Tokens estimados: {0}}" FontSize="11">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="#AAAAAA" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsNearContextLimit}" Value="True">
+                                        <Setter Property="Foreground" Value="#F59E0B" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock Text="{Binding ContextAvailableText}" FontSize="10">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="#777777" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsNearContextLimit}" Value="True">
+                                        <Setter Property="Foreground" Value="#F59E0B" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock FontSize="10" Foreground="#F59E0B" Margin="0,3,0,0"
+                               Visibility="{Binding IsNearContextLimit, Converter={StaticResource BoolToVis}}">
+                        ⚠️ Contexto casi lleno
+                    </TextBlock>
+                    <TextBlock Text="{Binding LoadedArtifacts, StringFormat=Artefactos: {0}}" Foreground="#777777" FontSize="11" Margin="0,5,0,0" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

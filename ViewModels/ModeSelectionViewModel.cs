@@ -1,0 +1,218 @@
+using System;
+using System.Windows.Input;
+using PRImager.AIAssistant.Helpers;
+using PRImager.AIAssistant.Services.Models;
+
+using System.Collections.ObjectModel;
+using System.Linq;
+using PRImager.AIAssistant.Services;
+
+namespace PRImager.AIAssistant.ViewModels;
+
+public class ModeSelectionViewModel : ObservableObject
+{
+    // Evento que notifica al contenedor (MainWindow) qué modo se seleccionó
+    public event EventHandler<OperationMode>? ModeSelected;
+
+    // Comandos
+    public ICommand SelectInvestigationCommand { get; }
+    public ICommand SelectConsultationCommand { get; }
+    public ICommand HelpCommand { get; }
+    public ICommand LicensesCommand { get; }
+
+    /// <summary>Versión de la aplicación para mostrar en la pantalla de selección.</summary>
+    public string VersionText
+    {
+        get
+        {
+            var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            return version != null ? $"v{version.Major}.{version.Minor}.{version.Build} — Patagonia Robot" : "v1.0.0 — Patagonia Robot";
+        }
+    }
+
+    private readonly ConfigManager _configManager;
+    private readonly ModelProfileService _profileService;
+    private AppSettings _settings;
+
+    // === Modelo y perfil de ejecución (catálogo v2) ===
+
+    /// <summary>Modelos disponibles para el selector de la UI.</summary>
+    public ObservableCollection<ModelDisplayItem> AvailableModelItems { get; } = new();
+
+    /// <summary>Perfiles de ejecución disponibles para los botones toggle.</summary>
+    public ObservableCollection<ExecutionProfileItem> AvailableExecutionProfiles { get; } = new();
+
+    private ModelDisplayItem? _selectedModelItem;
+    /// <summary>Modelo seleccionado actualmente en la UI.</summary>
+    public ModelDisplayItem? SelectedModelItem
+    {
+        get => _selectedModelItem;
+        set
+        {
+            if (SetProperty(ref _selectedModelItem, value) && value != null)
+            {
+                _settings.SelectedModel = value.Model.ModelFileName;
+                _settings.MmprojFileName = value.Model.MmprojFileName;
+                _configManager.Save(_settings);
+
+                OnPropertyChanged(nameof(SelectedModelHardwareTag));
+                OnPropertyChanged(nameof(SelectedModelCapabilitiesText));
+                OnPropertyChanged(nameof(SelectedModelContextInfo));
+            }
+        }
+    }
+
+    private ExecutionProfileItem? _selectedExecutionProfile;
+    /// <summary>Perfil de ejecución seleccionado actualmente.</summary>
+    public ExecutionProfileItem? SelectedExecutionProfile
+    {
+        get => _selectedExecutionProfile;
+        set
+        {
+            if (SetProperty(ref _selectedExecutionProfile, value) && value != null)
+            {
+                _settings.GpuLayers = value.Profile.GpuLayers;
+                _settings.CtxSize = value.Profile.CtxSize;
+                if (value.Profile.Threads > 0)
+                    _settings.Threads = value.Profile.Threads;
+                _configManager.Save(_settings);
+
+                // Marcar el perfil activo y desmarcar los demás
+                foreach (var ep in AvailableExecutionProfiles)
+                    ep.IsActive = ep == value;
+
+                OnPropertyChanged(nameof(SelectedModelContextInfo));
+            }
+        }
+    }
+
+    public string SelectedModelHardwareTag => _selectedModelItem?.Model.HardwareTag ?? "";
+
+    public string SelectedModelCapabilitiesText
+    {
+        get
+        {
+            if (_selectedModelItem == null) return "";
+            var caps = _selectedModelItem.Model.Capabilities;
+            if (caps == null || caps.Count == 0) return "";
+            var badges = caps.Select(c => c switch
+            {
+                "Vision" => "🔍 Vision",
+                "Audio" => "🔊 Audio",
+                _ => c
+            });
+            return string.Join(" · ", badges);
+        }
+    }
+
+    public string SelectedModelContextInfo
+    {
+        get
+        {
+            if (_selectedExecutionProfile == null) return "";
+            var p = _selectedExecutionProfile.Profile;
+            return $"ctx: {p.CtxSize} · capas GPU: {p.GpuLayers}";
+        }
+    }
+
+    public ICommand SelectExecutionProfileCommand { get; }
+
+    public ModeSelectionViewModel(ConfigManager configManager, ModelProfileService profileService)
+    {
+        _configManager = configManager;
+        _profileService = profileService;
+        _settings = _configManager.Load();
+
+        SelectInvestigationCommand = new RelayCommand(
+            () => ModeSelected?.Invoke(this, OperationMode.Investigation));
+        SelectConsultationCommand = new RelayCommand(
+            () => ModeSelected?.Invoke(this, OperationMode.Consultation));
+
+        SelectExecutionProfileCommand = new RelayCommand<ExecutionProfileItem>(ep => { if (ep != null) SelectedExecutionProfile = ep; });
+
+        LoadProfiles();
+
+        HelpCommand = new RelayCommand(() =>
+        {
+            string helpPath = System.IO.Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory, "Help", "Help_PRAIA.html");
+            if (System.IO.File.Exists(helpPath))
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = helpPath,
+                    UseShellExecute = true
+                });
+            }
+            else
+            {
+                System.Windows.MessageBox.Show(
+                    "No se encontró el archivo de ayuda.\nRuta esperada: " + helpPath,
+                    "Ayuda no disponible",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
+            }
+        });
+
+        LicensesCommand = new RelayCommand(() =>
+        {
+            System.Windows.MessageBox.Show(
+                "PR-AI Assistant utiliza los siguientes componentes de código abierto:\n\n" +
+                "• llama.cpp — Licencia MIT\n" +
+                "  https://github.com/ggerganov/llama.cpp\n" +
+                "  Motor de inferencia local para modelos de lenguaje.\n\n" +
+                "• Gemma 4 E2B — Licencia Apache 2.0\n" +
+                "  https://ai.google.dev/gemma\n" +
+                "  Modelo de IA de Google DeepMind.\n\n" +
+                "• .NET 8 — Licencia MIT\n" +
+                "  https://dotnet.microsoft.com\n" +
+                "  Framework de desarrollo de Microsoft.\n\n" +
+                "PR-AI Assistant © 2026 Patagonia Robot.\n" +
+                "Todos los derechos reservados.",
+                "PR-AI Assistant — Licencias de Terceros",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Information);
+        });
+    }
+
+    private void LoadProfiles()
+    {
+        AvailableModelItems.Clear();
+        AvailableExecutionProfiles.Clear();
+        _profileService.LoadCatalog();
+
+        var models = _profileService.GetAvailableModels();
+        foreach (var (model, isAvailable) in models)
+        {
+            AvailableModelItems.Add(new ModelDisplayItem(model, isAvailable));
+        }
+
+        var execProfiles = _profileService.GetExecutionProfiles();
+        foreach (var ep in execProfiles)
+        {
+            AvailableExecutionProfiles.Add(new ExecutionProfileItem(ep));
+        }
+
+        var savedMatch = AvailableModelItems.FirstOrDefault(m =>
+            m.IsAvailable && m.Model.ModelFileName == _settings.SelectedModel);
+
+        if (savedMatch != null)
+        {
+            SelectedModelItem = savedMatch;
+        }
+        else
+        {
+            var firstAvailable = AvailableModelItems.FirstOrDefault(m => m.IsAvailable);
+            if (firstAvailable != null)
+                SelectedModelItem = firstAvailable;
+        }
+
+        var defaultProfile = AvailableExecutionProfiles.FirstOrDefault(p => 
+            p.Profile.GpuLayers == _settings.GpuLayers && p.Profile.CtxSize == _settings.CtxSize)
+            ?? AvailableExecutionProfiles.FirstOrDefault(p => p.Profile.Id == "balanced")
+            ?? AvailableExecutionProfiles.FirstOrDefault();
+
+        if (defaultProfile != null)
+            SelectedExecutionProfile = defaultProfile;
+    }
+}

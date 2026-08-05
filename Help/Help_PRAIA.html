@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>PR-AI Assistant - Help</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Montserrat', Arial, sans-serif; background-color: #1a1a2e; color: #E2E8F0; line-height: 1.6; margin: 0; padding: 40px 20px; }
+        .container { max-width: 900px; margin: 0 auto; position: relative; }
+        .lang-toggle { position: absolute; top: 0; right: 0; background: #16213e; border: 1px solid #334155; border-radius: 4px; padding: 5px; display: flex; gap: 5px; }
+        .lang-btn { font-family: 'Montserrat', Arial, sans-serif; background: transparent; color: #94A3B8; border: none; cursor: pointer; font-weight: 600; padding: 5px 10px; border-radius: 3px; font-size: 13px; }
+        .lang-btn.active { background: #10B981; color: #1a1a2e; }
+        .header { text-align: center; margin-bottom: 50px; margin-top: 20px; }
+        .h-line1 { color: #10B981; font-size: 28px; letter-spacing: 2px; }
+        .h-line2 { color: #10B981; font-size: 22px; margin: 10px 0; }
+        .h-line3 { color: #94A3B8; font-size: 14px; }
+        .card { background-color: #16213e; border: 1px solid #334155; border-radius: 8px; padding: 30px; margin-bottom: 30px; }
+        h2 { color: #10B981; margin-top: 0; border-bottom: 1px solid #334155; padding-bottom: 10px; font-weight: 600; font-size: 18px; }
+        h3 { color: #00D4AA; font-weight: 600; font-size: 15px; margin: 20px 0 8px 0; }
+        p { margin: 0 0 12px 0; }
+        ul, ol { padding-left: 20px; }
+        li { margin-bottom: 10px; }
+        strong { color: #00D4AA; }
+        code { background: #1a1a2e; padding: 2px 6px; border-radius: 3px; font-size: 13px; color: #10B981; }
+        .footer { text-align: center; color: #94A3B8; font-size: 12px; margin-top: 50px; padding-top: 20px; border-top: 1px solid #334155; }
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+        .note { background: #1a1a2e; border-left: 3px solid #F59E0B; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 16px 0; font-size: 14px; }
+        .note strong { color: #F59E0B; }
+        .warning { background: #1a1a2e; border-left: 3px solid #EF4444; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 16px 0; font-size: 14px; }
+        .warning strong { color: #EF4444; }
+        .tip { background: #1a1a2e; border-left: 3px solid #3B82F6; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 16px 0; font-size: 14px; }
+        .tip strong { color: #3B82F6; }
+        table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+        th { background: #1a1a2e; color: #10B981; text-align: left; padding: 8px 12px; font-size: 13px; border-bottom: 1px solid #334155; }
+        td { padding: 8px 12px; font-size: 13px; border-bottom: 1px solid #1a1a2e; }
+        tr:hover td { background: #1a1a2e; }
+        .kbd { background: #334155; color: #E2E8F0; padding: 2px 6px; border-radius: 3px; font-size: 12px; font-family: 'Consolas', monospace; border: 1px solid #4a5568; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="lang-toggle">
+            <button class="lang-btn" id="btn-es" onclick="setLang('es')">ES</button>
+            <button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button>
+        </div>
+
+        <div class="header">
+            <div class="h-line1"><span style="font-weight:700">PATAGONIA</span> <span style="font-weight:400">ROBOT</span></div>
+            <div class="h-line2"><strong style="color:#10B981">PR</strong>-<strong style="color:#10B981">AI</strong> <strong style="color:#10B981">A</strong>ssistant</div>
+            <div class="h-line3">v1.0.0 &mdash; Asistente de IA Local para Triaje Forense Digital</div>
+        </div>
+
+        <!-- ==================== ESPAÑOL ==================== -->
+        <div id="content-es" class="content-section">
+
+            <div class="card">
+                <h2>Descripción</h2>
+                <p><strong>PR-AI Assistant</strong> es un asistente de inteligencia artificial diseñado específicamente para el triaje forense digital. Forma parte de la suite <strong>PRImager Forensic Core</strong>.</p>
+                <p>Su característica principal es la ejecución <strong>100% local</strong> de modelos de lenguaje (LLMs) y modelos de visión (VLMs), garantizando la privacidad absoluta de los datos, el cumplimiento estricto de la cadena de custodia y la no alteración de la evidencia digital. Ningún dato sale de la máquina del perito.</p>
+                <p>El motor de inferencia es <strong>llama.cpp</strong>, ejecutando modelos de la familia <strong>Google Gemma 4</strong> (licencia Apache 2.0) con soporte para aceleración GPU NVIDIA (CUDA) y operación en CPU para equipos sin GPU dedicada.</p>
+            </div>
+
+            <div class="card">
+                <h2>Modos de Operación</h2>
+                <p>La aplicación ofrece dos modos de uso con distintos niveles de seguridad y auditoría:</p>
+
+                <h3>Modo Investigación</h3>
+                <p>Diseñado para el análisis de evidencia digital en el marco de una causa judicial. Requiere:</p>
+                <ul>
+                    <li><strong>Formulario de identificación obligatorio:</strong> Nombre y legajo del perito, número de causa judicial y juzgado interviniente.</li>
+                    <li><strong>Aceptación del descargo legal:</strong> Basado en buenas prácticas de la RFC 3227 (Guidelines for Evidence Collection and Archiving). El hash SHA-256 del descargo se registra en el log forense.</li>
+                    <li><strong>Panel de contexto forense:</strong> Permite cargar archivos de texto, CSV, JSON, volcados hexadecimales e imágenes para inyectarlos como contexto de análisis.</li>
+                    <li><strong>Logging forense completo:</strong> Cada interacción se registra con timestamp UTC y hash SHA-256 en un archivo de auditoría de solo adición (append-only).</li>
+                    <li><strong>Exportación de sesión:</strong> Al finalizar, se puede exportar un reporte estructurado de la sesión en formatos TXT, HTML o JSON, con hash SHA-256 del documento final.</li>
+                </ul>
+                <div class="warning">
+                    <strong>Importante:</strong> El modelo de IA asiste al perito pero nunca lo reemplaza. Toda respuesta generada por IA debe ser verificada por el perito antes de incorporarse a cualquier informe o actuación judicial. Las respuestas incluyen automáticamente un descargo al pie indicando su origen artificial.
+                </div>
+
+                <h3>Modo Consulta (Academia PR)</h3>
+                <p>Funciona como un entorno académico aislado (sandbox) para consultas sobre:</p>
+                <ul>
+                    <li>Legislación y normativa (Ley 26.388, Convenio de Budapest, RFC 3227, ISO 27037).</li>
+                    <li>Conceptos y procedimientos de informática forense.</li>
+                    <li>Estructuras de datos, formatos de archivo y artefactos digitales.</li>
+                </ul>
+                <div class="note">
+                    <strong>Nota:</strong> En modo consulta el modelo tiene instrucciones explícitas de rechazar el análisis de evidencia real. No se habilita el panel de carga de archivos ni la exportación de sesión forense.
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Guía de Uso</h2>
+                <ol>
+                    <li><strong>Seleccionar modo de operación:</strong> Al iniciar la aplicación, elija entre Modo Investigación o Academia PR según el contexto de trabajo.</li>
+                    <li><strong>Seleccionar perfil de modelo:</strong> En el panel izquierdo, elija el perfil de IA adecuado al hardware disponible:
+                        <table>
+                            <tr><th>Perfil</th><th>Descripción</th><th>Hardware</th></tr>
+                            <tr><td>Rendimiento</td><td>Solo texto, rápido</td><td>CPU suficiente</td></tr>
+                            <tr><td>Equilibrado</td><td>Texto + imágenes</td><td>GPU recomendada</td></tr>
+                            <tr><td>Máxima Calidad</td><td>Máxima precisión</td><td>GPU potente requerida</td></tr>
+                        </table>
+                    </li>
+                    <li><strong>Iniciar el servidor:</strong> Presione el botón "Iniciar". El sistema cargará el modelo en memoria (10-30 segundos la primera vez). El indicador cambiará a verde "Listo" cuando esté operativo. En la esquina inferior izquierda se muestra la GPU detectada.</li>
+                    <li><strong>Ajustar parámetros (opcional):</strong>
+                        <ul>
+                            <li><strong>Thinking Mode:</strong> Habilita el modo de razonamiento extendido del modelo. Produce respuestas más reflexivas pero más lentas.</li>
+                            <li><strong>Temperatura:</strong> Controla la creatividad de las respuestas (0.0 = determinista, 2.0 = muy creativo). Valor recomendado para forense: 0.3-0.7.</li>
+                            <li><strong>Máx. respuesta:</strong> Límite de tokens para la respuesta generada.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Cargar contexto forense</strong> (solo Modo Investigación):
+                        <ul>
+                            <li>Botón <strong>📎</strong> — Cargar archivos de texto, CSV, JSON o volcados hexadecimales.</li>
+                            <li>Botón <strong>🖼️</strong> — Cargar imágenes para análisis visual (requiere perfil con soporte de Visión).</li>
+                            <li>También puede arrastrar archivos directamente sobre el área de chat.</li>
+                        </ul>
+                        <p>Los archivos cargados aparecen en el panel derecho "Contexto Forense" con su tipo y tamaño. El contador de tokens estimados se actualiza en tiempo real.</p>
+                    </li>
+                    <li><strong>Interactuar con el asistente:</strong> Escriba su consulta en el campo de texto inferior y presione <span class="kbd">Enter</span> o el botón de envío. Use <span class="kbd">Shift+Enter</span> para saltos de línea sin enviar. La respuesta se muestra en tiempo real (streaming).</li>
+                    <li><strong>Exportar sesión</strong> (solo Modo Investigación): Presione "Exportar Sesión" en el panel izquierdo. Seleccione el formato (TXT, HTML o JSON) y la ubicación. El archivo exportado incluye un hash SHA-256 de integridad.</li>
+                </ol>
+                <div class="tip">
+                    <strong>Consejo:</strong> Si el modelo no puede generar respuesta (contexto excedido), utilice el botón "Nueva Sesión" para reiniciar la conversación. Para sesiones largas, puede aumentar el tamaño de contexto editando <code>ctx_size</code> en <code>Config/settings.json</code>.
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Gestión de Ventana de Contexto</h2>
+                <p>Los modelos de IA locales operan con ventanas de contexto limitadas. PR-AI Assistant implementa mecanismos automáticos de protección:</p>
+                <ul>
+                    <li><strong>Validación de archivos:</strong> Los archivos cargados se validan rigurosamente. Se rechazan binarios ejecutables (.exe, .dll) y se aplican límites de caracteres (50.000 para texto, 5.000 para hexadecimal). El contenido excedente se trunca automáticamente.</li>
+                    <li><strong>Recorte automático del historial:</strong> Antes de cada consulta, el sistema calcula los tokens estimados. Si el sistema de prompts, el contexto forense y el historial superan el límite configurado, se recortan los mensajes más antiguos preservando siempre las instrucciones base.</li>
+                    <li><strong>Indicadores visuales:</strong> El panel derecho muestra en tiempo real los tokens estimados, el espacio disponible y una advertencia cuando el contexto está cerca del límite.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h2>Auditoría y Trazabilidad</h2>
+                <p>Cada sesión genera un archivo de log forense (<code>ai-session-YYYY-MM-DD.log</code>) en la carpeta <code>Logs/</code> con las siguientes características:</p>
+                <ul>
+                    <li>Formato de solo adición (append-only): no se pueden modificar entradas previas.</li>
+                    <li>Cada entrada incluye timestamp UTC y hash SHA-256 del contenido.</li>
+                    <li>Se registran: inicio de sesión, validación de descargo, consultas del perito, respuestas del modelo, carga de contexto, errores y exportaciones.</li>
+                </ul>
+                <p>Esto garantiza la inalterabilidad del registro ante escrutinio judicial.</p>
+            </div>
+
+            <div class="card">
+                <h2>Requisitos del Sistema</h2>
+                <table>
+                    <tr><th>Componente</th><th>Mínimo</th><th>Recomendado</th></tr>
+                    <tr><td>Sistema Operativo</td><td>Windows 10 x64</td><td>Windows 11 x64</td></tr>
+                    <tr><td>RAM</td><td>8 GB</td><td>16 GB</td></tr>
+                    <tr><td>GPU</td><td>No requerida (CPU)</td><td>NVIDIA GTX 1060 6GB+</td></tr>
+                    <tr><td>GPU Óptima</td><td>&mdash;</td><td>NVIDIA RTX 3060 12GB</td></tr>
+                    <tr><td>Espacio en disco</td><td>5 GB</td><td>5 GB</td></tr>
+                    <tr><td>Conexión a Internet</td><td colspan="2">No requerida (operación 100% offline)</td></tr>
+                </table>
+                <div class="note">
+                    <strong>Nota:</strong> La aplicación detecta automáticamente la GPU disponible. Si no se encuentra GPU NVIDIA con soporte CUDA, opera en modo CPU con rendimiento reducido pero funcional. Las DLLs de CUDA runtime (<code>cublas64_13.dll</code>, <code>cublasLt64_13.dll</code>) deben estar presentes en la carpeta <code>Tools/</code> para la aceleración por GPU.
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Estructura de Distribución</h2>
+                <p>La aplicación es completamente portable y autónoma (self-contained). No requiere instalación de .NET Runtime ni conexión a Internet.</p>
+<pre style="background:#1a1a2e; padding:16px; border-radius:6px; font-size:12px; color:#10B981; overflow-x:auto;">
+PR-AI-Assistant/
+├── PR-AI-Assistant.exe     Ejecutable principal
+├── Config/
+│   ├── model_catalog.json  Perfiles de modelo
+│   └── settings.json       Configuración general
+├── Models/
+│   ├── *.gguf              Modelos de lenguaje
+│   └── mmproj-*.gguf       Proyector multimodal (visión)
+├── Prompts/
+│   ├── system_forense.txt  Prompt para Modo Investigación
+│   └── system_consulta.txt Prompt para Academia PR
+├── Tools/
+│   ├── llama-server.exe    Motor de inferencia
+│   ├── ggml-cuda.dll       Backend CUDA
+│   ├── cublas64_13.dll     CUDA runtime
+│   └── ...                 DLLs de soporte
+├── Logs/                   Logs de auditoría forense
+├── Sessions/               Sesiones exportadas
+└── Help/
+    └── Help_PRAIA.html     Este archivo
+</pre>
+            </div>
+
+            <div class="card">
+                <h2>Consideraciones Forenses</h2>
+                <ul>
+                    <li>PR-AI Assistant <strong>nunca accede directamente a la evidencia original</strong>. Solo trabaja con datos ya extraídos y proporcionados por el perito.</li>
+                    <li>El modelo de IA opera de forma completamente local: <strong>cero conexiones externas, cero telemetría, cero envío de datos</strong>.</li>
+                    <li>Toda respuesta del modelo incluye automáticamente un descargo indicando su origen artificial y la necesidad de verificación por el perito.</li>
+                    <li>El archivo de log forense constituye un registro completo, no editable y verificable de toda interacción con el modelo.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h2>Licencias de Terceros</h2>
+                <ul>
+                    <li><strong>llama.cpp</strong> — Motor de inferencia de modelos GGUF. Ejecutado como proceso externo (<code>llama-server.exe</code>). Distribuido sin modificaciones bajo licencia <strong style="color:#E2E8F0">MIT</strong>. No existe vinculación directa (linking) con el ejecutable principal.</li>
+                    <li><strong>Google Gemma 4</strong> — Familia de modelos de lenguaje. Distribuidos bajo licencia <strong style="color:#E2E8F0">Apache 2.0</strong>, que permite uso comercial sin restricciones.</li>
+                    <li><strong>NVIDIA cuBLAS</strong> — Bibliotecas de aceleración matemática para GPU. Distribuidas bajo los términos de licencia de <strong style="color:#E2E8F0">NVIDIA CUDA Toolkit EULA</strong>.</li>
+                </ul>
+            </div>
+
+        </div>
+
+        <!-- ==================== ENGLISH ==================== -->
+        <div id="content-en" class="content-section">
+
+            <div class="card">
+                <h2>Description</h2>
+                <p><strong>PR-AI Assistant</strong> is an artificial intelligence assistant specifically designed for digital forensic triage. It is part of the <strong>PRImager Forensic Core</strong> suite.</p>
+                <p>Its main feature is the <strong>100% local</strong> execution of language models (LLMs) and vision models (VLMs), ensuring absolute data privacy, strict chain of custody compliance, and no alteration of digital evidence. No data ever leaves the examiner's machine.</p>
+                <p>The inference engine is <strong>llama.cpp</strong>, running models from the <strong>Google Gemma 4</strong> family (Apache 2.0 license) with NVIDIA GPU acceleration (CUDA) support and CPU fallback for machines without a dedicated GPU.</p>
+            </div>
+
+            <div class="card">
+                <h2>Operating Modes</h2>
+                <p>The application offers two operating modes with different security and auditing levels:</p>
+
+                <h3>Investigation Mode</h3>
+                <p>Designed for digital evidence analysis within the framework of a judicial case. Requires:</p>
+                <ul>
+                    <li><strong>Mandatory identification form:</strong> Examiner name and badge number, case number, and court of jurisdiction.</li>
+                    <li><strong>Legal disclaimer acceptance:</strong> Based on RFC 3227 best practices (Guidelines for Evidence Collection and Archiving). The SHA-256 hash of the disclaimer is recorded in the forensic log.</li>
+                    <li><strong>Forensic context panel:</strong> Allows loading text files, CSV, JSON, hex dumps, and images to inject them as analysis context.</li>
+                    <li><strong>Full forensic logging:</strong> Every interaction is logged with UTC timestamp and SHA-256 hash in an append-only audit file.</li>
+                    <li><strong>Session export:</strong> Upon completion, a structured session report can be exported in TXT, HTML, or JSON format, with SHA-256 hash of the final document.</li>
+                </ul>
+                <div class="warning">
+                    <strong>Important:</strong> The AI model assists the examiner but never replaces them. Every AI-generated response must be verified by the examiner before being incorporated into any report or judicial proceeding. Responses automatically include a disclaimer indicating their artificial origin.
+                </div>
+
+                <h3>Consultation Mode (Academia PR)</h3>
+                <p>Functions as an isolated academic sandbox for queries about:</p>
+                <ul>
+                    <li>Legislation and regulations (Law 26.388, Budapest Convention, RFC 3227, ISO 27037).</li>
+                    <li>Digital forensics concepts and procedures.</li>
+                    <li>Data structures, file formats, and digital artifacts.</li>
+                </ul>
+                <div class="note">
+                    <strong>Note:</strong> In consultation mode, the model has explicit instructions to reject analysis of real evidence. The file loading panel and forensic session export are disabled.
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Usage Guide</h2>
+                <ol>
+                    <li><strong>Select operating mode:</strong> Upon launching the application, choose between Investigation Mode or Academia PR according to your work context.</li>
+                    <li><strong>Select model profile:</strong> In the left panel, choose the AI profile appropriate for the available hardware:
+                        <table>
+                            <tr><th>Profile</th><th>Description</th><th>Hardware</th></tr>
+                            <tr><td>Performance</td><td>Text only, fast</td><td>CPU sufficient</td></tr>
+                            <tr><td>Balanced</td><td>Text + images</td><td>GPU recommended</td></tr>
+                            <tr><td>Maximum Quality</td><td>Maximum precision</td><td>Powerful GPU required</td></tr>
+                        </table>
+                    </li>
+                    <li><strong>Start the server:</strong> Press the "Start" button. The system will load the model into memory (10-30 seconds on first run). The indicator will turn green "Ready" when operational. The detected GPU is shown in the bottom-left corner.</li>
+                    <li><strong>Adjust parameters (optional):</strong>
+                        <ul>
+                            <li><strong>Thinking Mode:</strong> Enables the model's extended reasoning mode. Produces more thoughtful but slower responses.</li>
+                            <li><strong>Temperature:</strong> Controls response creativity (0.0 = deterministic, 2.0 = very creative). Recommended for forensics: 0.3-0.7.</li>
+                            <li><strong>Max. response:</strong> Token limit for the generated response.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Load forensic context</strong> (Investigation Mode only):
+                        <ul>
+                            <li>Button <strong>📎</strong> — Load text files, CSV, JSON, or hex dumps.</li>
+                            <li>Button <strong>🖼️</strong> — Load images for visual analysis (requires profile with Vision support).</li>
+                            <li>You can also drag and drop files directly onto the chat area.</li>
+                        </ul>
+                        <p>Loaded files appear in the right panel "Forensic Context" with their type and size. The estimated token counter updates in real time.</p>
+                    </li>
+                    <li><strong>Interact with the assistant:</strong> Type your query in the bottom text field and press <span class="kbd">Enter</span> or the send button. Use <span class="kbd">Shift+Enter</span> for line breaks without sending. The response is displayed in real time (streaming).</li>
+                    <li><strong>Export session</strong> (Investigation Mode only): Press "Export Session" in the left panel. Select the format (TXT, HTML, or JSON) and location. The exported file includes a SHA-256 integrity hash.</li>
+                </ol>
+                <div class="tip">
+                    <strong>Tip:</strong> If the model cannot generate a response (context exceeded), use the "New Session" button to restart the conversation. For long sessions, you can increase the context size by editing <code>ctx_size</code> in <code>Config/settings.json</code>.
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Context Window Management</h2>
+                <p>Local AI models operate with limited context windows. PR-AI Assistant implements automatic protection mechanisms:</p>
+                <ul>
+                    <li><strong>File validation:</strong> Loaded files are rigorously validated. Executable binaries (.exe, .dll) are rejected, and character limits are applied (50,000 for text, 5,000 for hexadecimal). Excess content is automatically truncated.</li>
+                    <li><strong>Automatic history trimming:</strong> Before each query, the system estimates token usage. If the system prompt, forensic context, and chat history exceed the configured limit, the oldest messages are trimmed while always preserving base instructions.</li>
+                    <li><strong>Visual indicators:</strong> The right panel displays estimated tokens, available space, and a warning when context is near the limit in real time.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h2>Auditing and Traceability</h2>
+                <p>Each session generates a forensic log file (<code>ai-session-YYYY-MM-DD.log</code>) in the <code>Logs/</code> folder with the following characteristics:</p>
+                <ul>
+                    <li>Append-only format: previous entries cannot be modified.</li>
+                    <li>Each entry includes UTC timestamp and SHA-256 hash of the content.</li>
+                    <li>Recorded events include: session start, disclaimer validation, examiner queries, model responses, context loading, errors, and exports.</li>
+                </ul>
+                <p>This ensures record immutability under judicial scrutiny.</p>
+            </div>
+
+            <div class="card">
+                <h2>System Requirements</h2>
+                <table>
+                    <tr><th>Component</th><th>Minimum</th><th>Recommended</th></tr>
+                    <tr><td>Operating System</td><td>Windows 10 x64</td><td>Windows 11 x64</td></tr>
+                    <tr><td>RAM</td><td>8 GB</td><td>16 GB</td></tr>
+                    <tr><td>GPU</td><td>Not required (CPU)</td><td>NVIDIA GTX 1060 6GB+</td></tr>
+                    <tr><td>Optimal GPU</td><td>&mdash;</td><td>NVIDIA RTX 3060 12GB</td></tr>
+                    <tr><td>Disk space</td><td>5 GB</td><td>5 GB</td></tr>
+                    <tr><td>Internet connection</td><td colspan="2">Not required (100% offline operation)</td></tr>
+                </table>
+                <div class="note">
+                    <strong>Note:</strong> The application automatically detects available GPU. If no NVIDIA GPU with CUDA support is found, it operates in CPU mode with reduced but functional performance. CUDA runtime DLLs (<code>cublas64_13.dll</code>, <code>cublasLt64_13.dll</code>) must be present in the <code>Tools/</code> folder for GPU acceleration.
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Distribution Structure</h2>
+                <p>The application is fully portable and self-contained. No .NET Runtime installation or Internet connection is required.</p>
+<pre style="background:#1a1a2e; padding:16px; border-radius:6px; font-size:12px; color:#10B981; overflow-x:auto;">
+PR-AI-Assistant/
+├── PR-AI-Assistant.exe     Main executable
+├── Config/
+│   ├── model_catalog.json  Model profiles
+│   └── settings.json       General configuration
+├── Models/
+│   ├── *.gguf              Language models
+│   └── mmproj-*.gguf       Multimodal projector (vision)
+├── Prompts/
+│   ├── system_forense.txt  Investigation Mode prompt
+│   └── system_consulta.txt Academia PR prompt
+├── Tools/
+│   ├── llama-server.exe    Inference engine
+│   ├── ggml-cuda.dll       CUDA backend
+│   ├── cublas64_13.dll     CUDA runtime
+│   └── ...                 Support DLLs
+├── Logs/                   Forensic audit logs
+├── Sessions/               Exported sessions
+└── Help/
+    └── Help_PRAIA.html     This file
+</pre>
+            </div>
+
+            <div class="card">
+                <h2>Forensic Considerations</h2>
+                <ul>
+                    <li>PR-AI Assistant <strong>never directly accesses the original evidence</strong>. It only works with data already extracted and provided by the examiner.</li>
+                    <li>The AI model operates completely locally: <strong>zero external connections, zero telemetry, zero data transmission</strong>.</li>
+                    <li>Every model response automatically includes a disclaimer indicating its artificial origin and the need for examiner verification.</li>
+                    <li>The forensic log file constitutes a complete, non-editable, and verifiable record of every interaction with the model.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h2>Third-Party Licenses</h2>
+                <ul>
+                    <li><strong>llama.cpp</strong> — GGUF model inference engine. Executed as an external process (<code>llama-server.exe</code>). Distributed unmodified under <strong style="color:#E2E8F0">MIT</strong> license. No direct linking exists with the main executable.</li>
+                    <li><strong>Google Gemma 4</strong> — Language model family. Distributed under <strong style="color:#E2E8F0">Apache 2.0</strong> license, allowing unrestricted commercial use.</li>
+                    <li><strong>NVIDIA cuBLAS</strong> — GPU math acceleration libraries. Distributed under the terms of the <strong style="color:#E2E8F0">NVIDIA CUDA Toolkit EULA</strong>.</li>
+                </ul>
+            </div>
+
+        </div>
+
+        <div class="footer">
+            &copy; 2026 Patagonia Robot &mdash; Tecnolog&iacute;a Forense Avanzada
+        </div>
+    </div>
+
+    <script>
+        function setLang(lang) {
+            document.getElementById('content-es').classList.remove('active');
+            document.getElementById('content-en').classList.remove('active');
+            document.getElementById('btn-es').classList.remove('active');
+            document.getElementById('btn-en').classList.remove('active');
+            if (lang === 'es') { document.getElementById('content-es').classList.add('active'); document.getElementById('btn-es').classList.add('active'); }
+            else { document.getElementById('content-en').classList.add('active'); document.getElementById('btn-en').classList.add('active'); }
+        }
+        var userLang = navigator.language || navigator.userLanguage;
+        if (userLang.toLowerCase().startsWith('es')) setLang('es'); else setLang('en');
+    </script>
+</body>
+</html>
