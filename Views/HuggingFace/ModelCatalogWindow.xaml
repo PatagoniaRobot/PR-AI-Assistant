@@ -1,0 +1,245 @@
+<Window x:Class="PRImager.AIAssistant.Views.HuggingFace.ModelCatalogWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:conv="clr-namespace:PRImager.AIAssistant.Views.Converters"
+        xmlns:vm="clr-namespace:PRImager.AIAssistant.ViewModels.HuggingFace"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=vm:ModelCatalogViewModel}"
+        Title="Catálogo de modelos — PR-AI Assistant"
+        Height="700" Width="1040"
+        Background="#1A1A2E"
+        WindowStartupLocation="CenterOwner"
+        FontFamily="{StaticResource MainFont}">
+
+    <Window.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVis" />
+        <conv:HexToBrushConverter x:Key="HexToBrush" />
+
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#E0E0E0" />
+            <Setter Property="FontFamily" Value="{StaticResource MainFont}" />
+        </Style>
+
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#94a3b8" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+        </Style>
+
+        <Style x:Key="CatalogButton" TargetType="Button">
+            <Setter Property="Background" Value="#10B981" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Padding" Value="16,8" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.85" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bd" Property="Background" Value="#374151" />
+                                <Setter Property="Foreground" Value="#6B7280" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DangerCatalogButton" TargetType="Button" BasedOn="{StaticResource CatalogButton}">
+            <Setter Property="Background" Value="#DC2626" />
+        </Style>
+
+        <Style x:Key="NeutralCatalogButton" TargetType="Button" BasedOn="{StaticResource CatalogButton}">
+            <Setter Property="Background" Value="#334155" />
+        </Style>
+
+        <Style TargetType="DataGrid">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="GridLinesVisibility" Value="Horizontal" />
+            <Setter Property="HorizontalGridLinesBrush" Value="#1e293b" />
+            <Setter Property="RowBackground" Value="Transparent" />
+            <Setter Property="AlternatingRowBackground" Value="#0d1526" />
+            <Setter Property="Foreground" Value="#E0E0E0" />
+            <Setter Property="HeadersVisibility" Value="Column" />
+            <Setter Property="AutoGenerateColumns" Value="False" />
+            <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="SelectionMode" Value="Single" />
+            <Setter Property="CanUserAddRows" Value="False" />
+            <Setter Property="RowHeaderWidth" Value="0" />
+        </Style>
+
+        <Style TargetType="DataGridColumnHeader" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+            <Setter Property="Background" Value="#0f172a" />
+            <Setter Property="Foreground" Value="#94a3b8" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="BorderBrush" Value="#334155" />
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="#E0E0E0" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="8,6" />
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#1e3a5f" />
+                    <Setter Property="Foreground" Value="#ffffff" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Encabezado -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="Catálogo de modelos" FontSize="18" FontWeight="Bold" />
+            <TextBlock Text="{Binding GpuText}" Foreground="#00D4AA" FontSize="11" Margin="0,4,0,0" />
+        </StackPanel>
+
+        <!-- Buscador -->
+        <Grid Grid.Row="1" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBox Grid.Column="0"
+                     AutomationProperties.AutomationId="CatalogSearchBox"
+                     Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}"
+                     IsEnabled="{Binding CanEditSearch}"
+                     Background="#1E293B" Foreground="#E0E0E0" BorderBrush="#334155"
+                     BorderThickness="1" Padding="8,6" FontSize="13"
+                     KeyDown="SearchBox_KeyDown" />
+            <Button Grid.Column="1" Content="Buscar" Command="{Binding SearchCommand}"
+                    AutomationProperties.AutomationId="CatalogSearchButton"
+                    Style="{StaticResource CatalogButton}" Margin="8,0,0,0" />
+        </Grid>
+
+        <!-- Resultados: repos a la izquierda, cuantizaciones a la derecha -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="1.2*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Background="#0f172a" BorderBrush="#334155" BorderThickness="1" CornerRadius="6">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="REPOSITORIOS" Style="{StaticResource SectionLabel}" Margin="10,8,10,6" />
+                    <DataGrid ItemsSource="{Binding Repos}" SelectedItem="{Binding SelectedRepo}"
+                              AutomationProperties.AutomationId="RepoGrid">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Modelo" Binding="{Binding ShortName}" Width="*" />
+                            <DataGridTextColumn Header="Autor" Binding="{Binding Author}" Width="Auto" />
+                            <DataGridTextColumn Header="Descargas" Binding="{Binding DownloadsText}" Width="Auto" />
+                            <DataGridTextColumn Header="Licencia" Binding="{Binding License}" Width="Auto" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </Border>
+
+            <Border Grid.Column="2" Background="#0f172a" BorderBrush="#334155" BorderThickness="1" CornerRadius="6">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="CUANTIZACIONES DISPONIBLES" Style="{StaticResource SectionLabel}" Margin="10,8,10,6" />
+                    <DataGrid ItemsSource="{Binding Quantizations}" SelectedItem="{Binding SelectedQuantization}"
+                              AutomationProperties.AutomationId="QuantGrid">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Archivo" Binding="{Binding FileName}" Width="*" />
+                            <DataGridTextColumn Header="Cuant." Binding="{Binding Quantization}" Width="Auto" />
+                            <DataGridTextColumn Header="Tamaño" Binding="{Binding SizeText}" Width="Auto" />
+                            <DataGridTemplateColumn Header="VRAM" Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" ToolTip="{Binding VramExplanation}">
+                                            <Ellipse Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,6,0"
+                                                     Fill="{Binding VramColor, Converter={StaticResource HexToBrush}}" />
+                                            <TextBlock Text="{Binding VramLabel}" FontSize="11" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </Border>
+        </Grid>
+
+        <!-- Detalle del semáforo y progreso -->
+        <StackPanel Grid.Row="3" Margin="0,12,0,0">
+            <TextBlock Text="{Binding SelectedVramExplanation}" Foreground="#94a3b8" FontSize="11"
+                       TextWrapping="Wrap" Margin="0,0,0,8" />
+
+            <StackPanel Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}">
+                <!-- OneWay explícito: ProgressBar.Value bindea TwoWay por defecto y
+                     DownloadPercent es de solo lectura desde la vista -->
+                <ProgressBar Height="18" Minimum="0" Maximum="100"
+                             Value="{Binding DownloadPercent, Mode=OneWay}"
+                             Background="#1E293B" Foreground="#10B981" BorderThickness="0" />
+                <TextBlock Text="{Binding DownloadText}" Foreground="#94a3b8" FontSize="11" Margin="0,4,0,0" />
+            </StackPanel>
+
+            <Border Background="#0d1526" BorderBrush="#334155" BorderThickness="1" CornerRadius="4"
+                    Padding="8" Margin="0,4,0,0"
+                    Visibility="{Binding HasLastHash, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <TextBlock Text="SHA-256 del archivo descargado" Foreground="#94a3b8" FontSize="10" />
+                    <TextBox Text="{Binding LastHash, Mode=OneWay}" IsReadOnly="True"
+                             AutomationProperties.AutomationId="LastHashBox"
+                             Background="Transparent" BorderThickness="0" Foreground="#10B981"
+                             FontFamily="{StaticResource MonoFont}" FontSize="11" />
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="{Binding Status}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0"
+                       AutomationProperties.AutomationId="CatalogStatus">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="#94a3b8" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsError}" Value="True">
+                                <Setter Property="Foreground" Value="#F59E0B" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </StackPanel>
+
+        <!-- Acciones -->
+        <Grid Grid.Row="4" Margin="0,12,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <Button Content="Descargar" Command="{Binding DownloadCommand}"
+                        AutomationProperties.AutomationId="DownloadButton"
+                        Style="{StaticResource CatalogButton}" Margin="0,0,8,0" />
+                <Button Content="Cancelar descarga" Command="{Binding CancelDownloadCommand}"
+                        AutomationProperties.AutomationId="CancelDownloadButton"
+                        Style="{StaticResource DangerCatalogButton}" />
+            </StackPanel>
+            <Button Content="Cerrar" Command="{Binding CloseCommand}"
+                    Style="{StaticResource NeutralCatalogButton}" HorizontalAlignment="Right" />
+        </Grid>
+    </Grid>
+</Window>

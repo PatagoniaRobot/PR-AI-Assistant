@@ -418,6 +418,8 @@ public class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(IsWebSearchOn));
         OnPropertyChanged(nameof(WebSearchToggleTooltip));
 
+        ((RelayCommand)OpenModelCatalogCommand).RaiseCanExecuteChanged();
+
         UsageProfileApplied?.Invoke(this, profile);
         UpdateContextUsage();
     }
@@ -643,6 +645,9 @@ public class MainViewModel : ObservableObject
     /// <summary>Abre la ventana de gestión de perfiles de uso.</summary>
     public ICommand ManageProfilesCommand { get; }
 
+    /// <summary>Abre el catálogo de modelos de HuggingFace.</summary>
+    public ICommand OpenModelCatalogCommand { get; }
+
     public ICommand ToggleSidebarCommand { get; }
 
     public MainViewModel(ChatOrchestrator orchestrator, IFileDialogService fileDialogService, ConfigManager configManager, ModelProfileService profileService, UsageProfileService usageProfileService)
@@ -686,6 +691,7 @@ public class MainViewModel : ObservableObject
         SelectExecutionProfileCommand = new RelayCommand<ExecutionProfileItem>(ep => { if (ep != null) SelectedExecutionProfile = ep; });
         ToggleSidebarCommand = new RelayCommand(() => IsSidebarOpen = !IsSidebarOpen);
         ManageProfilesCommand = new RelayCommand(ExecuteManageProfiles);
+        OpenModelCatalogCommand = new RelayCommand(ExecuteOpenModelCatalog, () => IsModelDownloadAvailable);
 
         _orchestrator.ServerStatusChanged += (s, status) =>
             System.Windows.Application.Current.Dispatcher.Invoke(() => ServerStatus = status);
@@ -776,6 +782,60 @@ public class MainViewModel : ObservableObject
                 .FirstOrDefault(p => p.Id == _usageProfileService.ActiveProfile.Id);
         }
     }
+
+    /// <summary>
+    /// True si el catálogo de modelos fue compilado en este binario.
+    /// El XAML no puede evaluar #if, así que lo consulta por acá.
+    /// </summary>
+    public bool IsModelCatalogCompiledIn =>
+#if MODEL_DOWNLOAD
+        true;
+#else
+        false;
+#endif
+
+    /// <summary>
+    /// Abre el catálogo de modelos. Al terminar una descarga refresca el listado
+    /// local para que el modelo quede utilizable sin pasos manuales.
+    /// </summary>
+    private void ExecuteOpenModelCatalog()
+    {
+#if MODEL_DOWNLOAD
+        string modelsDir = string.IsNullOrWhiteSpace(_settings.ModelDownloadPath)
+            ? ResolveModelsDirectory()
+            : _settings.ModelDownloadPath;
+
+        string logsDir = System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "PRImager", "AIAssistant", "Logs");
+
+        var vm = new HuggingFace.ModelCatalogViewModel(
+            destinationDirectory: modelsDir,
+            contextTokens: _settings.CtxSize,
+            logDirectory: logsDir,
+            tokenProvider: () => _settings.HuggingFaceToken,
+            onModelDownloaded: path =>
+            {
+                _orchestrator.Logger.LogCustom("MODEL_DOWNLOADED", $"path=\"{path}\"");
+                ExecuteRefreshModels();
+            });
+
+        var window = new Views.HuggingFace.ModelCatalogWindow
+        {
+            DataContext = vm,
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+        vm.CloseRequested += (_, _) => window.Close();
+        window.ShowDialog();
+        vm.Dispose();
+#endif
+    }
+
+    /// <summary>Carpeta de modelos efectiva, resuelta contra el directorio de la app.</summary>
+    private string ResolveModelsDirectory() =>
+        Path.IsPathRooted(_settings.ModelPath)
+            ? _settings.ModelPath
+            : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, _settings.ModelPath);
 
     private bool CanExecuteSendMessage()
     {

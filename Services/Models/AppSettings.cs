@@ -43,5 +43,17 @@ namespace PRImager.AIAssistant.Services.Models
 
         /// <summary>Ventana de frescura por defecto: 0=sin filtro, 1=día, 2=semana, 3=mes.</summary>
         public int WebSearchFreshness { get; set; } = 2;
+
+        // Catálogo de modelos (E3)
+        /// <summary>
+        /// Token de lectura de HuggingFace. Solo hace falta para repos gated.
+        /// Vive en la configuración de usuario, nunca en el repositorio.
+        /// </summary>
+        public string HuggingFaceToken { get; set; } = "";
+
+        /// <summary>
+        /// Carpeta destino de las descargas. Vacío = la carpeta de modelos actual.
+        /// </summary>
+        public string ModelDownloadPath { get; set; } = "";
     }
 }

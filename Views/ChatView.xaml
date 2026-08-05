@@ -732,6 +732,16 @@
                                     <Button Grid.Column="1" Command="{Binding RefreshModelsCommand}" Content="↻"
                                             Style="{StaticResource SecondaryButtonStyle}" Background="#1E1E3A" />
                                 </Grid>
+
+                                <!-- Catálogo de HuggingFace: solo si el binario lo incluye
+                                     y el perfil efectivo habilita descargas -->
+                                <Button Command="{Binding OpenModelCatalogCommand}"
+                                        AutomationProperties.AutomationId="OpenCatalogButton"
+                                        Style="{StaticResource SecondaryButtonStyle}" Background="#1E1E3A"
+                                        MinHeight="28" Margin="0,6,0,0"
+                                        Visibility="{Binding IsModelCatalogCompiledIn, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="⤓ Catálogo de modelos" FontSize="11" />
+                                </Button>
                                 <!-- Info del modelo seleccionado -->
                                 <TextBlock Foreground="#00D4AA" FontSize="9" Margin="0,6,0,0">
                                     <TextBlock.Style>

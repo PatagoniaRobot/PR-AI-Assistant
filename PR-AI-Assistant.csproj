@@ -41,10 +41,16 @@
   <PropertyGroup>
     <EnableWebSearch Condition="'$(Configuration)' != 'Forense'">true</EnableWebSearch>
     <EnableWebSearch Condition="'$(Configuration)' == 'Forense'">false</EnableWebSearch>
+    <EnableModelDownload Condition="'$(Configuration)' != 'Forense'">true</EnableModelDownload>
+    <EnableModelDownload Condition="'$(Configuration)' == 'Forense'">false</EnableModelDownload>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(EnableWebSearch)' == 'true'">
     <DefineConstants>$(DefineConstants);WEB_SEARCH</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(EnableModelDownload)' == 'true'">
+    <DefineConstants>$(DefineConstants);MODEL_DOWNLOAD</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Forense'">
@@ -63,6 +69,13 @@
     <Page Remove="Views\WebSearch\**" />
     <Compile Remove="Views\WebSearch\**" />
     <Compile Remove="ViewModels\WebSearch\**" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(EnableModelDownload)' != 'true'">
+    <Compile Remove="Services\HuggingFace\**" />
+    <Page Remove="Views\HuggingFace\**" />
+    <Compile Remove="Views\HuggingFace\**" />
+    <Compile Remove="ViewModels\HuggingFace\**" />
   </ItemGroup>
 
   <ItemGroup>
