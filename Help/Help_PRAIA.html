@@ -137,6 +137,65 @@
             </div>
 
             <div class="card">
+                <h2>Búsqueda Web (SearXNG)</h2>
+                <p>La edición comercial puede enriquecer una consulta con resultados web actuales. Es la única función del programa que usa la red, y está construida sobre tres decisiones deliberadas:</p>
+                <ul>
+                    <li><strong>La decide el usuario, nunca el modelo.</strong> La búsqueda se activa con el botón <strong>🌐</strong> junto al campo de texto, consulta por consulta. No hay <em>tool-calling</em>: el modelo no puede decidir salir a Internet por su cuenta.</li>
+                    <li><strong>No existe en la edición institucional.</strong> No es un permiso desactivado por configuración: el código de red directamente no se compila en ese binario. El botón 🌐 ni siquiera aparece.</li>
+                    <li><strong>El Modo Investigación la bloquea siempre.</strong> Aunque el perfil activo la habilite, al entrar en Modo Investigación queda forzada a apagado.</li>
+                </ul>
+
+                <div class="warning">
+                    <strong>Advertencia forense:</strong> con la búsqueda activada, el texto de la consulta sale de la máquina hacia el servidor de búsqueda y se descargan páginas de sitios de terceros. La evidencia cargada no se transmite, pero la pregunta sí. Por eso está prohibida en Modo Investigación. Cada búsqueda queda registrada en el log de auditoría con el proveedor y la cantidad de fuentes leídas.
+                </div>
+
+                <h3>Por qué SearXNG</h3>
+                <p><strong>SearXNG</strong> es un metabuscador libre que consulta a varios motores y devuelve los resultados agregados. Se eligió porque no requiere cuenta, ni clave de API, ni tarjeta de crédito, y porque la consulta sale de un servidor que controla el propio usuario. En una herramienta pericial eso es más defendible que una clave corporativa contra un servicio comercial: no queda un tercero con un registro de búsquedas asociado a una identidad de facturación.</p>
+
+                <h3>Levantar una instancia propia</h3>
+                <p>Es la forma recomendada. Requiere <strong>Docker Desktop</strong> (gratuito). Una sola vez:</p>
+<pre style="background:#1a1a2e; padding:16px; border-radius:6px; font-size:12px; color:#10B981; overflow-x:auto;">
+docker run -d --name searxng -p 8080:8080 ^
+  -v "D:\PROYECTOS\PR-Tools\searxng:/etc/searxng" ^
+  --restart unless-stopped searxng/searxng
+</pre>
+                <p>El contenedor genera un archivo <code>settings.yml</code> en la carpeta indicada. Hay que <strong>habilitar el formato JSON</strong>, que viene desactivado de fábrica:</p>
+<pre style="background:#1a1a2e; padding:16px; border-radius:6px; font-size:12px; color:#10B981; overflow-x:auto;">
+search:
+  formats:
+    - html
+    - json
+</pre>
+                <p>Después, <code>docker restart searxng</code>. Con <code>--restart unless-stopped</code> el contenedor vuelve a levantarse solo al reiniciar el equipo.</p>
+
+                <div class="warning">
+                    <strong>Error más frecuente:</strong> si se omite el paso del JSON, la instancia funciona perfecto en el navegador pero rechaza las consultas de la aplicación con un error 403. El mensaje que muestra el programa indica el archivo y la clave exacta que hay que tocar.
+                </div>
+
+                <h3>Configurar la aplicación</h3>
+                <ol>
+                    <li>Abrir el panel lateral con <strong>☰</strong> y bajar hasta <strong>BÚSQUEDA WEB</strong>.</li>
+                    <li>En <strong>Instancia de SearXNG</strong>, escribir la dirección: <code>http://127.0.0.1:8080</code>. Se acepta también sin el esquema (<code>127.0.0.1:8080</code>).</li>
+                    <li>Verificar que el estado debajo del campo diga <em>«Instancia configurada»</em> en verde.</li>
+                    <li>Elegir la <strong>frescura</strong> de los resultados: último día, última semana, último mes o sin filtro.</li>
+                </ol>
+                <div class="tip">
+                    <strong>Nota:</strong> la dirección se muestra en claro, no enmascarada. No es una credencial, y conviene que el perito pueda verificar a simple vista contra qué servidor sale la consulta.
+                </div>
+
+                <h3>Qué ocurre al buscar</h3>
+                <p>Con el botón 🌐 encendido, la aplicación busca, descarga las <strong>3 primeras páginas</strong> (10 segundos de espera máxima cada una), las convierte a texto plano y arma la consulta al modelo con las fuentes numeradas y la instrucción de citar con <code>[n]</code>. En pantalla se ve <em>Buscando…</em> y luego <em>Leyendo 3 páginas…</em>.</p>
+                <p>Bajo la respuesta aparece un panel desplegable de <strong>fuentes</strong> con el título, la URL en la que se puede hacer clic, la fecha y si la página pudo leerse o no. Verificar las fuentes es responsabilidad del perito.</p>
+                <p>Los fallos no interrumpen la consulta: si una página no responde, se informa y se sigue con las demás. Si no se puede leer ninguna, el modelo responde igual, sin fuentes y avisando en pantalla.</p>
+                <div class="note">
+                    <strong>Sobre el historial:</strong> el modelo recibe la consulta enriquecida con el texto de las páginas, pero en el historial de la conversación se guarda la pregunta original. De lo contrario cada turno arrastraría miles de tokens de páginas web y el contexto se agotaría en dos intercambios.
+                </div>
+
+                <h3>Instancias públicas</h3>
+                <p>Se puede apuntar a una instancia pública de SearXNG en lugar de una propia, pero con reservas: la mayoría tiene el formato JSON deshabilitado, suelen limitar el uso automatizado (error 429) y significa confiar la consulta a un servidor de un tercero desconocido. Para trabajo pericial, siempre una instancia propia.</p>
+            </div>
+
+            <div class="card">
                 <h2>Auditoría y Trazabilidad</h2>
                 <p>Cada sesión genera un archivo de log forense (<code>ai-session-YYYY-MM-DD.log</code>) en la carpeta <code>Logs/</code> con las siguientes características:</p>
                 <ul>
@@ -156,7 +215,7 @@
                     <tr><td>GPU</td><td>No requerida (CPU)</td><td>NVIDIA GTX 1060 6GB+</td></tr>
                     <tr><td>GPU Óptima</td><td>&mdash;</td><td>NVIDIA RTX 3060 12GB</td></tr>
                     <tr><td>Espacio en disco</td><td>5 GB</td><td>5 GB</td></tr>
-                    <tr><td>Conexión a Internet</td><td colspan="2">No requerida (operación 100% offline)</td></tr>
+                    <tr><td>Conexión a Internet</td><td colspan="2">No requerida. La inferencia es 100% offline; solo la búsqueda web opcional usa la red</td></tr>
                 </table>
                 <div class="note">
                     <strong>Nota:</strong> La aplicación detecta automáticamente la GPU disponible. Si no se encuentra GPU NVIDIA con soporte CUDA, opera en modo CPU con rendimiento reducido pero funcional. Las DLLs de CUDA runtime (<code>cublas64_13.dll</code>, <code>cublasLt64_13.dll</code>) deben estar presentes en la carpeta <code>Tools/</code> para la aceleración por GPU.
@@ -206,6 +265,7 @@ PR-AI-Assistant/
                     <li><strong>llama.cpp</strong> — Motor de inferencia de modelos GGUF. Ejecutado como proceso externo (<code>llama-server.exe</code>). Distribuido sin modificaciones bajo licencia <strong style="color:#E2E8F0">MIT</strong>. No existe vinculación directa (linking) con el ejecutable principal.</li>
                     <li><strong>Google Gemma 4</strong> — Familia de modelos de lenguaje. Distribuidos bajo licencia <strong style="color:#E2E8F0">Apache 2.0</strong>, que permite uso comercial sin restricciones.</li>
                     <li><strong>NVIDIA cuBLAS</strong> — Bibliotecas de aceleración matemática para GPU. Distribuidas bajo los términos de licencia de <strong style="color:#E2E8F0">NVIDIA CUDA Toolkit EULA</strong>.</li>
+                    <li><strong>AngleSharp</strong> — Extracción de texto de páginas web para la búsqueda web. Licencia <strong style="color:#E2E8F0">MIT</strong>. Solo se incluye en la edición comercial; la edición institucional no lo distribuye.</li>
                 </ul>
             </div>
 
@@ -297,6 +357,65 @@ PR-AI-Assistant/
             </div>
 
             <div class="card">
+                <h2>Web Search (SearXNG)</h2>
+                <p>The commercial edition can enrich a query with current web results. It is the only feature in the program that uses the network, and it rests on three deliberate decisions:</p>
+                <ul>
+                    <li><strong>The user decides, never the model.</strong> Search is enabled with the <strong>🌐</strong> button next to the text field, one query at a time. There is no <em>tool-calling</em>: the model cannot decide to reach the Internet on its own.</li>
+                    <li><strong>It does not exist in the institutional edition.</strong> This is not a permission turned off in a config file: the networking code is simply not compiled into that binary. The 🌐 button does not even appear.</li>
+                    <li><strong>Investigation Mode always blocks it.</strong> Even if the active profile allows it, entering Investigation Mode forces it off.</li>
+                </ul>
+
+                <div class="warning">
+                    <strong>Forensic warning:</strong> with search enabled, the query text leaves the machine towards the search server, and pages from third-party sites are downloaded. Loaded evidence is never transmitted, but the question is. That is why it is forbidden in Investigation Mode. Every search is recorded in the audit log with the provider and the number of sources read.
+                </div>
+
+                <h3>Why SearXNG</h3>
+                <p><strong>SearXNG</strong> is a free metasearch engine that queries several engines and returns aggregated results. It was chosen because it requires no account, no API key and no credit card, and because the query leaves from a server the user controls. In a forensic tool that is more defensible than a corporate key against a commercial service: no third party is left holding a search log tied to a billing identity.</p>
+
+                <h3>Running your own instance</h3>
+                <p>This is the recommended approach. It requires <strong>Docker Desktop</strong> (free). Once only:</p>
+<pre style="background:#1a1a2e; padding:16px; border-radius:6px; font-size:12px; color:#10B981; overflow-x:auto;">
+docker run -d --name searxng -p 8080:8080 ^
+  -v "D:\PROYECTOS\PR-Tools\searxng:/etc/searxng" ^
+  --restart unless-stopped searxng/searxng
+</pre>
+                <p>The container generates a <code>settings.yml</code> file in that folder. You must <strong>enable the JSON format</strong>, which is disabled by default:</p>
+<pre style="background:#1a1a2e; padding:16px; border-radius:6px; font-size:12px; color:#10B981; overflow-x:auto;">
+search:
+  formats:
+    - html
+    - json
+</pre>
+                <p>Then run <code>docker restart searxng</code>. With <code>--restart unless-stopped</code> the container comes back up on its own after a reboot.</p>
+
+                <div class="warning">
+                    <strong>Most common error:</strong> if the JSON step is skipped, the instance works perfectly in a browser but rejects the application's queries with a 403 error. The message shown by the program names the exact file and key to change.
+                </div>
+
+                <h3>Configuring the application</h3>
+                <ol>
+                    <li>Open the side panel with <strong>☰</strong> and scroll down to <strong>WEB SEARCH</strong>.</li>
+                    <li>Under <strong>SearXNG instance</strong>, enter the address: <code>http://127.0.0.1:8080</code>. It is also accepted without the scheme (<code>127.0.0.1:8080</code>).</li>
+                    <li>Check that the status below the field reads <em>"Instance configured"</em> in green.</li>
+                    <li>Choose the result <strong>freshness</strong>: last day, last week, last month, or no filter.</li>
+                </ol>
+                <div class="tip">
+                    <strong>Note:</strong> the address is shown in plain text, not masked. It is not a credential, and the examiner should be able to see at a glance which server the query is going to.
+                </div>
+
+                <h3>What happens during a search</h3>
+                <p>With the 🌐 button on, the application searches, downloads the <strong>first 3 pages</strong> (10-second timeout each), converts them to plain text and builds the model query with numbered sources and an instruction to cite using <code>[n]</code>. The screen shows <em>Searching…</em> and then <em>Reading 3 pages…</em>.</p>
+                <p>Below the answer, a collapsible <strong>sources</strong> panel lists the title, a clickable URL, the date, and whether each page could be read. Verifying the sources is the examiner's responsibility.</p>
+                <p>Failures do not abort the query: if a page does not respond, it is reported and the rest continue. If none can be read, the model answers anyway, without sources and with an on-screen notice.</p>
+                <div class="note">
+                    <strong>About history:</strong> the model receives the query enriched with the page text, but the conversation history stores the original question. Otherwise every turn would drag thousands of tokens of web pages along and the context would be exhausted in two exchanges.
+                </div>
+
+                <h3>Public instances</h3>
+                <p>You can point to a public SearXNG instance instead of your own, with caveats: most have the JSON format disabled, they usually rate-limit automated use (429 error), and it means trusting your query to an unknown third party's server. For forensic work, always use your own instance.</p>
+            </div>
+
+            <div class="card">
                 <h2>Auditing and Traceability</h2>
                 <p>Each session generates a forensic log file (<code>ai-session-YYYY-MM-DD.log</code>) in the <code>Logs/</code> folder with the following characteristics:</p>
                 <ul>
@@ -316,7 +435,7 @@ PR-AI-Assistant/
                     <tr><td>GPU</td><td>Not required (CPU)</td><td>NVIDIA GTX 1060 6GB+</td></tr>
                     <tr><td>Optimal GPU</td><td>&mdash;</td><td>NVIDIA RTX 3060 12GB</td></tr>
                     <tr><td>Disk space</td><td>5 GB</td><td>5 GB</td></tr>
-                    <tr><td>Internet connection</td><td colspan="2">Not required (100% offline operation)</td></tr>
+                    <tr><td>Internet connection</td><td colspan="2">Not required. Inference is 100% offline; only the optional web search uses the network</td></tr>
                 </table>
                 <div class="note">
                     <strong>Note:</strong> The application automatically detects available GPU. If no NVIDIA GPU with CUDA support is found, it operates in CPU mode with reduced but functional performance. CUDA runtime DLLs (<code>cublas64_13.dll</code>, <code>cublasLt64_13.dll</code>) must be present in the <code>Tools/</code> folder for GPU acceleration.
@@ -366,6 +485,7 @@ PR-AI-Assistant/
                     <li><strong>llama.cpp</strong> — GGUF model inference engine. Executed as an external process (<code>llama-server.exe</code>). Distributed unmodified under <strong style="color:#E2E8F0">MIT</strong> license. No direct linking exists with the main executable.</li>
                     <li><strong>Google Gemma 4</strong> — Language model family. Distributed under <strong style="color:#E2E8F0">Apache 2.0</strong> license, allowing unrestricted commercial use.</li>
                     <li><strong>NVIDIA cuBLAS</strong> — GPU math acceleration libraries. Distributed under the terms of the <strong style="color:#E2E8F0">NVIDIA CUDA Toolkit EULA</strong>.</li>
+                    <li><strong>AngleSharp</strong> — Web page text extraction for web search. <strong style="color:#E2E8F0">MIT</strong> license. Included only in the commercial edition; the institutional edition does not ship it.</li>
                 </ul>
             </div>
 

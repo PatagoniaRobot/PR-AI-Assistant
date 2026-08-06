@@ -88,6 +88,9 @@
     <None Update="Prompts\**" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Config\**" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Tools\**" CopyToOutputDirectory="PreserveNewest" />
+    <!-- La ayuda se abre desde BaseDirectory\Help. Sin esto no se copiaba en el
+         build y la carpeta publicada quedaba con una copia manual desactualizada. -->
+    <None Update="Help\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- Models y Tools se copian manualmente por el perito (archivos >2 GB rompen SingleFile bundle) -->
