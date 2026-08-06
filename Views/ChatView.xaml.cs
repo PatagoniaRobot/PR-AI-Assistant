@@ -14,30 +14,10 @@ public partial class ChatView : UserControl
     public ChatView()
     {
         InitializeComponent();
-        DataContextChanged += (_, _) => SyncApiKeyBox();
     }
 
-    /// <summary>
-    /// Refleja la API key guardada en el PasswordBox. PasswordBox no soporta binding
-    /// (por diseño: no expone la contraseña como DependencyProperty), así que se
-    /// sincroniza a mano en ambos sentidos.
-    /// </summary>
-    private void SyncApiKeyBox()
-    {
-        if (BraveApiKeyBox == null) return;
-        if (DataContext is MainViewModel vm && BraveApiKeyBox.Password != vm.BraveApiKey)
-            BraveApiKeyBox.Password = vm.BraveApiKey;
-    }
-
-    /// <summary>
-    /// Persiste la API key de Brave al escribirla. Va a la configuración de usuario
-    /// en %APPDATA%, nunca al repositorio.
-    /// </summary>
-    private void BraveApiKey_PasswordChanged(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainViewModel vm && sender is System.Windows.Controls.PasswordBox box)
-            vm.BraveApiKey = box.Password;
-    }
+    // La dirección de SearXNG se bindea directo en el XAML: a diferencia de una API
+    // key, no es un secreto, así que no hace falta PasswordBox ni sincronización manual.
 
     /// <summary>
     /// Abre una fuente web en el navegador predeterminado, para que el usuario verifique.

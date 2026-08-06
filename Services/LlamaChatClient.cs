@@ -28,6 +28,13 @@ public class LlamaChatClient : IDisposable
     /// <summary>Notifica cada token recibido durante streaming.</summary>
     public event EventHandler<TokenReceivedEventArgs>? TokenReceived;
 
+    /// <summary>
+    /// Notifica cada token de razonamiento. Va por un canal aparte porque no es
+    /// respuesta: no se muestra como contenido ni se guarda en el historial, pero
+    /// sin él la pantalla queda muda mientras el modelo piensa.
+    /// </summary>
+    public event EventHandler<TokenReceivedEventArgs>? ReasoningTokenReceived;
+
     public LlamaChatClient(string baseUrl = "http://127.0.0.1:8787")
     {
         _baseUrl = baseUrl.TrimEnd('/');
@@ -90,16 +97,23 @@ public class LlamaChatClient : IDisposable
 
                 // Parsear el JSON del chunk
                 string? token = null;
+                string? reasoning = null;
                 try
                 {
                     var node = JsonNode.Parse(data);
-                    token = node?["choices"]?[0]?["delta"]?["content"]?.GetValue<string>();
+                    var delta = node?["choices"]?[0]?["delta"];
+                    token = delta?["content"]?.GetValue<string>();
+                    reasoning = delta?["reasoning_content"]?.GetValue<string>();
                 }
                 catch (JsonException)
                 {
                     // Línea con JSON inválido, ignorar
                     continue;
                 }
+
+                // El razonamiento se notifica pero no se emite: no es la respuesta.
+                if (!string.IsNullOrEmpty(reasoning))
+                    ReasoningTokenReceived?.Invoke(this, new TokenReceivedEventArgs(reasoning));
 
                 if (token is not null)
                 {
@@ -246,7 +260,21 @@ public class LlamaChatClient : IDisposable
             ["messages"] = messages,
             ["stream"] = stream,
             ["temperature"] = request.Temperature,
-            ["max_tokens"] = request.MaxTokens
+            ["max_tokens"] = request.MaxTokens,
+
+            // Control del modo razonamiento. Los modelos híbridos (familia Qwen3 y
+            // similares) traen el pensamiento ACTIVADO en su plantilla: el servidor
+            // registra "chat template, thinking = 1" al arrancar. Con el pensamiento
+            // activo el texto no viaja en delta.content sino en delta.reasoning_content,
+            // así que sin este parámetro la app no recibía un solo token y se quedaba
+            // en "Pensando…" hasta agotar max_tokens.
+            //
+            // Las plantillas que no conocen enable_thinking ignoran el kwarg, así que
+            // mandarlo siempre es inocuo para Gemma y compañía.
+            ["chat_template_kwargs"] = new JsonObject
+            {
+                ["enable_thinking"] = request.EnableThinking
+            }
         };
 
         return body.ToJsonString();

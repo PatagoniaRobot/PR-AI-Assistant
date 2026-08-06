@@ -556,20 +556,19 @@ public class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// API key de Brave. Se expone para el campo password del panel lateral;
-    /// se persiste en la configuración de usuario, nunca en el repositorio.
+    /// Dirección de la instancia de SearXNG. Se persiste en la configuración de
+    /// usuario. No es una credencial: se muestra en claro a propósito, para que el
+    /// perito pueda verificar contra qué servidor sale la consulta.
     /// </summary>
-    public string BraveApiKey
+    public string SearxngUrl
     {
-        get => _settings.BraveApiKey;
+        get => _settings.SearxngUrl;
         set
         {
-            // Se recorta al guardar: un salto de línea pegado de más rompe el header
-            // HTTP con una excepción en lugar de un mensaje legible.
             string incoming = (value ?? "").Trim();
-            if (_settings.BraveApiKey != incoming)
+            if (_settings.SearxngUrl != incoming)
             {
-                _settings.BraveApiKey = incoming;
+                _settings.SearxngUrl = incoming;
                 _configManager.Save(_settings);
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsWebSearchConfigured));
@@ -578,39 +577,32 @@ public class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>True si hay una API key con forma de key cargada.</summary>
-    public bool IsWebSearchConfigured => LooksLikeApiKey(_settings.BraveApiKey);
+    /// <summary>
+    /// True si hay una instancia de SearXNG con dirección válida. En la configuración
+    /// Forense el validador no existe —Services/WebSearch no se compila— y la respuesta
+    /// es siempre false: ese binario no busca en la web.
+    /// </summary>
+    public bool IsWebSearchConfigured =>
+#if WEB_SEARCH
+        Services.WebSearch.SearxngSearchProvider.TryBuildBaseUri(_settings.SearxngUrl, out _);
+#else
+        false;
+#endif
 
     /// <summary>Estado de configuración de la búsqueda web, para el panel lateral.</summary>
     public string WebSearchConfigStatus
     {
         get
         {
-            if (IsWebSearchConfigured) return "API key cargada.";
+            if (IsWebSearchConfigured)
+                return $"Instancia configurada. Las consultas salen hacia {_settings.SearxngUrl}.";
 
-            return string.IsNullOrWhiteSpace(_settings.BraveApiKey)
-                ? "Sin API key. Obtené una gratis en brave.com/search/api."
-                : "Lo cargado no tiene forma de API key. Pegá la key que da el panel de " +
-                  "Brave (empieza con \"BSA\"), no la dirección de la página.";
+            return string.IsNullOrWhiteSpace(_settings.SearxngUrl)
+                ? "Sin instancia. Indicá la dirección de un SearXNG, por ejemplo " +
+                  "http://127.0.0.1:8080. Ver la ayuda para levantar uno propio."
+                : "La dirección no es válida. Debe ser una URL http o https, " +
+                  "por ejemplo http://127.0.0.1:8080.";
         }
-    }
-
-    /// <summary>
-    /// Chequeo de forma de la API key. El campo es un PasswordBox: lo escrito queda
-    /// enmascarado, así que un error de pegado —la URL de la página en lugar de la
-    /// key— era invisible y solo se manifestaba como un fallo de búsqueda.
-    /// Deliberadamente laxo: rechaza lo que claramente no es una key, sin atarse al
-    /// formato exacto por si Brave lo cambia.
-    /// </summary>
-    private static bool LooksLikeApiKey(string? key)
-    {
-        if (string.IsNullOrWhiteSpace(key)) return false;
-
-        string k = key.Trim();
-        if (k.Length < 20) return false;
-
-        // Una key es un token opaco: sin espacios, barras ni puntos.
-        return !k.Any(c => char.IsWhiteSpace(c) || c == '/' || c == '\\' || c == '.');
     }
 
     // === Propiedades de modo de operación ===
@@ -750,6 +742,7 @@ public class MainViewModel : ObservableObject
         _orchestrator.StreamingTokenReceived += OnStreamingTokenReceived;
         _orchestrator.ResponseCompleted += OnResponseCompleted;
         _orchestrator.MetricsCalculated += OnMetricsCalculated;
+        _orchestrator.ReasoningProgress += OnReasoningProgress;
         _orchestrator.ErrorOccurred += OnErrorOccurred;
         _orchestrator.DetectedBackendChanged += (s, backend) =>
             System.Windows.Application.Current.Dispatcher.Invoke(() => GpuInfo = backend);
@@ -985,7 +978,7 @@ public class MainViewModel : ObservableObject
     private async Task<string?> RunWebSearchAsync(string message, ChatMessageViewModel assistantViewModel)
     {
 #if WEB_SEARCH
-        var provider = new Services.WebSearch.BraveSearchProvider(() => _settings.BraveApiKey);
+        var provider = new Services.WebSearch.SearxngSearchProvider(() => _settings.SearxngUrl);
         using var pipeline = new Services.WebSearch.WebSearchPipeline(provider);
 
         pipeline.ProgressChanged += (_, status) =>
@@ -1078,6 +1071,25 @@ public class MainViewModel : ObservableObject
             if (lastMessage != null && lastMessage.IsAssistant)
             {
                 lastMessage.GenerationMetrics = metrics;
+            }
+        });
+    }
+
+    /// <summary>
+    /// Muestra el avance del razonamiento. Corta el contador genérico "Pensando…":
+    /// ese timer se apaga solo cuando llega el primer token de contenido, que con un
+    /// modelo de razonamiento puede tardar miles de tokens en aparecer.
+    /// </summary>
+    private void OnReasoningProgress(object? sender, string progress)
+    {
+        System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            _thinkingTimer?.Stop();
+
+            var lastMessage = Messages.LastOrDefault();
+            if (lastMessage != null && lastMessage.IsAssistant)
+            {
+                lastMessage.GenerationMetrics = progress;
             }
         });
     }

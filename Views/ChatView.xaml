@@ -819,12 +819,13 @@
                                         Visibility="{Binding IsWebSearchCompiledIn, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="BÚSQUEDA WEB" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
 
-                                <TextBlock Text="API key de Brave Search:" Foreground="#E0E0E0" FontSize="10" Margin="0,0,0,4" />
-                                <PasswordBox x:Name="BraveApiKeyBox"
-                                             AutomationProperties.AutomationId="BraveApiKeyBox"
-                                             PasswordChanged="BraveApiKey_PasswordChanged"
-                                             Background="#1E293B" Foreground="#E0E0E0"
-                                             BorderBrush="#334155" BorderThickness="1" Padding="6,4" />
+                                <TextBlock Text="Instancia de SearXNG:" Foreground="#E0E0E0" FontSize="10" Margin="0,0,0,4" />
+                                <TextBox x:Name="SearxngUrlBox"
+                                         AutomationProperties.AutomationId="SearxngUrlBox"
+                                         Text="{Binding SearxngUrl, UpdateSourceTrigger=PropertyChanged, Delay=500}"
+                                         Background="#1E293B" Foreground="#E0E0E0"
+                                         BorderBrush="#334155" BorderThickness="1" Padding="6,4"
+                                         FontFamily="{StaticResource MonoFont}" FontSize="10" />
                                 <TextBlock Text="{Binding WebSearchConfigStatus}" FontSize="9" Margin="0,4,0,0" TextWrapping="Wrap">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">

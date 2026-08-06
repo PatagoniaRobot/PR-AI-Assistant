@@ -36,10 +36,14 @@ namespace PRImager.AIAssistant.Services.Models
 
         // Búsqueda web (E2)
         /// <summary>
-        /// API key de Brave Search. Vive solo en la configuración de usuario
-        /// (%APPDATA%), nunca en el repositorio.
+        /// Dirección de la instancia de SearXNG que atiende las búsquedas.
+        /// Vacío = búsqueda web sin configurar.
+        ///
+        /// No es una credencial: es la dirección de un servicio que controla el
+        /// usuario. La búsqueda web de esta herramienta no depende de ninguna
+        /// cuenta ni de ningún servicio pago.
         /// </summary>
-        public string BraveApiKey { get; set; } = "";
+        public string SearxngUrl { get; set; } = "";
 
         /// <summary>Ventana de frescura por defecto: 0=sin filtro, 1=día, 2=semana, 3=mes.</summary>
         public int WebSearchFreshness { get; set; } = 2;

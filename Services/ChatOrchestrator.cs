@@ -74,6 +74,12 @@ public class ChatOrchestrator : IDisposable
 
     public event EventHandler<string>? MetricsCalculated;
 
+    /// <summary>
+    /// Progreso del razonamiento, para que la pantalla no quede muda mientras el
+    /// modelo piensa. No es contenido de la respuesta.
+    /// </summary>
+    public event EventHandler<string>? ReasoningProgress;
+
     private string _baseSystemPrompt = string.Empty;
     private readonly List<string> _additionalContext = new();
 
@@ -257,11 +263,29 @@ public class ChatOrchestrator : IDisposable
 
             var responseBuilder = new System.Text.StringBuilder(1024);
             var watch = System.Diagnostics.Stopwatch.StartNew();
-            
+
             DateTime generationStart = DateTime.Now;
             DateTime? firstTokenAt = null;
             int tokenCount = 0;
+            int reasoningTokens = 0;
 
+            // Con razonamiento activo el modelo puede pensar miles de tokens antes de
+            // emitir la primera palabra de la respuesta. Se informa el avance para que
+            // la espera se distinga de un cuelgue.
+            void OnReasoning(object? _, TokenReceivedEventArgs e)
+            {
+                reasoningTokens++;
+                if (reasoningTokens % 10 == 0)
+                {
+                    var elapsed = (DateTime.Now - generationStart).TotalSeconds;
+                    ReasoningProgress?.Invoke(this,
+                        $"Razonando… {reasoningTokens} tokens · {elapsed:F0}s");
+                }
+            }
+
+            _chatClient.ReasoningTokenReceived += OnReasoning;
+            try
+            {
             await foreach (var token in _chatClient.SendMessageStreamAsync(request, _currentCts.Token))
             {
                 if (firstTokenAt == null) firstTokenAt = DateTime.Now;
@@ -277,6 +301,11 @@ public class ChatOrchestrator : IDisposable
                     string metricsStr = $"{tokenCount} tokens · {totalTime.TotalSeconds:F1}s · {tps:F1} tok/s";
                     MetricsCalculated?.Invoke(this, metricsStr);
                 }
+            }
+            }
+            finally
+            {
+                _chatClient.ReasoningTokenReceived -= OnReasoning;
             }
 
             watch.Stop();
@@ -297,11 +326,23 @@ public class ChatOrchestrator : IDisposable
             // Detectar respuesta vacía o extremadamente corta
             if (string.IsNullOrWhiteSpace(responseContent) || responseContent.Trim().Length < 5)
             {
-                _logger.LogCustom("EMPTY_RESPONSE", $"len={responseContent.Length} probable_cause=context_overflow");
+                // Un modelo de razonamiento que consumió todo el presupuesto pensando
+                // devuelve contenido vacío. Culpar al contexto mandaba a limpiar el
+                // historial, que no arregla nada.
+                bool exhaustedThinking = reasoningTokens > 0;
 
-                string warningMessage = "⚠️ El modelo no pudo generar respuesta. Posibles causas:\n"
-                    + "• El contexto excedió el límite. Intente con 'Nueva Sesión'.\n"
-                    + "• La consulta fue demasiado compleja. Intente reformularla.";
+                _logger.LogCustom("EMPTY_RESPONSE",
+                    $"len={responseContent.Length} tokens_razonamiento={reasoningTokens} " +
+                    $"probable_cause={(exhaustedThinking ? "reasoning_budget_exhausted" : "context_overflow")}");
+
+                string warningMessage = exhaustedThinking
+                    ? $"⚠️ El modelo gastó los {reasoningTokens} tokens disponibles razonando y no "
+                      + "llegó a responder.\n"
+                      + "• Desactivá «Thinking Mode» en el panel lateral (☰ → PARÁMETROS), o\n"
+                      + "• subí «Máx. respuesta» para darle presupuesto suficiente."
+                    : "⚠️ El modelo no pudo generar respuesta. Posibles causas:\n"
+                      + "• El contexto excedió el límite. Intente con 'Nueva Sesión'.\n"
+                      + "• La consulta fue demasiado compleja. Intente reformularla.";
 
                 // No agregar respuesta vacía al historial
                 ResponseCompleted?.Invoke(this, warningMessage);

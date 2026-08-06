@@ -5,7 +5,7 @@ using PRImager.AIAssistant.Services.Models;
 namespace PRImager.AIAssistant.Services.WebSearch;
 
 /// <summary>
-/// Ventana de frescura de los resultados. Se mapea al parámetro freshness de Brave.
+/// Ventana de frescura de los resultados. Se mapea al parámetro time_range de SearXNG.
 /// </summary>
 public enum SearchFreshness
 {
@@ -24,9 +24,9 @@ public static class SearchFreshnessExtensions
 {
     public static string? ToApiValue(this SearchFreshness f) => f switch
     {
-        SearchFreshness.Day => "pd",
-        SearchFreshness.Week => "pw",
-        SearchFreshness.Month => "pm",
+        SearchFreshness.Day => "day",
+        SearchFreshness.Week => "week",
+        SearchFreshness.Month => "month",
         _ => null
     };
 
