@@ -58,11 +58,72 @@ public class ModelProfileService
     /// <summary>
     /// Retorna los modelos disponibles, marcando cada uno según si el .gguf existe en disco.
     /// </summary>
-    public List<(ModelInfo Model, bool IsAvailable)> GetAvailableModels()
+    /// <param name="downloadDirectory">
+    /// Carpeta de descargas a escanear además del catálogo. Los .gguf que aparezcan
+    /// ahí se ofrecen como modelos seleccionables: bajar un modelo del catálogo de
+    /// HuggingFace y después no poder elegirlo deja la descarga sin uso.
+    /// Null o vacío para no escanear nada.
+    /// </param>
+    public List<(ModelInfo Model, bool IsAvailable)> GetAvailableModels(string? downloadDirectory = null)
     {
-        return _catalog.Models
-            .Select(m => (m, IsModelFileAvailable(m)))
+        var result = _catalog.Models
+            .Select(m => (Model: m, IsAvailable: IsModelFileAvailable(m)))
             .ToList();
+
+        foreach (var discovered in DiscoverModels(downloadDirectory, result.Select(r => r.Model)))
+            result.Add((discovered, true));
+
+        return result;
+    }
+
+    /// <summary>
+    /// Arma un <see cref="ModelInfo"/> por cada .gguf de la carpeta que no esté ya
+    /// en el catálogo.
+    ///
+    /// Se excluyen los proyectores multimodales: un mmproj no es un modelo que se
+    /// pueda cargar solo, y ofrecerlo en el selector solo produce un fallo al iniciar
+    /// el servidor.
+    /// </summary>
+    private static IEnumerable<ModelInfo> DiscoverModels(
+        string? directory, IEnumerable<ModelInfo> catalogModels)
+    {
+        if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
+            yield break;
+
+        var known = new HashSet<string>(
+            catalogModels.Select(m => m.ModelFileName),
+            StringComparer.OrdinalIgnoreCase);
+
+        string[] files;
+        try
+        {
+            files = Directory.GetFiles(directory, "*.gguf");
+        }
+        catch (Exception ex)
+        {
+            // Una carpeta de descargas inaccesible no debe dejar sin modelos al selector.
+            System.Diagnostics.Debug.WriteLine($"ModelProfileService: No se pudo leer {directory}: {ex.Message}");
+            yield break;
+        }
+
+        foreach (string file in files.OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
+        {
+            string fileName = Path.GetFileName(file);
+
+            if (known.Contains(fileName)) continue;
+            if (fileName.Contains("mmproj", StringComparison.OrdinalIgnoreCase)) continue;
+
+            yield return new ModelInfo
+            {
+                Id = $"local:{fileName}",
+                DisplayName = $"{Path.GetFileNameWithoutExtension(fileName)} (descargado)",
+                ModelFileName = fileName,
+                DirectoryOverride = directory,
+                RequiresGpu = false,
+                HardwareTag = "📥 Descargado",
+                Capabilities = new List<string>()
+            };
+        }
     }
 
     /// <summary>
@@ -129,15 +190,16 @@ public class ModelProfileService
     }
 
     /// <summary>
-    /// Verifica si el archivo .gguf del modelo existe en la carpeta Models/.
+    /// Verifica si el archivo .gguf del modelo existe, en la carpeta Models/ o en la
+    /// carpeta propia del modelo si se descubrió fuera del catálogo.
     /// </summary>
     private bool IsModelFileAvailable(ModelInfo model)
     {
         if (string.IsNullOrEmpty(model.ModelFileName))
             return false;
 
-        string fullPath = Path.Combine(_modelsDirectory, model.ModelFileName);
-        return File.Exists(fullPath);
+        string directory = model.IsDiscovered ? model.DirectoryOverride : _modelsDirectory;
+        return File.Exists(Path.Combine(directory, model.ModelFileName));
     }
 
     /// <summary>

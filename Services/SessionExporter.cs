@@ -130,7 +130,7 @@ public class SessionExporter
         sb.AppendLine("───────────");
         sb.AppendLine("Este reporte fue generado automáticamente por PR-AI Assistant v1.0.");
         sb.AppendLine("El contenido generado por IA debe ser verificado por el perito.");
-        sb.AppendLine("Modelo utilizado: Gemma 4 E2B (Apache 2.0) ejecutándose localmente.");
+        sb.AppendLine($"Modelo utilizado: {data.ModelName} ejecutándose localmente.");
         sb.AppendLine("Ningún dato fue transmitido a servidores externos.");
         sb.AppendLine("PR-AI Assistant © 2026 Patagonia Robot.");
         sb.AppendLine("══════════════════════════════════════════════════════════");
@@ -227,7 +227,7 @@ public class SessionExporter
         sb.AppendLine("<div class=\"footer-section\">");
         sb.AppendLine("<h2>Estadísticas y Declaración</h2>");
         sb.AppendLine($"<p>Total de consultas: {data.TotalQueries} | Total de respuestas: {data.TotalResponses} | Tokens estimados: {data.TotalTokensEstimated} | Tiempo de inferencia: {data.TotalInferenceMs} ms</p>");
-        sb.AppendLine("<p>Este reporte fue generado automáticamente por PR-AI Assistant v1.0. El contenido generado por IA debe ser verificado por el perito. Modelo utilizado: Gemma 4 E2B (Apache 2.0) ejecutándose localmente. Ningún dato fue transmitido a servidores externos.</p>");
+        sb.AppendLine($"<p>Este reporte fue generado automáticamente por PR-AI Assistant v1.0. El contenido generado por IA debe ser verificado por el perito. Modelo utilizado: {System.Net.WebUtility.HtmlEncode(data.ModelName)} ejecutándose localmente. Ningún dato fue transmitido a servidores externos.</p>");
         sb.AppendLine("<p>PR-AI Assistant © 2026 Patagonia Robot.</p>");
         // El placeholder para el hash lo inyectaremos después de cerrarlo
         sb.AppendLine("<!-- HASH_PLACEHOLDER -->");
@@ -251,6 +251,7 @@ public class SessionExporter
         {
             prai_version = "1.0",
             export_format = "session_report",
+            model = data.ModelName,
             session = new
             {
                 id = data.Session.SessionId,

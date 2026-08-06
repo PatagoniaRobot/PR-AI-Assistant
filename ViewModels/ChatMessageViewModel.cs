@@ -21,9 +21,25 @@ public class ChatMessageViewModel : ObservableObject
     public bool IsAssistant => Role == "assistant";
     public bool IsSystem => Role == "system";
     
+    /// <summary>
+    /// Modelo que generó este mensaje. Se fija al crearlo, no se lee del estado
+    /// actual: si el perito cambia de modelo a mitad de sesión, cada respuesta debe
+    /// seguir declarando con cuál se produjo.
+    /// </summary>
+    public string? ModelDisplayName { get; }
+
     // Para el disclaimer
     public bool HasDisclaimer => IsAssistant;
-    public string DisclaimerText => "\n\n---\n[PR-AI Assistant – Generado por IA]\nEste contenido fue generado por inteligencia artificial (Gemma 4 E2B) ejecutándose localmente. Debe ser verificado por el perito antes de incorporarse a cualquier informe o actuación judicial.";
+
+    public string DisclaimerText =>
+        "\n\n---\n[PR-AI Assistant – Generado por IA]\n" +
+        $"Este contenido fue generado por inteligencia artificial ({ModelLabel}) " +
+        "ejecutándose localmente. Debe ser verificado por el perito antes de " +
+        "incorporarse a cualquier informe o actuación judicial.";
+
+    private string ModelLabel => string.IsNullOrWhiteSpace(ModelDisplayName)
+        ? "modelo local"
+        : ModelDisplayName;
 
     public string Content
     {
@@ -108,11 +124,13 @@ public class ChatMessageViewModel : ObservableObject
         set => SetProperty(ref _areSourcesExpanded, value);
     }
 
-    public ChatMessageViewModel(string role, string content, List<string>? imagePaths = null)
+    public ChatMessageViewModel(string role, string content, List<string>? imagePaths = null,
+                                string? modelDisplayName = null)
     {
         Role = role;
         Content = content;
         Timestamp = DateTime.Now;
         ImagePaths = imagePaths;
+        ModelDisplayName = modelDisplayName;
     }
 }

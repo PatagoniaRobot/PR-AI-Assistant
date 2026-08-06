@@ -161,12 +161,17 @@ public class ModeSelectionViewModel : ObservableObject
                 "• llama.cpp — Licencia MIT\n" +
                 "  https://github.com/ggerganov/llama.cpp\n" +
                 "  Motor de inferencia local para modelos de lenguaje.\n\n" +
-                "• Gemma 4 E2B — Licencia Apache 2.0\n" +
+                "• Gemma 4 (variantes E2B y E4B) — Licencia Apache 2.0\n" +
                 "  https://ai.google.dev/gemma\n" +
-                "  Modelo de IA de Google DeepMind.\n\n" +
+                "  Modelos de IA de Google DeepMind incluidos en la distribución.\n\n" +
                 "• .NET 8 — Licencia MIT\n" +
                 "  https://dotnet.microsoft.com\n" +
                 "  Framework de desarrollo de Microsoft.\n\n" +
+#if WEB_SEARCH
+                "• AngleSharp — Licencia MIT\n" +
+                "  https://anglesharp.github.io\n" +
+                "  Extracción de texto de páginas web.\n\n" +
+#endif
                 "PR-AI Assistant © 2026 Patagonia Robot.\n" +
                 "Todos los derechos reservados.",
                 "PR-AI Assistant — Licencias de Terceros",

@@ -125,20 +125,27 @@ public class ChatOrchestrator : IDisposable
             }
         }
 
-        string modelFile = Path.Combine(modelsPath, _currentSettings.SelectedModel);
         if (string.IsNullOrEmpty(_currentSettings.SelectedModel))
             throw new InvalidOperationException("No se ha seleccionado ningún modelo .gguf.");
 
-        // Detectar proyector multimodal (mmproj) para soporte de visión
+        // Los modelos descargados se guardan fuera de Models/ y se persisten con ruta
+        // completa: si ya viene absoluta, se respeta.
+        string modelFile = ResolvePath(modelsPath, _currentSettings.SelectedModel);
+
+        // Detectar proyector multimodal (mmproj) para soporte de visión.
+        // Se busca junto al modelo, no en Models/: de lo contrario un modelo descargado
+        // sin visión se llevaría el proyector de Gemma y el servidor arrancaría mal.
+        string modelDirectory = Path.GetDirectoryName(modelFile) ?? modelsPath;
+
         string? mmprojPath = null;
         if (!string.IsNullOrEmpty(_currentSettings.MmprojFileName))
         {
-            mmprojPath = Path.Combine(modelsPath, _currentSettings.MmprojFileName);
+            mmprojPath = Path.Combine(modelDirectory, _currentSettings.MmprojFileName);
         }
-        else if (Directory.Exists(modelsPath))
+        else if (Directory.Exists(modelDirectory))
         {
             // Auto-detectar si no está especificado
-            mmprojPath = Directory.GetFiles(modelsPath, "*mmproj*").FirstOrDefault();
+            mmprojPath = Directory.GetFiles(modelDirectory, "*mmproj*").FirstOrDefault();
         }
 
         var config = new LlamaServerConfig

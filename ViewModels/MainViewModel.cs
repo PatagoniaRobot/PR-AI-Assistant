@@ -66,7 +66,9 @@ public class MainViewModel : ObservableObject
         {
             if (SetProperty(ref _selectedModelItem, value) && value != null)
             {
-                _settings.SelectedModel = value.Model.ModelFileName;
+                // SelectionKey trae la ruta completa para los modelos descargados,
+                // que no viven en Models/. Para los del catálogo es el nombre a secas.
+                _settings.SelectedModel = value.Model.SelectionKey;
                 _settings.MmprojFileName = value.Model.MmprojFileName;
                 _configManager.Save(_settings);
 
@@ -74,6 +76,7 @@ public class MainViewModel : ObservableObject
                 OnPropertyChanged(nameof(SelectedModelCapabilitiesText));
                 OnPropertyChanged(nameof(SelectedModelContextInfo));
                 OnPropertyChanged(nameof(IsSelectedModelAvailable));
+                OnPropertyChanged(nameof(ActiveModelDisplayName));
                 ((AsyncRelayCommand)StartServerCommand).RaiseCanExecuteChanged();
             }
         }
@@ -137,6 +140,25 @@ public class MainViewModel : ObservableObject
 
     /// <summary>Si el modelo seleccionado tiene el .gguf disponible en disco.</summary>
     public bool IsSelectedModelAvailable => _selectedModelItem?.IsAvailable ?? false;
+
+    /// <summary>
+    /// Nombre del modelo activo para los avisos de contenido generado por IA y para
+    /// la declaración del reporte exportado. Cae al nombre del .gguf configurado
+    /// cuando el modelo no está en el catálogo (por ejemplo, uno descargado a mano):
+    /// declarar el archivo real es preferible a declarar uno equivocado.
+    /// </summary>
+    public string ActiveModelDisplayName
+    {
+        get
+        {
+            if (_selectedModelItem != null)
+                return _selectedModelItem.Model.DisplayName;
+
+            return string.IsNullOrWhiteSpace(_settings.SelectedModel)
+                ? "modelo local"
+                : Path.GetFileNameWithoutExtension(_settings.SelectedModel);
+        }
+    }
 
     public ServerStatus ServerStatus
     {
@@ -542,9 +564,12 @@ public class MainViewModel : ObservableObject
         get => _settings.BraveApiKey;
         set
         {
-            if (_settings.BraveApiKey != value)
+            // Se recorta al guardar: un salto de línea pegado de más rompe el header
+            // HTTP con una excepción en lugar de un mensaje legible.
+            string incoming = (value ?? "").Trim();
+            if (_settings.BraveApiKey != incoming)
             {
-                _settings.BraveApiKey = value ?? "";
+                _settings.BraveApiKey = incoming;
                 _configManager.Save(_settings);
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsWebSearchConfigured));
@@ -553,13 +578,40 @@ public class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>True si hay API key cargada.</summary>
-    public bool IsWebSearchConfigured => !string.IsNullOrWhiteSpace(_settings.BraveApiKey);
+    /// <summary>True si hay una API key con forma de key cargada.</summary>
+    public bool IsWebSearchConfigured => LooksLikeApiKey(_settings.BraveApiKey);
 
     /// <summary>Estado de configuración de la búsqueda web, para el panel lateral.</summary>
-    public string WebSearchConfigStatus => IsWebSearchConfigured
-        ? "API key cargada."
-        : "Sin API key. Obtené una gratis en brave.com/search/api.";
+    public string WebSearchConfigStatus
+    {
+        get
+        {
+            if (IsWebSearchConfigured) return "API key cargada.";
+
+            return string.IsNullOrWhiteSpace(_settings.BraveApiKey)
+                ? "Sin API key. Obtené una gratis en brave.com/search/api."
+                : "Lo cargado no tiene forma de API key. Pegá la key que da el panel de " +
+                  "Brave (empieza con \"BSA\"), no la dirección de la página.";
+        }
+    }
+
+    /// <summary>
+    /// Chequeo de forma de la API key. El campo es un PasswordBox: lo escrito queda
+    /// enmascarado, así que un error de pegado —la URL de la página en lugar de la
+    /// key— era invisible y solo se manifestaba como un fallo de búsqueda.
+    /// Deliberadamente laxo: rechaza lo que claramente no es una key, sin atarse al
+    /// formato exacto por si Brave lo cambia.
+    /// </summary>
+    private static bool LooksLikeApiKey(string? key)
+    {
+        if (string.IsNullOrWhiteSpace(key)) return false;
+
+        string k = key.Trim();
+        if (k.Length < 20) return false;
+
+        // Una key es un token opaco: sin espacios, barras ni puntos.
+        return !k.Any(c => char.IsWhiteSpace(c) || c == '/' || c == '\\' || c == '.');
+    }
 
     // === Propiedades de modo de operación ===
 
@@ -801,9 +853,7 @@ public class MainViewModel : ObservableObject
     private void ExecuteOpenModelCatalog()
     {
 #if MODEL_DOWNLOAD
-        string modelsDir = string.IsNullOrWhiteSpace(_settings.ModelDownloadPath)
-            ? ResolveModelsDirectory()
-            : _settings.ModelDownloadPath;
+        string modelsDir = ResolveDownloadDirectory() ?? ResolveModelsDirectory();
 
         string logsDir = System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -837,6 +887,24 @@ public class MainViewModel : ObservableObject
             ? _settings.ModelPath
             : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, _settings.ModelPath);
 
+    /// <summary>
+    /// Carpeta donde aterrizan las descargas, que el selector escanea además del catálogo.
+    ///
+    /// En la configuración Forense devuelve null: ese binario no descarga modelos y su
+    /// selector se limita al catálogo distribuido. Aceptar un .gguf de origen arbitrario
+    /// debilitaría la misma garantía que sostiene la barrera de compilación.
+    /// </summary>
+    private string? ResolveDownloadDirectory()
+    {
+#if MODEL_DOWNLOAD
+        return string.IsNullOrWhiteSpace(_settings.ModelDownloadPath)
+            ? ResolveModelsDirectory()
+            : _settings.ModelDownloadPath;
+#else
+        return null;
+#endif
+    }
+
     private bool CanExecuteSendMessage()
     {
         return !string.IsNullOrWhiteSpace(UserInput) && IsServerReady && !IsProcessing;
@@ -859,7 +927,8 @@ public class MainViewModel : ObservableObject
         var userViewModel = new ChatMessageViewModel("user", message, imagesToSend.Any() ? imagesToSend : null);
         Messages.Add(userViewModel);
 
-        var assistantViewModel = new ChatMessageViewModel("assistant", "") { IsStreaming = true };
+        var assistantViewModel = new ChatMessageViewModel(
+            "assistant", "", null, ActiveModelDisplayName) { IsStreaming = true };
         Messages.Add(assistantViewModel);
 
         _thinkingStartTime = DateTime.Now;
@@ -1290,8 +1359,20 @@ public class MainViewModel : ObservableObject
         AvailableExecutionProfiles.Clear();
         _profileService.LoadCatalog();
 
-        // Cargar modelos
-        var models = _profileService.GetAvailableModels();
+        string? downloadDirectory = ResolveDownloadDirectory();
+
+        // Una configuración sin descargas no debe honrar un modelo de ruta absoluta
+        // heredado de un settings.json escrito por el binario comercial: se descarta
+        // acá y más abajo se cae al primer modelo del catálogo.
+        if (downloadDirectory == null && Path.IsPathRooted(_settings.SelectedModel))
+        {
+            _settings.SelectedModel = "";
+            _settings.MmprojFileName = "";
+            _configManager.Save(_settings);
+        }
+
+        // Cargar modelos del catálogo más los .gguf de la carpeta de descargas
+        var models = _profileService.GetAvailableModels(downloadDirectory);
         foreach (var (model, isAvailable) in models)
         {
             AvailableModelItems.Add(new ModelDisplayItem(model, isAvailable));
@@ -1306,7 +1387,8 @@ public class MainViewModel : ObservableObject
 
         // Seleccionar modelo guardado o el primer disponible
         var savedMatch = AvailableModelItems.FirstOrDefault(m =>
-            m.IsAvailable && m.Model.ModelFileName == _settings.SelectedModel);
+            m.IsAvailable && string.Equals(m.Model.SelectionKey, _settings.SelectedModel,
+                                           StringComparison.OrdinalIgnoreCase));
 
         if (savedMatch != null)
         {
@@ -1389,6 +1471,7 @@ public class MainViewModel : ObservableObject
             Messages = exportMessages,
             Artifacts = exportArtifacts,
             ExportTimeUtc = DateTime.UtcNow,
+            ModelName = ActiveModelDisplayName,
             TotalTokensEstimated = EstimatedTokens,
             TotalInferenceMs = 0
         };

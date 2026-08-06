@@ -63,10 +63,12 @@ public sealed class BraveSearchProvider : IWebSearchProvider, IDisposable
 
             using var response = await _http.SendAsync(request, ct);
 
-            if (!response.IsSuccessStatusCode)
-                return WebSearchResponse.Fail(DescribeHttpFailure(response.StatusCode));
-
             string json = await response.Content.ReadAsStringAsync(ct);
+
+            if (!response.IsSuccessStatusCode)
+                return WebSearchResponse.Fail(
+                    DescribeHttpFailure(response.StatusCode, ExtractErrorCode(json)));
+
             return Parse(json);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -87,18 +89,60 @@ public sealed class BraveSearchProvider : IWebSearchProvider, IDisposable
         }
     }
 
-    private static string DescribeHttpFailure(HttpStatusCode code) => code switch
+    /// <summary>
+    /// Traduce el fallo HTTP a un mensaje accionable.
+    ///
+    /// Brave no usa 401 para una key inválida: responde 422 con
+    /// <c>SUBSCRIPTION_TOKEN_INVALID</c> en el cuerpo, el mismo estado que usa para
+    /// una consulta mal formada. Mirar solo el código mandaba al usuario a revisar
+    /// la consulta cuando el problema era la key, así que se discrimina por
+    /// <c>error.code</c>.
+    /// </summary>
+    private static string DescribeHttpFailure(HttpStatusCode code, string? errorCode)
     {
-        HttpStatusCode.Unauthorized =>
-            "La API key de Brave Search fue rechazada (401). Verificá que esté bien copiada.",
-        HttpStatusCode.Forbidden =>
-            "Brave Search rechazó la petición (403). La key puede no tener habilitado este plan.",
-        HttpStatusCode.TooManyRequests =>
-            "Se agotó la cuota de Brave Search (429). El plan gratuito permite 2000 consultas por mes.",
-        HttpStatusCode.UnprocessableEntity =>
-            "Brave Search no pudo procesar la consulta (422).",
-        _ => $"Brave Search respondió {(int)code} ({code})."
-    };
+        if (errorCode == "SUBSCRIPTION_TOKEN_INVALID")
+            return "La API key de Brave Search es inválida: el servicio la rechazó " +
+                   $"({(int)code} SUBSCRIPTION_TOKEN_INVALID). Cargá la key —no la URL de la " +
+                   "página— en el panel lateral, sección BÚSQUEDA WEB. Se obtiene en " +
+                   "brave.com/search/api y empieza con \"BSA\".";
+
+        if (errorCode == "RATE_LIMITED" || code == HttpStatusCode.TooManyRequests)
+            return "Se agotó la cuota de Brave Search (429). El plan gratuito permite " +
+                   "2000 consultas por mes y 1 por segundo.";
+
+        return code switch
+        {
+            HttpStatusCode.Unauthorized =>
+                "La API key de Brave Search fue rechazada (401). Verificá que esté bien copiada.",
+            HttpStatusCode.Forbidden =>
+                "Brave Search rechazó la petición (403). La key puede no tener habilitado este plan.",
+            HttpStatusCode.UnprocessableEntity =>
+                $"Brave Search no pudo procesar la consulta (422{FormatCode(errorCode)}).",
+            _ => $"Brave Search respondió {(int)code} ({code}{FormatCode(errorCode)})."
+        };
+    }
+
+    private static string FormatCode(string? errorCode) =>
+        string.IsNullOrEmpty(errorCode) ? "" : $" {errorCode}";
+
+    /// <summary>Lee <c>error.code</c> del cuerpo de error. Null si el cuerpo no lo trae.</summary>
+    private static string? ExtractErrorCode(string body)
+    {
+        if (string.IsNullOrWhiteSpace(body)) return null;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            return doc.RootElement.TryGetProperty("error", out var error) &&
+                   error.ValueKind == JsonValueKind.Object
+                ? GetOptionalString(error, "code")
+                : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>
     /// Extrae los resultados del JSON. Tolera que falten campos opcionales:

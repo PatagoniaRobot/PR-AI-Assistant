@@ -13,6 +13,11 @@ public record SessionExportData
     public required List<ExportMessage> Messages { get; init; }
     public required List<ExportArtifact> Artifacts { get; init; }
     public DateTime ExportTimeUtc { get; init; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Modelo con el que se produjo la sesión, para la declaración del reporte.
+    /// </summary>
+    public string ModelName { get; init; } = "modelo local";
     
     // Estadísticas
     public int TotalQueries => Messages.Count(m => m.Role == "user");
