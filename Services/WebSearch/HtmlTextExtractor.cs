@@ -25,14 +25,30 @@ public sealed class HtmlTextExtractor
 
     /// <summary>
     /// Extrae el texto principal del HTML, truncado a <paramref name="maxChars"/>.
-    /// Se trunca por caracteres: a ~4 chars por token, 8000 chars ≈ 2000 tokens.
+    /// Se trunca por caracteres: a ~4 chars por token, 6000 chars ≈ 1500 tokens.
+    ///
+    /// El trabajo va a Task.Run porque es CPU pura —parsear el DOM, recorrerlo entero
+    /// y normalizar el texto— y AngleSharp resuelve el parseo sin ceder el hilo. Sin
+    /// esto corría completo sobre quien llamara, que en la aplicación es el hilo de UI:
+    /// el costo lo fija el peso del HTML de entrada, no los caracteres que se usan, así
+    /// que una página pesada congelaba la ventana medio segundo o más.
     /// </summary>
-    public async Task<string> ExtractAsync(string html, int maxChars = 8000, CancellationToken ct = default)
+    public Task<string> ExtractAsync(string html, int maxChars = 6000, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(html)) return "";
+        if (string.IsNullOrWhiteSpace(html)) return Task.FromResult("");
 
+        return Task.Run(() => Extract(html, maxChars, ct), ct);
+    }
+
+    private string Extract(string html, int maxChars, CancellationToken ct)
+    {
         var context = BrowsingContext.New(_config);
-        var document = await context.OpenAsync(req => req.Content(html), ct);
+
+        // OpenAsync no cede el hilo con contenido en memoria; ya estamos fuera del
+        // hilo de UI, así que esperarlo acá no bloquea nada que importe.
+        var document = context.OpenAsync(req => req.Content(html), ct).GetAwaiter().GetResult();
+
+        ct.ThrowIfCancellationRequested();
 
         foreach (var selector in NoiseSelectors)
         {
@@ -46,6 +62,8 @@ public sealed class HtmlTextExtractor
             ?? document.Body as IElement;
 
         if (root == null) return "";
+
+        ct.ThrowIfCancellationRequested();
 
         string text = root.TextContent ?? "";
         text = Normalize(text);

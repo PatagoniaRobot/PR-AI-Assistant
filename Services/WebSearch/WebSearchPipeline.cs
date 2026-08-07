@@ -19,14 +19,36 @@ namespace PRImager.AIAssistant.Services.WebSearch;
 /// </summary>
 public sealed class WebSearchPipeline : IDisposable
 {
-    /// <summary>Resultados que se piden al proveedor.</summary>
-    public const int ResultCount = 5;
+    /// <summary>Resultados que se piden al proveedor. Son candidatos, no lecturas.</summary>
+    public const int ResultCount = 12;
 
-    /// <summary>Páginas que efectivamente se descargan y leen.</summary>
-    public const int PagesToFetch = 3;
+    /// <summary>
+    /// Fuentes leídas con éxito que se busca reunir. Es un objetivo, no un tope de
+    /// intentos: en la práctica ~1 de cada 4 páginas rechaza la descarga, así que
+    /// tomar las primeras N y conformarse dejaba al modelo con dos fuentes o menos.
+    /// </summary>
+    public const int TargetPages = 6;
+
+    /// <summary>
+    /// Tope de páginas que se intentan descargar. Acota el peor caso cuando muchas
+    /// fuentes seguidas rechazan la conexión.
+    /// </summary>
+    public const int MaxFetchAttempts = 10;
+
+    /// <summary>Descargas simultáneas. Las páginas se leen en paralelo, no en fila.</summary>
+    private const int MaxConcurrentFetches = 4;
 
     private const int PerPageTimeoutSeconds = 10;
-    private const int MaxCharsPerPage = 8000;
+
+    /// <summary>
+    /// Presupuesto por página. Bajó de 8000 al ampliar de 3 a 6 fuentes: seis fuentes
+    /// de 6000 son ~9000 tokens, contra ~6000 que costaban tres de 8000. Más variedad
+    /// de origen por un costo de contexto comparable.
+    /// </summary>
+    private const int MaxCharsPerPage = 6000;
+
+    /// <summary>Compatibilidad: cuántas páginas se intentan de arranque.</summary>
+    public const int PagesToFetch = TargetPages;
 
     private readonly IWebSearchProvider _provider;
     private readonly HtmlTextExtractor _extractor = new();
@@ -68,43 +90,70 @@ public sealed class WebSearchPipeline : IDisposable
     {
         ProgressChanged?.Invoke(this, "Buscando…");
 
-        var search = await _provider.SearchAsync(userQuery, ResultCount, freshness, ct);
+        var search = await _provider.SearchAsync(userQuery, ResultCount, freshness, ct)
+                                    .ConfigureAwait(false);
         if (!search.Success)
             return WebSearchContext.Fail(search.ErrorMessage ?? "Fallo la búsqueda.");
 
         if (search.Results.Count == 0)
             return WebSearchContext.Fail("La búsqueda no devolvió resultados.");
 
-        var targets = search.Results.Take(PagesToFetch).ToList();
-        ProgressChanged?.Invoke(this, $"Leyendo {targets.Count} páginas…");
+        var candidates = search.Results.Take(MaxFetchAttempts).ToList();
+        var attempted = new List<(WebSearchResult result, string? text, string? failure)>();
+
+        // Se lee en tandas paralelas hasta reunir TargetPages fuentes útiles. Si la
+        // primera tanda deja huecos —hay sitios que rechazan la descarga— se siguen
+        // probando candidatos en lugar de entregarle al modelo dos fuentes flacas.
+        int next = 0;
+        while (next < candidates.Count
+               && attempted.Count(a => a.failure == null) < TargetPages)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            int missing = TargetPages - attempted.Count(a => a.failure == null);
+            int waveSize = Math.Min(Math.Max(missing, 1), candidates.Count - next);
+            var wave = candidates.Skip(next).Take(waveSize).ToList();
+            next += waveSize;
+
+            int soFar = attempted.Count(a => a.failure == null);
+            ProgressChanged?.Invoke(this, soFar == 0
+                ? $"Leyendo {wave.Count} páginas…"
+                : $"Leyendo {wave.Count} páginas más… ({soFar} de {TargetPages})");
+
+            var waveResults = await ReadPagesAsync(wave, ct).ConfigureAwait(false);
+            attempted.AddRange(waveResults);
+        }
+
+        // Las que se leyeron encabezan la numeración; las fallidas quedan al final
+        // para que el usuario igual las vea en el panel de fuentes.
+        var ordered = attempted.Where(a => a.failure == null)
+                               .Take(TargetPages)
+                               .Concat(attempted.Where(a => a.failure != null))
+                               .ToList();
 
         var sources = new List<WebSource>();
         var pageTexts = new List<string>();
 
-        for (int i = 0; i < targets.Count; i++)
+        for (int i = 0; i < ordered.Count; i++)
         {
-            ct.ThrowIfCancellationRequested();
+            var (r, text, failure) = ordered[i];
 
-            var r = targets[i];
             var source = new WebSource
             {
                 Index = i + 1,
                 Title = string.IsNullOrWhiteSpace(r.Title) ? r.Url : r.Title,
                 Url = r.Url,
-                PublishedDate = string.IsNullOrWhiteSpace(r.PublishedDate) ? "sin fecha" : r.PublishedDate!
+                PublishedDate = string.IsNullOrWhiteSpace(r.PublishedDate) ? "sin fecha" : r.PublishedDate!,
+                WasRead = failure == null
             };
 
-            var (text, failure) = await TryReadPageAsync(r.Url, ct);
-
-            if (failure == null && !string.IsNullOrWhiteSpace(text))
+            if (failure == null)
             {
-                source.WasRead = true;
-                pageTexts.Add(text);
+                pageTexts.Add(text!);
             }
             else
             {
-                source.WasRead = false;
-                source.FailureReason = failure ?? "sin contenido legible";
+                source.FailureReason = failure;
                 // Sin página, al menos queda la descripción que dio el buscador
                 pageTexts.Add(string.IsNullOrWhiteSpace(r.Description)
                     ? "[No se pudo leer esta fuente.]"
@@ -120,10 +169,10 @@ public sealed class WebSearchPipeline : IDisposable
             return new WebSearchContext
             {
                 Success = false,
-                ErrorMessage = $"No se pudo leer ninguna de las {targets.Count} fuentes encontradas.",
+                ErrorMessage = $"No se pudo leer ninguna de las {sources.Count} fuentes encontradas.",
                 Sources = sources,
                 PagesRead = 0,
-                PagesAttempted = targets.Count
+                PagesAttempted = sources.Count
             };
         }
 
@@ -133,8 +182,39 @@ public sealed class WebSearchPipeline : IDisposable
             EnrichedQuery = BuildPrompt(userQuery, sources, pageTexts),
             Sources = sources,
             PagesRead = read,
-            PagesAttempted = targets.Count
+            PagesAttempted = sources.Count
         };
+    }
+
+    /// <summary>
+    /// Descarga y extrae un grupo de páginas en paralelo, conservando el orden de
+    /// entrada. En serie, seis páginas costaban la suma de sus tiempos.
+    /// </summary>
+    private async Task<List<(WebSearchResult, string?, string?)>> ReadPagesAsync(
+        List<WebSearchResult> targets, CancellationToken ct)
+    {
+        using var gate = new SemaphoreSlim(MaxConcurrentFetches);
+
+        var tasks = targets.Select(async r =>
+        {
+            await gate.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                var (text, failure) = await TryReadPageAsync(r.Url, ct).ConfigureAwait(false);
+
+                if (failure == null && string.IsNullOrWhiteSpace(text))
+                    failure = "sin contenido legible";
+
+                return (r, text, failure);
+            }
+            finally
+            {
+                gate.Release();
+            }
+        }).ToList();
+
+        var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+        return results.ToList();
     }
 
     /// <summary>
@@ -148,7 +228,7 @@ public sealed class WebSearchPipeline : IDisposable
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             timeoutCts.CancelAfter(TimeSpan.FromSeconds(PerPageTimeoutSeconds));
 
-            using var response = await _http.GetAsync(url, timeoutCts.Token);
+            using var response = await _http.GetAsync(url, timeoutCts.Token).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return (null, $"HTTP {(int)response.StatusCode}");
 
@@ -156,8 +236,10 @@ public sealed class WebSearchPipeline : IDisposable
             if (mediaType != null && !mediaType.Contains("html", StringComparison.OrdinalIgnoreCase))
                 return (null, $"tipo no soportado ({mediaType})");
 
-            string html = await response.Content.ReadAsStringAsync(timeoutCts.Token);
-            string text = await _extractor.ExtractAsync(html, MaxCharsPerPage, ct);
+            string html = await response.Content.ReadAsStringAsync(timeoutCts.Token)
+                                        .ConfigureAwait(false);
+            string text = await _extractor.ExtractAsync(html, MaxCharsPerPage, timeoutCts.Token)
+                                          .ConfigureAwait(false);
 
             return string.IsNullOrWhiteSpace(text)
                 ? (null, "sin texto extraíble")
