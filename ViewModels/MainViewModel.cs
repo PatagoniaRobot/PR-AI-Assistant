@@ -26,6 +26,12 @@ public class MainViewModel : ObservableObject
     private readonly ContextWindowManager _contextWindowManager;
     private AppSettings _settings;
     private System.Windows.Threading.DispatcherTimer? _thinkingTimer;
+
+    // Coalescencia del streaming: los tokens se acumulan y se vuelcan a la burbuja
+    // cada _streamFlushInterval en lugar de actualizar la UI por cada uno.
+    private readonly System.Text.StringBuilder _pendingTokens = new();
+    private System.Windows.Threading.DispatcherTimer? _streamFlushTimer;
+    private static readonly TimeSpan _streamFlushInterval = TimeSpan.FromMilliseconds(100);
     private DateTime _thinkingStartTime;
 
     private ServerStatus _serverStatus = ServerStatus.Stopped;
@@ -944,6 +950,16 @@ public class MainViewModel : ObservableObject
         };
         _thinkingTimer.Start();
 
+        // El timer se arma acá, sobre el hilo de UI: OnStreamingTokenReceived corre en
+        // un hilo de background y no puede crear ni arrancar un DispatcherTimer.
+        StopStreamFlush();
+        _streamFlushTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = _streamFlushInterval
+        };
+        _streamFlushTimer.Tick += (s, e) => FlushPendingTokens();
+        _streamFlushTimer.Start();
+
         // Enriquecimiento web: solo si el usuario lo pidió con el toggle.
         // El modelo no decide cuándo buscar.
         string promptToSend = message;
@@ -1035,28 +1051,65 @@ public class MainViewModel : ObservableObject
 #endif
     }
 
-    // Despachar actualizaciones de streaming al hilo de UI desde hilos de background
+    // Los tokens llegan de a uno desde un hilo de background. Solo se acumulan acá:
+    // el volcado a la UI lo hace _streamFlushTimer sobre el hilo de interfaz.
     private void OnStreamingTokenReceived(object? sender, string token)
     {
-        System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+        lock (_pendingTokens)
         {
-            var lastMessage = Messages.LastOrDefault();
-            if (lastMessage != null && lastMessage.IsAssistant && lastMessage.IsStreaming)
-            {
-                lastMessage.Content += token;
-            }
-        });
+            _pendingTokens.Append(token);
+        }
+    }
+
+    /// <summary>
+    /// Vuelca a la burbuja los tokens acumulados. Corre en el hilo de UI.
+    /// </summary>
+    private void FlushPendingTokens()
+    {
+        string chunk;
+        lock (_pendingTokens)
+        {
+            if (_pendingTokens.Length == 0) return;
+            chunk = _pendingTokens.ToString();
+            _pendingTokens.Clear();
+        }
+
+        var lastMessage = Messages.LastOrDefault();
+        if (lastMessage != null && lastMessage.IsAssistant && lastMessage.IsStreaming)
+        {
+            lastMessage.AppendContent(chunk);
+        }
+    }
+
+    /// <summary>
+    /// Corta el volcado y descarta lo pendiente. Se llama siempre desde el hilo de UI,
+    /// así que ningún tick puede colarse después y pisar el texto final.
+    /// </summary>
+    private void StopStreamFlush()
+    {
+        _streamFlushTimer?.Stop();
+        _streamFlushTimer = null;
+
+        lock (_pendingTokens)
+        {
+            _pendingTokens.Clear();
+        }
     }
 
     private void OnResponseCompleted(object? sender, string finalResponse)
     {
         System.Windows.Application.Current.Dispatcher.Invoke(() =>
         {
+            // finalResponse trae la respuesta completa, así que lo pendiente se descarta.
+            StopStreamFlush();
+
             var lastMessage = Messages.LastOrDefault();
             if (lastMessage != null && lastMessage.IsAssistant && lastMessage.IsStreaming)
             {
-                lastMessage.IsStreaming = false;
+                // El contenido primero: invertido, el paso a markdown parsearía el texto
+                // parcial y volvería a parsear el definitivo un instante después.
                 lastMessage.Content = finalResponse;
+                lastMessage.IsStreaming = false;
             }
             IsProcessing = false;
             UpdateContextUsage();
@@ -1098,11 +1151,15 @@ public class MainViewModel : ObservableObject
     {
         System.Windows.Application.Current.Dispatcher.Invoke(() =>
         {
+            // Lo generado antes del error se conserva: primero se vuelca, después se corta.
+            FlushPendingTokens();
+            StopStreamFlush();
+
             var lastMessage = Messages.LastOrDefault();
             if (lastMessage != null && lastMessage.IsAssistant && lastMessage.IsStreaming)
             {
+                lastMessage.AppendContent($"\n\n[Error: {error}]");
                 lastMessage.IsStreaming = false;
-                lastMessage.Content += $"\n\n[Error: {error}]";
             }
             IsProcessing = false;
         });
@@ -1113,12 +1170,24 @@ public class MainViewModel : ObservableObject
     private void ExecuteCancel()
     {
         _orchestrator.CancelCurrentRequest();
+
+        // La cancelación no dispara ResponseCompleted: el cierre corre por cuenta de acá.
+        FlushPendingTokens();
+        StopStreamFlush();
+
+        var lastMessage = Messages.LastOrDefault();
+        if (lastMessage != null && lastMessage.IsAssistant && lastMessage.IsStreaming)
+        {
+            lastMessage.IsStreaming = false;
+        }
+
         IsProcessing = false;
     }
 
     private void ExecuteClearHistory()
     {
         _orchestrator.ClearHistory();
+        StopStreamFlush();
         Messages.Clear();
         LoadedArtifactsList.Clear();
         _pendingImages.Clear();

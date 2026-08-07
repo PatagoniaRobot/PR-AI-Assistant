@@ -16,7 +16,6 @@
         <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
         <conv:ServerStatusToColorConverter x:Key="StatusToColor" />
         <conv:HexToBrushConverter x:Key="HexToBrush" />
-        <helpers:MarkdownMultiConverter x:Key="MarkdownMulti" />
 
         <Style TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{StaticResource MainFont}" />
@@ -404,13 +403,9 @@
                                                              Padding="0"
                                                              IsTabStop="False"
                                                              FocusVisualStyle="{x:Null}"
-                                                             Visibility="{Binding IsWaitingForFirstToken, Converter={StaticResource InverseBoolToVis}}">
-                                                    <helpers:RichTextBoxHelper.Document>
-                                                        <MultiBinding Converter="{StaticResource MarkdownMulti}">
-                                                            <Binding Path="Content" />
-                                                            <Binding Path="RenderMode" />
-                                                        </MultiBinding>
-                                                    </helpers:RichTextBoxHelper.Document>
+                                                             Visibility="{Binding IsWaitingForFirstToken, Converter={StaticResource InverseBoolToVis}}"
+                                                             helpers:RichTextBoxHelper.RenderMode="{Binding RenderMode}"
+                                                             helpers:RichTextBoxHelper.Content="{Binding Content}">
                                                     <RichTextBox.Resources>
                                                         <Style TargetType="Paragraph">
                                                             <Setter Property="Margin" Value="0,0,0,8" />

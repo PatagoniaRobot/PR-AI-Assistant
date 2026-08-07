@@ -10,7 +10,8 @@ namespace PRImager.AIAssistant.ViewModels;
 /// </summary>
 public class ChatMessageViewModel : ObservableObject
 {
-    private string _content = string.Empty;
+    private readonly System.Text.StringBuilder _builder = new();
+    private string? _content = string.Empty;
     private bool _isStreaming;
 
     public string Role { get; }
@@ -41,17 +42,40 @@ public class ChatMessageViewModel : ObservableObject
         ? "modelo local"
         : ModelDisplayName;
 
+    /// <summary>
+    /// Texto del mensaje. Se respalda en un StringBuilder porque el streaming crece
+    /// por el final: concatenar con += copiaba todo lo acumulado en cada actualización.
+    /// La cadena materializada se cachea hasta el próximo append.
+    /// </summary>
     public string Content
     {
-        get => _content;
+        get => _content ??= _builder.ToString();
         set
         {
-            if (SetProperty(ref _content, value))
-            {
-                OnPropertyChanged(nameof(RenderMode));
-                OnPropertyChanged(nameof(IsWaitingForFirstToken));
-            }
+            value ??= string.Empty;
+            if (Content == value) return;
+
+            _builder.Clear();
+            _builder.Append(value);
+            _content = value;
+
+            OnPropertyChanged(nameof(Content));
+            OnPropertyChanged(nameof(IsWaitingForFirstToken));
         }
+    }
+
+    /// <summary>
+    /// Agrega texto al final sin recomponer lo ya acumulado. Es el camino del streaming.
+    /// </summary>
+    public void AppendContent(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return;
+
+        _builder.Append(text);
+        _content = null;
+
+        OnPropertyChanged(nameof(Content));
+        OnPropertyChanged(nameof(IsWaitingForFirstToken));
     }
 
     public bool IsStreaming
