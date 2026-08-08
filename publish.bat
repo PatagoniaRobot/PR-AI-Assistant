@@ -42,6 +42,13 @@ echo   - Carpeta Prompts\ (con system_forense.txt)
 echo   - Carpeta Config\ (con model_catalog.json, settings.json)
 echo   - Carpeta Tools\ (con llama-server.exe y dependencias)
 echo.
+echo TOOLS: la release de llama.cpp trae 21 ejecutables y la aplicacion usa UNO,
+echo llama-server.exe. Los otros 20 se sacaron (77,5 MB) junto con ggml-rpc.dll.
+echo No volver a copiar la carpeta entera de una release nueva: llevar solo
+echo llama-server.exe y las .dll, y NO ggml-rpc.dll ni rpc-server.exe, que dan
+echo capacidad de inferencia distribuida por red y contradicen el aislamiento
+echo que promete la edicion institucional.
+echo.
 echo LICENCIAS: LICENSE y THIRD-PARTY-NOTICES.txt se copian solos desde el .csproj.
 echo Verificar que esten en %OUTDIR%\ antes de entregar: incluirlos es una
 echo obligacion de las licencias MIT, Apache 2.0 y del EULA de NVIDIA.
