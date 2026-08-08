@@ -98,4 +98,18 @@
     <None Remove="Models\**" />
   </ItemGroup>
 
+  <!--
+    Los bancos de prueba de Tests\ son proyectos aparte y NO forman parte de la
+    aplicación. Sin estas exclusiones el SDK los tomaría por los globs implícitos y
+    los compilaría dentro del ejecutable: dos Main, código de prueba en el binario
+    que se entrega, y la barrera de compilación arruinada, porque un banco nombra
+    tipos que en Forense no deben existir.
+  -->
+  <ItemGroup>
+    <Compile Remove="Tests\**" />
+    <Page Remove="Tests\**" />
+    <None Remove="Tests\**" />
+    <Resource Remove="Tests\**" />
+  </ItemGroup>
+
 </Project>

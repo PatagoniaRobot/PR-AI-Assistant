@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>disable</Nullable>
+    <AssemblyName>SeleccionDeModelos</AssemblyName>
+    <RootNamespace>PRImager.AIAssistant.Tests.SeleccionDeModelos</RootNamespace>
+
+    <!--
+      Se referencia el DLL compilado y no el .csproj de la aplicación: el banco tiene
+      que poder ejercer un binario ya construido, incluido el de OTRO árbol. Eso es lo
+      que permite el control positivo, correr el mismo banco contra un worktree en el
+      commit anterior y comprobar que las aserciones fallan.
+
+        -p:EdicionApp=Debug|Forense   cuál de las dos ediciones se ejerce
+        -p:RaizApp=<ruta>             contra qué árbol (por defecto, este repo)
+    -->
+    <EdicionApp Condition="'$(EdicionApp)' == ''">Debug</EdicionApp>
+    <RaizApp Condition="'$(RaizApp)' == ''">$(MSBuildThisFileDirectory)..\..</RaizApp>
+    <DllDeLaApp>$(RaizApp)\bin\$(EdicionApp)\net8.0-windows\PR-AI-Assistant.dll</DllDeLaApp>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="PR-AI-Assistant">
+      <HintPath>$(DllDeLaApp)</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <!--
+    Un HintPath que no existe no hace fallar a MSBuild: omite la referencia en
+    silencio y el banco explota con decenas de "no se encontró el tipo PRImager",
+    que no dicen nada del problema real. Se falla acá, con el motivo.
+  -->
+  <Target Name="VerificarDllDeLaApp" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(DllDeLaApp)')"
+           Text="No está el binario de la aplicación en '$(DllDeLaApp)'.&#xA;  · Compilalo primero:  dotnet build -c $(EdicionApp)&#xA;  · Si apuntás a otro árbol con -p:RaizApp=, usá una ruta ABSOLUTA: las relativas se resuelven contra la carpeta de este banco, no contra el directorio actual." />
+  </Target>
+
+</Project>

@@ -1,0 +1,97 @@
+# Bancos de prueba
+
+Ejercen el **código de producción**: cada banco referencia el DLL ya compilado de la
+aplicación e instancia los servicios y ViewModels reales. No hay dobles de la
+aplicación acá dentro.
+
+Ese fue un cambio de criterio deliberado. Los bancos anteriores validaban unidades
+contra dobles y llegaron a informar 289 aserciones sin fallos mientras el producto
+entregaba respuestas vacías y no mostraba los modelos descargados. Un doble modela
+lo que uno ya entendió del mundo, no el mundo.
+
+## Correrlos
+
+```bat
+:: primero, la aplicación tiene que estar compilada
+dotnet build -c Debug
+dotnet build -c Forense
+
+cd Tests\SeleccionDeModelos
+dotnet run -p:EdicionApp=Debug      :: 13 aserciones
+dotnet run -p:EdicionApp=Forense    ::  9 aserciones (el resto no aplica)
+
+cd ..\BorradoDeModelos
+dotnet run                          :: 52 aserciones + 12 de humo
+```
+
+Devuelven 0 si pasa todo y 1 si algo falla, así que sirven en un script.
+
+**No están en `PR-AI-Assistant.sln` a propósito.** Referencian el DLL por `HintPath`,
+no por `ProjectReference`: en un clone limpio, compilar la solución fallaría por un
+binario que todavía no existe. Se corren a mano, después de compilar la aplicación.
+
+## Qué cubre cada uno
+
+### `SeleccionDeModelos` — backlog 9.1 y 9.2
+
+Instancia `ModeSelectionViewModel` y ejerce el ciclo completo del usuario: elegir un
+modelo, guardarlo, reabrir la pantalla. Cubre el descubrimiento de la carpeta de
+descargas, la persistencia por `SelectionKey`, la exclusión de `mmproj`, la carpeta
+ausente, la paridad con el selector del chat y el borde Forense.
+
+### `BorradoDeModelos` — backlog 9.4
+
+Las tres barreras del borrado (modelo activo, catálogo distribuido, fuera de la
+carpeta), el `.part` asociado, el `mmproj` huérfano y el que no lo está, y el
+registro de la baja en `model-downloads.jsonl`.
+
+`Humo.cs` **abre la ventana del catálogo de verdad**, fuerza el layout y escucha
+`PresentationTraceSources.DataBindingSource`, que es donde WPF deja los errores de
+binding que por defecto se traga en silencio. Además lee el texto efectivamente
+dibujado en el árbol visual, no solo que los controles existan: encontró una fila
+que salía con el color correcto y el texto equivocado. Deja una captura de la
+ventana en `%TEMP%\catalogo-con-descargados.png` — conviene mirarla.
+
+## Cómo se comprueba que un banco sirve
+
+Un banco que pasa entero a la primera todavía no probó nada. Las dos formas de
+comprobar que muerde, las dos usadas al escribir estos:
+
+**Contra el código anterior.** `-p:RaizApp=` apunta el banco a otro árbol, así que se
+lo corre contra un worktree en el commit previo al arreglo:
+
+```bat
+git worktree add ..\praia-baseline <commit-anterior> --detach
+cd ..\praia-baseline
+dotnet build -c Debug
+
+cd <repo>\Tests\SeleccionDeModelos
+dotnet run -p:EdicionApp=Debug -p:RaizApp=D:\PROYECTOS\PR-Tools\praia-baseline
+```
+
+**`RaizApp` tiene que ser una ruta absoluta.** MSBuild resuelve las relativas contra
+la carpeta del banco, no contra el directorio actual, y un `HintPath` que no existe
+no lo hace fallar: omite la referencia y el banco explota con decenas de «no se
+encontró el tipo `PRImager`». Los `.csproj` verifican que el DLL esté y cortan con
+ese motivo, pero conviene saberlo.
+
+Contra `0a2ea1f` este banco da 7 OK y 5 fallas, y reproduce el síntoma que había
+reportado el usuario. Después del arreglo, 13 y 0.
+
+Terminado, se limpia el worktree:
+
+```bat
+git worktree remove ..\praia-baseline --force
+```
+
+**Mutando el código.** Se desactiva a propósito la barrera que el banco dice cubrir y
+se comprueba que las aserciones fallan. Desactivar las dos barreras críticas del
+borrado hace fallar 6 aserciones y borra el modelo activo de verdad.
+
+## Al agregar un banco nuevo
+
+`Tests\**` está excluido del `.csproj` de la aplicación. Sin esas exclusiones el SDK
+tomaría estos `.cs` por los globs implícitos y los compilaría dentro del ejecutable
+que se entrega —con dos `Main`, y nombrando tipos que en la edición Forense no deben
+existir. Si se agrega una carpeta acá, no hace falta tocar nada; si se agrega un
+banco fuera de `Tests\`, sí.
