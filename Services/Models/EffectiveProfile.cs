@@ -12,6 +12,9 @@ namespace PRImager.AIAssistant.Services.Models;
 ///   - SystemPrompt: gana el prompt institucional de investigación.
 ///   - MandatoryLog: forzado a true.
 ///   - WebSearchEnabled / ModelDownloadEnabled: forzados a false.
+///   - FileUploadEnabled: forzado a TRUE. Es la única capacidad que el marco
+///     institucional habilita en vez de quitar: cargar evidencia es constitutivo de
+///     la investigación y un perfil no puede sacárselo al perito.
 ///   - Temperature: la define el perfil en ambos modos. Es un parámetro de muestreo,
 ///     no una capacidad, y el perito debe poder elegirla.
 ///
@@ -34,6 +37,16 @@ public sealed class EffectiveProfile
     /// <summary>Descarga de modelos efectivamente disponible.</summary>
     public bool ModelDownloadEnabled { get; }
 
+    /// <summary>Carga de archivos e imágenes efectivamente disponible.</summary>
+    public bool FileUploadEnabled { get; }
+
+    /// <summary>
+    /// True cuando lo que se cargue entra como contexto forense auditado, en lugar de
+    /// como un adjunto del mensaje. Es la diferencia entre evidencia y un archivo
+    /// cualquiera, y decide tanto el destino del contenido como el texto del diálogo.
+    /// </summary>
+    public bool FileUploadIsForensic => Mode == OperationMode.Investigation;
+
     /// <summary>Registro de auditoría obligatorio.</summary>
     public bool MandatoryLog { get; }
 
@@ -49,6 +62,7 @@ public sealed class EffectiveProfile
         double temperature,
         bool webSearchEnabled,
         bool modelDownloadEnabled,
+        bool fileUploadEnabled,
         bool mandatoryLog,
         bool isSystemPromptOverridden)
     {
@@ -57,6 +71,7 @@ public sealed class EffectiveProfile
         Temperature = temperature;
         WebSearchEnabled = webSearchEnabled;
         ModelDownloadEnabled = modelDownloadEnabled;
+        FileUploadEnabled = fileUploadEnabled;
         MandatoryLog = mandatoryLog;
         IsSystemPromptOverridden = isSystemPromptOverridden;
     }
@@ -76,6 +91,8 @@ public sealed class EffectiveProfile
             temperature: profile.Temperature,
             webSearchEnabled: !isInvestigation && profile.WebSearchEnabled,
             modelDownloadEnabled: !isInvestigation && profile.ModelDownloadEnabled,
+            // Nótese el || y no el &&: acá el modo habilita, no restringe
+            fileUploadEnabled: isInvestigation || profile.FileUploadEnabled,
             mandatoryLog: isInvestigation || profile.MandatoryLog,
             isSystemPromptOverridden: isInvestigation);
     }

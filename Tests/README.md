@@ -22,6 +22,10 @@ dotnet run -p:EdicionApp=Forense    ::  9 aserciones (el resto no aplica)
 
 cd ..\BorradoDeModelos
 dotnet run                          :: 52 aserciones + 12 de humo
+
+cd ..\CargaDeArchivos
+dotnet run -p:EdicionApp=Debug      :: 46 aserciones + 11 de humo
+dotnet run -p:EdicionApp=Forense    :: igual: la carga no es capacidad de red
 ```
 
 Devuelven 0 si pasa todo y 1 si algo falla, así que sirven en un script.
@@ -45,12 +49,35 @@ Las tres barreras del borrado (modelo activo, catálogo distribuido, fuera de la
 carpeta), el `.part` asociado, el `mmproj` huérfano y el que no lo está, y el
 registro de la baja en `model-downloads.jsonl`.
 
-`Humo.cs` **abre la ventana del catálogo de verdad**, fuerza el layout y escucha
+Su `Humo.cs` **abre la ventana del catálogo de verdad**, fuerza el layout y escucha
 `PresentationTraceSources.DataBindingSource`, que es donde WPF deja los errores de
 binding que por defecto se traga en silencio. Además lee el texto efectivamente
 dibujado en el árbol visual, no solo que los controles existan: encontró una fila
 que salía con el color correcto y el texto equivocado. Deja una captura de la
 ventana en `%TEMP%\catalogo-con-descargados.png` — conviene mirarla.
+
+### `CargaDeArchivos` — backlog 9.3
+
+La regla de precedencia de la capacidad —el Modo Investigación la **habilita** en vez
+de quitarla, al revés que la búsqueda web y las descargas— y, sobre todo, que un
+archivo adjuntado en Modo General no se convierta en evidencia: no entra al system
+prompt, no aparece en el panel de contexto forense y del log solo queda el hecho, no
+el contenido. Verifica también que Investigación siga comportándose igual que antes.
+
+Instancia un `MainViewModel` real con un doble del diálogo de archivos. No necesita
+servidor de inferencia: para saber a dónde fue a parar el archivo alcanza con mirar
+el system prompt del orquestador y las colecciones del ViewModel.
+
+Su `Humo.cs` dibuja la vista de chat y ejercita la tira de adjuntos desde el árbol
+visual: pulsa la ✕ real, no el comando del ViewModel. Deja una captura en
+`%TEMP%\tira-de-adjuntos.png`.
+
+**Una lección de este banco, que vale para los que vengan.** La aserción «el
+contenido del archivo no está en el log» pasaba, y pasaba porque el log se leía
+vacío: el `ForensicLogger` mantiene el archivo abierto en escritura y
+`File.ReadAllText` chocaba con eso, pero la `IOException` estaba atrapada y devolvía
+cadena vacía. Una aserción negativa sobre una fuente vacía siempre pasa. Ahora la
+lectura falla ruidosamente si no puede leer.
 
 ## Cómo se comprueba que un banco sirve
 

@@ -192,6 +192,9 @@
                               Content="Búsqueda web habilitada" />
                     <CheckBox IsChecked="{Binding EditModelDownloadEnabled}" IsEnabled="{Binding IsEditable}"
                               Content="Descarga de modelos habilitada" />
+                    <CheckBox IsChecked="{Binding EditFileUploadEnabled}" IsEnabled="{Binding IsEditable}"
+                              Content="Adjuntar archivos e imágenes"
+                              ToolTip="El Modo Investigación siempre la habilita: cargar evidencia es parte del marco institucional y un perfil no puede quitarla." />
                     <CheckBox IsChecked="{Binding EditMandatoryLog}" IsEnabled="{Binding IsEditable}"
                               Content="Registro de auditoría obligatorio" />
 

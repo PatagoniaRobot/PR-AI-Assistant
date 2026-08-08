@@ -55,6 +55,12 @@ public class MainViewModel : ObservableObject
     public ObservableCollection<string> AvailableModels { get; }
     public ObservableCollection<LoadedArtifactViewModel> LoadedArtifactsList { get; }
 
+    /// <summary>
+    /// Adjuntos del próximo mensaje en Modo General. Se vacía al enviar: son del turno,
+    /// no de la sesión, que es justamente lo que los distingue del contexto forense.
+    /// </summary>
+    public ObservableCollection<LoadedArtifactViewModel> PendingAttachments { get; }
+
     // === Modelo y perfil de ejecución (catálogo v2) ===
 
     /// <summary>Modelos disponibles para el selector de la UI.</summary>
@@ -430,15 +436,19 @@ public class MainViewModel : ObservableObject
         // Cultura invariante: el log de auditoría debe ser parseable sin depender del locale
         _orchestrator.Logger.LogCustom("PROFILE_APPLIED", string.Format(
             System.Globalization.CultureInfo.InvariantCulture,
-            "id={0} mode={1} temp={2:F2} web={3} descargas={4} log_obligatorio={5} prompt_pisado={6}",
+            "id={0} mode={1} temp={2:F2} web={3} descargas={4} archivos={5} log_obligatorio={6} prompt_pisado={7}",
             profile.Id, CurrentMode, effective.Temperature, effective.WebSearchEnabled,
-            effective.ModelDownloadEnabled, effective.MandatoryLog, effective.IsSystemPromptOverridden));
+            effective.ModelDownloadEnabled, effective.FileUploadEnabled, effective.MandatoryLog,
+            effective.IsSystemPromptOverridden));
 
         OnPropertyChanged(nameof(Temperature));
         OnPropertyChanged(nameof(AccentColor));
         OnPropertyChanged(nameof(ProfileName));
         OnPropertyChanged(nameof(IsWebSearchAvailable));
         OnPropertyChanged(nameof(IsModelDownloadAvailable));
+        OnPropertyChanged(nameof(IsFileUploadAvailable));
+        OnPropertyChanged(nameof(FileUploadIsForensic));
+        OnPropertyChanged(nameof(ShowFileButtons));
         OnPropertyChanged(nameof(IsProfilePromptOverridden));
         OnPropertyChanged(nameof(ProfileOverrideNotice));
 
@@ -463,6 +473,21 @@ public class MainViewModel : ObservableObject
 
     /// <summary>Descarga de modelos efectivamente disponible (perfil + modo). Consumido por E3.</summary>
     public bool IsModelDownloadAvailable => _effectiveProfile?.ModelDownloadEnabled ?? false;
+
+    /// <summary>
+    /// Carga de archivos efectivamente disponible (perfil + modo).
+    /// El Modo Investigación la fuerza a true; fuera de él la decide el perfil.
+    /// </summary>
+    public bool IsFileUploadAvailable => _effectiveProfile?.FileUploadEnabled ?? false;
+
+    /// <summary>
+    /// True cuando lo que se cargue entra como evidencia auditada al contexto forense.
+    /// False en Modo General, donde el archivo es un adjunto del mensaje y nada más.
+    /// </summary>
+    public bool FileUploadIsForensic => _effectiveProfile?.FileUploadIsForensic ?? false;
+
+    /// <summary>Hay adjuntos esperando: la tira sobre el input se muestra.</summary>
+    public bool HasPendingAttachments => PendingAttachments.Count > 0;
 
     /// <summary>True si el modo institucional pisó el prompt del perfil.</summary>
     public bool IsProfilePromptOverridden => _effectiveProfile?.IsSystemPromptOverridden ?? false;
@@ -646,11 +671,19 @@ public class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>Muestra el panel derecho de contexto forense (solo Investigación).</summary>
+    /// <summary>
+    /// Muestra el panel derecho de contexto forense. Sigue atado al modo, no al perfil:
+    /// ese panel significa evidencia, y en Modo General lo que se carga no lo es. Los
+    /// adjuntos de General se ven en la tira sobre el input.
+    /// </summary>
     public bool ShowContextPanel => CurrentMode == OperationMode.Investigation;
 
-    /// <summary>Muestra los botones de carga de archivos e imágenes (solo Investigación).</summary>
-    public bool ShowFileButtons => CurrentMode == OperationMode.Investigation;
+    /// <summary>
+    /// Muestra los botones de carga de archivos e imágenes. Depende del perfil efectivo
+    /// y no del modo: no todo lo que se carga es evidencia, y el usuario debe poder
+    /// adjuntar un archivo en Modo General.
+    /// </summary>
+    public bool ShowFileButtons => IsFileUploadAvailable;
 
     /// <summary>Texto del badge de sandbox para modo consulta.</summary>
     public string ModeBadgeText => CurrentMode == OperationMode.Consultation
@@ -720,6 +753,8 @@ public class MainViewModel : ObservableObject
         Messages = new ObservableCollection<ChatMessageViewModel>();
         AvailableModels = new ObservableCollection<string>();
         LoadedArtifactsList = new ObservableCollection<LoadedArtifactViewModel>();
+        PendingAttachments = new ObservableCollection<LoadedArtifactViewModel>();
+        PendingAttachments.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasPendingAttachments));
 
         // Seleccionar opción de MaxTokens según configuración guardada
         _selectedMaxTokens = MaxTokensOptions.FirstOrDefault(o => o.Value == _settings.MaxTokens)
@@ -931,6 +966,11 @@ public class MainViewModel : ObservableObject
         if (LoadedArtifacts >= imagesToSend.Count)
             LoadedArtifacts -= imagesToSend.Count;
 
+        // Los adjuntos de Modo General son del turno: se consumen acá y la tira queda
+        // vacía, a diferencia del contexto forense, que persiste en toda la sesión.
+        string attachmentsBlock = BuildAttachmentsBlock();
+        PendingAttachments.Clear();
+
         var userViewModel = new ChatMessageViewModel("user", message, imagesToSend.Any() ? imagesToSend : null);
         Messages.Add(userViewModel);
 
@@ -975,12 +1015,24 @@ public class MainViewModel : ObservableObject
 
         if (IsWebSearchOn)
         {
+            // La búsqueda se hace con el mensaje limpio: enriquecerlo antes mandaría
+            // el archivo entero como consulta al buscador.
             var enriched = await RunWebSearchAsync(message, assistantViewModel);
             if (enriched != null)
             {
                 promptToSend = enriched;
                 historyContent = message;
             }
+        }
+
+        // Los adjuntos se anteponen al prompt de este turno y no entran al historial,
+        // por el mismo motivo que las fuentes web (ver desvío «Historial sin la
+        // consulta enriquecida»): de otro modo cada turno arrastraría el archivo
+        // completo y el contexto se consumiría solo.
+        if (attachmentsBlock.Length > 0)
+        {
+            promptToSend = attachmentsBlock + promptToSend;
+            historyContent ??= message;
         }
 
         try
@@ -1198,6 +1250,9 @@ public class MainViewModel : ObservableObject
         StopStreamFlush();
         Messages.Clear();
         LoadedArtifactsList.Clear();
+        // Los adjuntos pendientes también se descartan: "nueva sesión" no puede dejar
+        // un archivo colgado del turno anterior, que es la versión suave de 4.1.
+        PendingAttachments.Clear();
         _pendingImages.Clear();
         LoadedArtifacts = 0;
         EstimatedTokens = 0;
@@ -1277,43 +1332,93 @@ public class MainViewModel : ObservableObject
 
     private async Task ExecuteLoadFilesAsync()
     {
-        var files = _fileDialogService.OpenTextFiles("Seleccione archivos de contexto forense");
-        if (files != null && files.Length > 0)
+        bool forensic = FileUploadIsForensic;
+
+        // El diálogo no puede decir "contexto forense" fuera de una investigación:
+        // nombrar evidencia a un archivo cualquiera confunde sobre qué se está haciendo.
+        var files = _fileDialogService.OpenTextFiles(forensic
+            ? "Seleccione archivos de contexto forense"
+            : "Seleccione archivos para adjuntar al mensaje");
+
+        if (files == null || files.Length == 0) return;
+
+        foreach (var file in files)
         {
-            foreach (var file in files)
+            try
             {
-                try
+                var validation = _ingestionService.ValidateFile(file);
+                if (!validation.IsAccepted)
                 {
-                    var validation = _ingestionService.ValidateFile(file);
-                    if (!validation.IsAccepted)
-                    {
-                        System.Windows.MessageBox.Show(
-                            $"Archivo rechazado: {Path.GetFileName(file)}\n{validation.RejectionReason}",
-                            "Ingesta rechazada", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                        continue;
-                    }
+                    System.Windows.MessageBox.Show(
+                        $"Archivo rechazado: {Path.GetFileName(file)}\n{validation.RejectionReason}",
+                        "Ingesta rechazada", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    continue;
+                }
 
-                    string header = $"--- ARCHIVO: {Path.GetFileName(file)} [{validation.ContentType}] ---\n";
-                    string content = header + (validation.ProcessedContent ?? await File.ReadAllTextAsync(file));
+                string header = $"--- ARCHIVO: {Path.GetFileName(file)} [{validation.ContentType}] ---\n";
+                string content = header + (validation.ProcessedContent ?? await File.ReadAllTextAsync(file));
 
-                    if (validation.WasTruncated)
-                        content += $"\n[TRUNCADO: {validation.OriginalLength} → {validation.ProcessedLength} chars]";
+                if (validation.WasTruncated)
+                    content += $"\n[TRUNCADO: {validation.OriginalLength} → {validation.ProcessedLength} chars]";
 
+                if (forensic)
+                {
                     _orchestrator.LoadForensicContext(content);
 
                     var artifact = LoadedArtifactViewModel.FromFile(file);
                     artifact.RemoveCommand = new RelayCommand(() => RemoveArtifact(artifact));
                     LoadedArtifactsList.Add(artifact);
                 }
-                catch (Exception ex)
+                else
                 {
-                    System.Windows.MessageBox.Show($"Error al cargar archivo {Path.GetFileName(file)}:\n{ex.Message}");
+                    AddPendingAttachment(LoadedArtifactViewModel.FromFile(file, content));
                 }
             }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Error al cargar archivo {Path.GetFileName(file)}:\n{ex.Message}");
+            }
+        }
+
+        if (forensic)
+        {
             LoadedArtifacts = LoadedArtifactsList.Count + _pendingImages.Count;
             UpdateContextUsage();
         }
     }
+
+    /// <summary>
+    /// Suma un adjunto al próximo mensaje y deja constancia del hecho.
+    ///
+    /// Se registra qué entró —nombre, tamaño, tipo— y **nunca el contenido**: en Modo
+    /// General el archivo no es evidencia y auditar lo que el usuario lee convertiría
+    /// una herramienta personal en otra cosa. Pero sin ningún rastro no habría manera
+    /// de reconstruir qué vio el modelo, y eso sí hace falta.
+    /// </summary>
+    private void AddPendingAttachment(LoadedArtifactViewModel artifact)
+    {
+        artifact.RemoveCommand = new RelayCommand(() => RemovePendingAttachment(artifact));
+        PendingAttachments.Add(artifact);
+
+        _orchestrator.Logger.LogCustom("FILE_ATTACHED", string.Format(
+            System.Globalization.CultureInfo.InvariantCulture,
+            "file=\"{0}\" bytes={1} type={2} forense=false",
+            artifact.FileName, artifact.FileSize, artifact.IsImage ? "imagen" : "texto"));
+    }
+
+    private void RemovePendingAttachment(LoadedArtifactViewModel artifact)
+    {
+        PendingAttachments.Remove(artifact);
+        if (artifact.IsImage) _pendingImages.Remove(artifact.FilePath);
+    }
+
+    /// <summary>
+    /// Bloque de texto de los adjuntos del turno. Ver <see cref="AttachmentPrompt"/>.
+    /// </summary>
+    private string BuildAttachmentsBlock() =>
+        AttachmentPrompt.Build(PendingAttachments
+            .Where(a => !a.IsImage)
+            .Select(a => a.AttachedContent));
 
     private async Task ExecuteLoadImagesAsync()
     {
@@ -1341,15 +1446,25 @@ public class MainViewModel : ObservableObject
                 }
 
                 _pendingImages.Add(file);
-                var artifact = LoadedArtifactViewModel.FromFile(file);
-                artifact.RemoveCommand = new RelayCommand(() =>
+
+                if (FileUploadIsForensic)
                 {
-                    _pendingImages.Remove(file);
-                    RemoveArtifact(artifact);
-                });
-                LoadedArtifactsList.Add(artifact);
+                    var artifact = LoadedArtifactViewModel.FromFile(file, isImage: true);
+                    artifact.RemoveCommand = new RelayCommand(() =>
+                    {
+                        _pendingImages.Remove(file);
+                        RemoveArtifact(artifact);
+                    });
+                    LoadedArtifactsList.Add(artifact);
+                }
+                else
+                {
+                    AddPendingAttachment(LoadedArtifactViewModel.FromFile(file, isImage: true));
+                }
             }
-            LoadedArtifacts = LoadedArtifactsList.Count + _pendingImages.Count;
+
+            if (FileUploadIsForensic)
+                LoadedArtifacts = LoadedArtifactsList.Count + _pendingImages.Count;
         }
         await Task.CompletedTask;
     }

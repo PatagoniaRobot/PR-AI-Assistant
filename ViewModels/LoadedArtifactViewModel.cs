@@ -5,7 +5,11 @@ using PRImager.AIAssistant.Helpers;
 namespace PRImager.AIAssistant.ViewModels;
 
 /// <summary>
-/// Representa un artefacto (archivo o imagen) cargado en el contexto forense.
+/// Representa un archivo o imagen cargado por el usuario.
+///
+/// Sirve a los dos destinos posibles, que no son lo mismo: el contexto forense de
+/// una investigación —evidencia, auditada, persistente en la sesión— y un adjunto
+/// del próximo mensaje en Modo General, que no es evidencia y no sobrevive al turno.
 /// </summary>
 public class LoadedArtifactViewModel : ObservableObject
 {
@@ -13,6 +17,19 @@ public class LoadedArtifactViewModel : ObservableObject
     public string FilePath { get; init; } = string.Empty;
     public string FileType { get; init; } = string.Empty;
     public long FileSize { get; init; }
+
+    /// <summary>
+    /// Texto ya procesado del archivo, cuando el artefacto es un adjunto del mensaje.
+    /// Vacío para las imágenes —viajan como imagen, no como texto— y para el contexto
+    /// forense, que se acumula en el orquestador y no acá.
+    /// </summary>
+    public string AttachedContent { get; init; } = string.Empty;
+
+    /// <summary>Distingue el ícono y, sobre todo, cómo viaja al modelo.</summary>
+    public bool IsImage { get; init; }
+
+    /// <summary>Ícono para la tira de adjuntos.</summary>
+    public string Icon => IsImage ? "🖼" : "📄";
 
     /// <summary>Tamaño formateado para mostrar en UI.</summary>
     public string FileSizeFormatted => FileSize < 1024
@@ -27,7 +44,8 @@ public class LoadedArtifactViewModel : ObservableObject
     /// <summary>
     /// Crea un LoadedArtifactViewModel a partir de una ruta de archivo.
     /// </summary>
-    public static LoadedArtifactViewModel FromFile(string filePath)
+    public static LoadedArtifactViewModel FromFile(
+        string filePath, string attachedContent = "", bool isImage = false)
     {
         var info = new FileInfo(filePath);
         return new LoadedArtifactViewModel
@@ -35,7 +53,9 @@ public class LoadedArtifactViewModel : ObservableObject
             FileName = info.Name,
             FilePath = filePath,
             FileType = info.Extension.ToUpperInvariant(),
-            FileSize = info.Exists ? info.Length : 0
+            FileSize = info.Exists ? info.Length : 0,
+            AttachedContent = attachedContent,
+            IsImage = isImage
         };
     }
 }

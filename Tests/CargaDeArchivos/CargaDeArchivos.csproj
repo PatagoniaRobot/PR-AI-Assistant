@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>disable</Nullable>
+    <AssemblyName>CargaDeArchivos</AssemblyName>
+    <RootNamespace>PRImager.AIAssistant.Tests.CargaDeArchivos</RootNamespace>
+
+    <!--
+      Corre contra las dos ediciones: la carga de archivos existe en ambas, porque no
+      es una capacidad de red.
+
+        -p:EdicionApp=Debug|Forense
+        -p:RaizApp=<ruta ABSOLUTA>
+    -->
+    <EdicionApp Condition="'$(EdicionApp)' == ''">Debug</EdicionApp>
+    <RaizApp Condition="'$(RaizApp)' == ''">$(MSBuildThisFileDirectory)..\..</RaizApp>
+    <DllDeLaApp>$(RaizApp)\bin\$(EdicionApp)\net8.0-windows\PR-AI-Assistant.dll</DllDeLaApp>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="PR-AI-Assistant">
+      <HintPath>$(DllDeLaApp)</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="VerificarDllDeLaApp" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(DllDeLaApp)')"
+           Text="No está el binario de la aplicación en '$(DllDeLaApp)'.&#xA;  · Compilalo primero:  dotnet build -c $(EdicionApp)&#xA;  · Si apuntás a otro árbol con -p:RaizApp=, usá una ruta ABSOLUTA: las relativas se resuelven contra la carpeta de este banco, no contra el directorio actual." />
+  </Target>
+
+</Project>

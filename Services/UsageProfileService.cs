@@ -170,6 +170,7 @@ public class UsageProfileService
         existing.DefaultModelPath = edited.DefaultModelPath;
         existing.WebSearchEnabled = edited.WebSearchEnabled;
         existing.ModelDownloadEnabled = edited.ModelDownloadEnabled;
+        existing.FileUploadEnabled = edited.FileUploadEnabled;
         existing.MandatoryLog = edited.MandatoryLog;
         existing.AccentColor = edited.AccentColor;
         Save();
@@ -221,6 +222,9 @@ public class UsageProfileService
         ContextTokens = 8192,
         WebSearchEnabled = false,
         ModelDownloadEnabled = false,
+        // En Investigación el modo lo fuerza igual; queda explícito para cuando este
+        // perfil se use en Modo Consulta, donde cargar un archivo sigue teniendo sentido.
+        FileUploadEnabled = true,
         MandatoryLog = true,
         AccentColor = "#1E5F74",
         IsFactory = true,
@@ -235,6 +239,7 @@ public class UsageProfileService
         ContextTokens = 8192,
         WebSearchEnabled = true,
         ModelDownloadEnabled = true,
+        FileUploadEnabled = true,
         MandatoryLog = false,
         AccentColor = "#B85C38",
         IsFactory = true,

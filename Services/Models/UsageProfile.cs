@@ -36,6 +36,16 @@ public sealed class UsageProfile
     /// <summary>Habilita el catálogo y la descarga de modelos (E3).</summary>
     public bool ModelDownloadEnabled { get; set; }
 
+    /// <summary>
+    /// Habilita adjuntar archivos e imágenes al mensaje.
+    ///
+    /// A diferencia de las otras dos capacidades, el Modo Investigación la fuerza a
+    /// <c>true</c> y no a false: cargar evidencia es parte del marco institucional,
+    /// no algo que el perfil pueda quitar. Fuera de Investigación manda el perfil, y
+    /// lo que se adjunta **no es evidencia**: va al mensaje, no al contexto forense.
+    /// </summary>
+    public bool FileUploadEnabled { get; set; }
+
     /// <summary>Fuerza el registro de auditoría de toda la sesión.</summary>
     public bool MandatoryLog { get; set; }
 
@@ -59,6 +69,7 @@ public sealed class UsageProfile
         DefaultModelPath = DefaultModelPath,
         WebSearchEnabled = WebSearchEnabled,
         ModelDownloadEnabled = ModelDownloadEnabled,
+        FileUploadEnabled = FileUploadEnabled,
         MandatoryLog = MandatoryLog,
         AccentColor = AccentColor,
         IsFactory = false

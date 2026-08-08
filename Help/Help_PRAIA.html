@@ -110,13 +110,18 @@
                             <li><strong>Máx. respuesta:</strong> Límite de tokens para la respuesta generada.</li>
                         </ul>
                     </li>
-                    <li><strong>Cargar contexto forense</strong> (solo Modo Investigación):
+                    <li><strong>Cargar archivos</strong>:
                         <ul>
                             <li>Botón <strong>📎</strong> — Cargar archivos de texto, CSV, JSON o volcados hexadecimales.</li>
                             <li>Botón <strong>🖼️</strong> — Cargar imágenes para análisis visual (requiere perfil con soporte de Visión).</li>
                             <li>También puede arrastrar archivos directamente sobre el área de chat.</li>
                         </ul>
-                        <p>Los archivos cargados aparecen en el panel derecho "Contexto Forense" con su tipo y tamaño. El contador de tokens estimados se actualiza en tiempo real.</p>
+                        <p><strong>Qué ocurre con lo que se carga depende del modo, y la diferencia es importante:</strong></p>
+                        <ul>
+                            <li><strong>En Modo Investigación es evidencia.</strong> Los archivos aparecen en el panel derecho "Contexto Forense" con su tipo y tamaño, se inyectan en el contexto de análisis, permanecen disponibles durante toda la sesión y quedan registrados en el log de auditoría. El contador de tokens estimados se actualiza en tiempo real.</li>
+                            <li><strong>En Modo General es un adjunto del mensaje.</strong> Los archivos aparecen como etiquetas sobre el cuadro de texto, se envían junto con esa única consulta y luego se descartan. <em>No</em> son evidencia, no entran al panel de contexto forense y no permanecen en la sesión. Del log solo queda constancia de qué archivo se adjuntó —nombre, tamaño y tipo—, nunca su contenido.</li>
+                        </ul>
+                        <p>Los botones de carga se muestran según el perfil de uso activo. El Modo Investigación siempre los habilita: cargar evidencia es parte del marco institucional y un perfil no puede quitarlo.</p>
                     </li>
                     <li><strong>Interactuar con el asistente:</strong> Escriba su consulta en el campo de texto inferior y presione <span class="kbd">Enter</span> o el botón de envío. Use <span class="kbd">Shift+Enter</span> para saltos de línea sin enviar. La respuesta se muestra en tiempo real (streaming).</li>
                     <li><strong>Exportar sesión</strong> (solo Modo Investigación): Presione "Exportar Sesión" en el panel izquierdo. Seleccione el formato (TXT, HTML o JSON) y la ubicación. El archivo exportado incluye un hash SHA-256 de integridad.</li>
