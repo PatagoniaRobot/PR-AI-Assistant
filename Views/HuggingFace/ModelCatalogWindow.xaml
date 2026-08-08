@@ -138,8 +138,15 @@
                     Style="{StaticResource CatalogButton}" Margin="8,0,0,0" />
         </Grid>
 
-        <!-- Resultados: repos a la izquierda, cuantizaciones a la derecha -->
+        <!-- Resultados: repos a la izquierda, cuantizaciones a la derecha.
+             Debajo, los modelos que ya están en disco. -->
         <Grid Grid.Row="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="12" />
@@ -178,6 +185,73 @@
                                                      Fill="{Binding VramColor, Converter={StaticResource HexToBrush}}" />
                                             <TextBlock Text="{Binding VramLabel}" FontSize="11" VerticalAlignment="Center" />
                                         </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </Border>
+            </Grid>
+
+            <!-- Modelos ya descargados: se listan acá para poder recuperar disco.
+                 Los que vienen con el producto no aparecen: no se eliminan. -->
+            <Border Grid.Row="1" Background="#0f172a" BorderBrush="#334155" BorderThickness="1"
+                    CornerRadius="6" Margin="0,12,0,0">
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" Margin="10,8,10,6">
+                        <TextBlock Text="MODELOS DESCARGADOS" Style="{StaticResource SectionLabel}"
+                                   Margin="0" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding DownloadedSummary}" Foreground="#64748b" FontSize="11"
+                                   HorizontalAlignment="Right" VerticalAlignment="Center"
+                                   AutomationProperties.AutomationId="DownloadedSummary" />
+                    </Grid>
+
+                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding SelectedDownloadedHint}"
+                               Foreground="#F59E0B" FontSize="11" TextWrapping="Wrap"
+                               Margin="10,4,10,8"
+                               AutomationProperties.AutomationId="DownloadedHint">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedDownloadedHint}" Value="">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <DataGrid ItemsSource="{Binding DownloadedModels}"
+                              SelectedItem="{Binding SelectedDownloaded}"
+                              MaxHeight="132"
+                              AutomationProperties.AutomationId="DownloadedGrid">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Archivo" Binding="{Binding FileName}" Width="*" />
+                            <DataGridTextColumn Header="Tamaño" Binding="{Binding SizeText}" Width="Auto" />
+                            <!-- Ancho fijo: con Auto la columna se mide contra el texto
+                                 inicial y el DataTrigger del modelo en uso queda cortado -->
+                            <DataGridTemplateColumn Header="Estado" Width="90">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <!-- El texto por defecto va en el Style y no como
+                                             atributo: un valor local le gana al DataTrigger
+                                             y la fila del modelo en uso quedaba con el guión -->
+                                        <TextBlock FontSize="11" VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="—" />
+                                                    <Setter Property="Foreground" Value="#64748b" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                            <Setter Property="Text" Value="● en uso" />
+                                                            <Setter Property="Foreground" Value="#00D4AA" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
@@ -236,7 +310,14 @@
                         Style="{StaticResource CatalogButton}" Margin="0,0,8,0" />
                 <Button Content="Cancelar descarga" Command="{Binding CancelDownloadCommand}"
                         AutomationProperties.AutomationId="CancelDownloadButton"
-                        Style="{StaticResource DangerCatalogButton}" />
+                        Style="{StaticResource DangerCatalogButton}" Margin="0,0,24,0" />
+                <Button Content="Eliminar descargado" Command="{Binding DeleteDownloadedCommand}"
+                        AutomationProperties.AutomationId="DeleteDownloadedButton"
+                        Style="{StaticResource DangerCatalogButton}" Margin="0,0,8,0" />
+                <Button Content="Limpiar parciales" Command="{Binding CleanPartialsCommand}"
+                        AutomationProperties.AutomationId="CleanPartialsButton"
+                        ToolTip="Borra los .part que hayan quedado de descargas interrumpidas"
+                        Style="{StaticResource NeutralCatalogButton}" />
             </StackPanel>
             <Button Content="Cerrar" Command="{Binding CloseCommand}"
                     Style="{StaticResource NeutralCatalogButton}" HorizontalAlignment="Right" />

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -51,15 +52,21 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
     private readonly ModelDownloader _downloader;
     private readonly GpuInfoService _gpuInfo;
     private readonly ModelDownloadLog _downloadLog;
+    private readonly DownloadedModelStore? _store;
     private readonly string _destinationDirectory;
     private readonly int _contextTokens;
     private readonly Action<string>? _onModelDownloaded;
+    private readonly Action<ModelDeletionRecord>? _onModelDeleted;
+    private readonly Func<DownloadedModelInfo, bool> _confirmDeletion;
 
     private CancellationTokenSource? _downloadCts;
     private GpuVramInfo? _vram;
 
     public ObservableCollection<HfRepo> Repos { get; } = new();
     public ObservableCollection<QuantizationItem> Quantizations { get; } = new();
+
+    /// <summary>Modelos ya descargados, para poder eliminarlos y recuperar disco.</summary>
+    public ObservableCollection<DownloadedModelInfo> DownloadedModels { get; } = new();
 
     private string _query = "";
     public string Query
@@ -149,6 +156,9 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
                 OnPropertyChanged(nameof(CanEditSearch));
                 ((RelayCommand)CancelDownloadCommand).RaiseCanExecuteChanged();
                 ((AsyncRelayCommand)DownloadCommand).RaiseCanExecuteChanged();
+                // Mientras baja un modelo no se borra ninguno: el disco está en uso
+                ((RelayCommand)DeleteDownloadedCommand).RaiseCanExecuteChanged();
+                ((RelayCommand)CleanPartialsCommand).RaiseCanExecuteChanged();
             }
         }
     }
@@ -183,13 +193,51 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
 
     public bool HasLastHash => !string.IsNullOrEmpty(_lastHash);
 
+    // --- Modelos descargados ---
+
+    private DownloadedModelInfo? _selectedDownloaded;
+    public DownloadedModelInfo? SelectedDownloaded
+    {
+        get => _selectedDownloaded;
+        set
+        {
+            if (SetProperty(ref _selectedDownloaded, value))
+            {
+                OnPropertyChanged(nameof(SelectedDownloadedHint));
+                ((RelayCommand)DeleteDownloadedCommand).RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    /// <summary>Explica por qué un modelo no se puede eliminar, cuando corresponde.</summary>
+    public string SelectedDownloadedHint => _selectedDownloaded?.BlockedReason ?? "";
+
+    private string _downloadedSummary = "";
+    /// <summary>Cuántos modelos descargados hay y cuánto disco ocupan.</summary>
+    public string DownloadedSummary
+    {
+        get => _downloadedSummary;
+        private set => SetProperty(ref _downloadedSummary, value);
+    }
+
     public ICommand SearchCommand { get; }
     public ICommand DownloadCommand { get; }
     public ICommand CancelDownloadCommand { get; }
+    public ICommand DeleteDownloadedCommand { get; }
+    public ICommand CleanPartialsCommand { get; }
     public ICommand CloseCommand { get; }
 
     public event EventHandler? CloseRequested;
 
+    /// <param name="store">
+    /// Gestión de los modelos ya descargados. Null deja la sección vacía, que es lo
+    /// que corresponde cuando no hay carpeta de descargas que administrar.
+    /// </param>
+    /// <param name="onModelDeleted">Refresca el selector de modelos tras una baja.</param>
+    /// <param name="confirmDeletion">
+    /// Confirmación del usuario. Se inyecta para poder ejercer el borrado sin abrir
+    /// un MessageBox, que en una corrida sin interacción bloquearía para siempre.
+    /// </param>
     public ModelCatalogViewModel(
         string destinationDirectory,
         int contextTokens,
@@ -198,12 +246,18 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
         Action<string>? onModelDownloaded = null,
         HuggingFaceClient? client = null,
         ModelDownloader? downloader = null,
-        GpuInfoService? gpuInfo = null)
+        GpuInfoService? gpuInfo = null,
+        DownloadedModelStore? store = null,
+        Action<ModelDeletionRecord>? onModelDeleted = null,
+        Func<DownloadedModelInfo, bool>? confirmDeletion = null)
     {
         _destinationDirectory = destinationDirectory;
         _contextTokens = contextTokens;
         _downloadLog = new ModelDownloadLog(logDirectory);
         _onModelDownloaded = onModelDownloaded;
+        _store = store;
+        _onModelDeleted = onModelDeleted;
+        _confirmDeletion = confirmDeletion ?? ConfirmDeletionWithDialog;
 
         _client = client ?? new HuggingFaceClient(tokenProvider: tokenProvider);
         _downloader = downloader ?? new ModelDownloader(tokenProvider: tokenProvider);
@@ -216,9 +270,42 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
         DownloadCommand = new AsyncRelayCommand(ExecuteDownloadAsync,
             () => !IsDownloading && _selectedQuantization != null);
         CancelDownloadCommand = new RelayCommand(ExecuteCancelDownload, () => IsDownloading);
+        DeleteDownloadedCommand = new RelayCommand(ExecuteDeleteDownloaded,
+            () => !IsDownloading && _selectedDownloaded != null && _selectedDownloaded.CanDelete);
+        CleanPartialsCommand = new RelayCommand(ExecuteCleanPartials, () => !IsDownloading && _store != null);
         CloseCommand = new RelayCommand(() => CloseRequested?.Invoke(this, EventArgs.Empty));
 
+        RefreshDownloaded();
         _ = InitializeGpuAsync();
+    }
+
+    /// <summary>
+    /// Relee la carpeta de descargas. Se llama al abrir la ventana y después de cada
+    /// alta o baja, para que la lista no quede describiendo un disco que ya cambió.
+    /// </summary>
+    public void RefreshDownloaded()
+    {
+        DownloadedModels.Clear();
+        SelectedDownloaded = null;
+
+        if (_store == null)
+        {
+            DownloadedSummary = "";
+            return;
+        }
+
+        var models = _store.List();
+        foreach (var m in models)
+            DownloadedModels.Add(m);
+
+        if (models.Count == 0)
+        {
+            DownloadedSummary = "No hay modelos descargados.";
+            return;
+        }
+
+        string total = DownloadedModelInfo.FormatSize(models.Sum(m => m.SizeBytes));
+        DownloadedSummary = $"{models.Count} modelo{(models.Count == 1 ? "" : "s")} · {total} en {_store.DirectoryText}";
     }
 
     private async Task InitializeGpuAsync()
@@ -348,6 +435,10 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
         Status = $"✅ {record.FileName} descargado en {_destinationDirectory}. " +
                  "Ya aparece en el selector de modelos.";
 
+        // El modelo recién bajado tiene que aparecer en la lista de descargados,
+        // que es desde donde se lo puede volver a eliminar
+        RefreshDownloaded();
+
         // Refrescar el catálogo local para que el modelo quede usable sin pasos manuales
         _onModelDownloaded?.Invoke(record.DestinationPath);
     }
@@ -356,6 +447,73 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
     {
         _downloadCts?.Cancel();
         Status = "Cancelando…";
+    }
+
+    /// <summary>
+    /// Confirmación por defecto. El tamaño va en el texto porque el motivo habitual
+    /// para borrar un modelo es recuperar disco, y sin el dato la decisión es a ciegas.
+    /// </summary>
+    private static bool ConfirmDeletionWithDialog(DownloadedModelInfo model)
+    {
+        var answer = System.Windows.MessageBox.Show(
+            $"Se va a eliminar del disco:\n\n{model.FileName}\n{model.SizeText}\n\n" +
+            $"Carpeta: {System.IO.Path.GetDirectoryName(model.FullPath)}\n\n" +
+            "La operación no se puede deshacer. Para volver a usarlo habría que " +
+            "descargarlo de nuevo.\n\n¿Eliminar?",
+            "Eliminar modelo descargado",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Warning,
+            // El botón por defecto es No: este diálogo borra gigabytes
+            System.Windows.MessageBoxResult.No);
+
+        return answer == System.Windows.MessageBoxResult.Yes;
+    }
+
+    private void ExecuteDeleteDownloaded()
+    {
+        if (_store == null || _selectedDownloaded == null) return;
+
+        var model = _selectedDownloaded;
+        if (!_confirmDeletion(model)) return;
+
+        var result = _store.Delete(model);
+
+        if (!result.Success)
+        {
+            IsError = true;
+            Status = result.ErrorMessage ?? "No se pudo eliminar el modelo.";
+            RefreshDownloaded();
+            return;
+        }
+
+        var record = result.Value!;
+        _downloadLog.RecordDeletion(record);
+
+        string extra = record.AlsoDeleted.Count > 0
+            ? $" También se borró {string.Join(", ", record.AlsoDeleted)}."
+            : "";
+
+        IsError = false;
+        Status = $"🗑 {record.FileName} eliminado. Se liberaron " +
+                 $"{DownloadedModelInfo.FormatSize(record.SizeBytes)}.{extra}";
+
+        RefreshDownloaded();
+        _onModelDeleted?.Invoke(record);
+    }
+
+    private void ExecuteCleanPartials()
+    {
+        if (_store == null) return;
+
+        var (deleted, freed) = _store.CleanPartials();
+
+        IsError = false;
+        Status = deleted.Count == 0
+            ? "No había descargas interrumpidas que limpiar."
+            : $"🗑 {deleted.Count} archivo{(deleted.Count == 1 ? "" : "s")} parcial{(deleted.Count == 1 ? "" : "es")} " +
+              $"eliminado{(deleted.Count == 1 ? "" : "s")}, {DownloadedModelInfo.FormatSize(freed)} liberados.";
+
+        RefreshDownloaded();
     }
 
     private void OnDownloadProgress(object? sender, DownloadProgress p)

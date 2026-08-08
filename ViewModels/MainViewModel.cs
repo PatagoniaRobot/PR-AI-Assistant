@@ -846,8 +846,9 @@ public class MainViewModel : ObservableObject
 #endif
 
     /// <summary>
-    /// Abre el catálogo de modelos. Al terminar una descarga refresca el listado
-    /// local para que el modelo quede utilizable sin pasos manuales.
+    /// Abre el catálogo de modelos. Al terminar una descarga, o al eliminar un
+    /// modelo, refresca el listado local para que el selector no quede describiendo
+    /// un disco que ya cambió.
     /// </summary>
     private void ExecuteOpenModelCatalog()
     {
@@ -858,6 +859,19 @@ public class MainViewModel : ObservableObject
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "PRImager", "AIAssistant", "Logs");
 
+        // Los archivos que vienen con el producto no se ofrecen para eliminar. Se
+        // incluyen los mmproj: si se borra el proyector, el modelo pierde la visión
+        // sin dar ningún error, que es el defecto 4.8 otra vez.
+        var protegidos = _profileService.GetAvailableModels(null)
+            .SelectMany(m => new[] { m.Model.ModelFileName, m.Model.MmprojFileName })
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .ToList();
+
+        var store = new Services.HuggingFace.DownloadedModelStore(
+            downloadDirectory: ResolveDownloadDirectory(),
+            catalogFileNames: protegidos,
+            activeSelectionKey: () => _settings.SelectedModel);
+
         var vm = new HuggingFace.ModelCatalogViewModel(
             destinationDirectory: modelsDir,
             contextTokens: _settings.CtxSize,
@@ -866,6 +880,13 @@ public class MainViewModel : ObservableObject
             onModelDownloaded: path =>
             {
                 _orchestrator.Logger.LogCustom("MODEL_DOWNLOADED", $"path=\"{path}\"");
+                ExecuteRefreshModels();
+            },
+            store: store,
+            onModelDeleted: record =>
+            {
+                _orchestrator.Logger.LogCustom("MODEL_DELETED",
+                    $"file=\"{record.FileName}\" bytes={record.SizeBytes}");
                 ExecuteRefreshModels();
             });
 

@@ -122,6 +122,12 @@ public sealed class HfRepoDetail
 /// </summary>
 public sealed class ModelDownloadRecord
 {
+    /// <summary>
+    /// Discrimina la línea en model-downloads.jsonl, donde ahora conviven altas y
+    /// bajas. Las líneas anteriores a este campo son todas altas.
+    /// </summary>
+    public string Event { get; set; } = "download";
+
     public string RepoId { get; set; } = "";
     public string FileName { get; set; } = "";
     public long SizeBytes { get; set; }

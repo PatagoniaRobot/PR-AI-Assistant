@@ -226,7 +226,16 @@ public sealed class ModelDownloadLog
 
     public string FilePath => _path;
 
-    public void Record(ModelDownloadRecord record)
+    public void Record(ModelDownloadRecord record) => Append(record);
+
+    /// <summary>
+    /// Registra la baja de un modelo. El archivo pasa a tener dos clases de línea,
+    /// que se distinguen por el campo <c>event</c>; las líneas escritas antes de que
+    /// existiera el campo son todas altas.
+    /// </summary>
+    public void RecordDeletion(ModelDeletionRecord record) => Append(record);
+
+    private void Append<T>(T record)
     {
         try
         {
@@ -241,7 +250,7 @@ public sealed class ModelDownloadLog
         }
         catch (Exception)
         {
-            // El registro no debe tumbar una descarga ya completada
+            // El registro no debe tumbar una operación ya consumada en disco
         }
     }
 }
