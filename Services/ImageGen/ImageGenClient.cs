@@ -52,6 +52,19 @@ public sealed class ImageGenClient : IDisposable
             return ImageGenResult.Fail("Escribí un prompt antes de generar.");
         }
 
+        // Este límite se comprueba acá y no solo en la interfaz porque no es una
+        // advertencia: por encima de MaxSafeDimension el motor muere con un error de
+        // CUDA y se lleva puesta la sesión. Un aviso que el llamador pueda ignorar no
+        // alcanza para algo que no se puede deshacer.
+        int lado = Math.Max(request.Width, request.Height);
+        if (lado > ImageVramArbiter.MaxSafeDimension)
+        {
+            return ImageGenResult.Fail(
+                $"El motor no soporta {request.Width}×{request.Height}. El máximo es " +
+                $"{ImageVramArbiter.MaxSafeDimension} píxeles de lado: por encima se cae con un " +
+                "error de CUDA y hay que reiniciarlo.");
+        }
+
         if (!_manager.IsReady)
             return ImageGenResult.Fail("El motor de imágenes no está listo.");
 

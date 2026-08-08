@@ -28,7 +28,7 @@ dotnet run -p:EdicionApp=Debug      :: 46 aserciones + 11 de humo
 dotnet run -p:EdicionApp=Forense    :: igual: la carga no es capacidad de red
 
 cd ..\GeneracionDeImagenes
-dotnet run                          :: 61 aserciones (necesita el motor instalado)
+dotnet run                          :: 99 aserciones (necesita el motor instalado)
 powershell .\verificar-barrera.ps1  :: la barrera de E4 sobre el binario Forense
 ```
 
@@ -100,6 +100,25 @@ las tres cosas que la API del motor **no** da y hubo que resolver afuera:
 - **Los fallos son datos.** Sin motor, sin modelo, prompt vacío y puerto tomado por otro
   modelo devuelven un mensaje legible en lugar de una excepción.
 
+`Arbitro.cs` cubre el semáforo de VRAM de E4.2, y sus casos **no son inventados**: la
+tabla de pisos por resolución sale de medir el motor en esta máquina bajo presión del
+modelo de lenguaje, y las aserciones verifican que la estimación se parezca a lo
+observado **y que no lo subestime** — subestimar haría que el semáforo diga verde y la
+generación falle, que es el error que importa evitar.
+
+Lo que ese banco protege, y que no es evidente:
+
+- **A 4096 píxeles de lado el motor no se queda sin memoria: se muere.**
+  `CUDA error: invalid configuration argument`, reproducido con 15.355 MiB libres, o sea
+  con la GPU vacía. Por eso el veredicto `Blocked` está separado de `Red`: uno es "va a
+  fallar y se recupera", el otro es "no lo intentes". El límite se comprueba además en
+  `ImageGenClient`, no solo en el semáforo, porque un aviso que el llamador pueda
+  ignorar no alcanza para algo que mata el proceso.
+- **`/sdcpp/v1/capabilities` anuncia `max_width` 4096**, justo el valor que se cae. Los
+  límites que declara el motor no se pueden usar tal cual para poblar la interfaz.
+- **El semáforo mira la VRAM libre, no la total.** Es lo que lo distingue del de modelos
+  de lenguaje: acá siempre hay algo más cargado.
+
 Necesita el motor instalado. Por defecto lo busca en `D:\PROYECTOS\PR-Tools\sd`; se
 cambia con la variable de entorno `SD_RAIZ`. Sin motor, informa cuántas pruebas omitió
 en lugar de pasar en silencio.
@@ -156,8 +175,9 @@ git worktree remove ..\praia-baseline --force
 **Mutando el código.** Se desactiva a propósito la barrera que el banco dice cubrir y
 se comprueba que las aserciones fallan. Desactivar las dos barreras críticas del
 borrado hace fallar 6 aserciones y borra el modelo activo de verdad. En
-`GeneracionDeImagenes`, mutar las cuatro decisiones centrales hace fallar 7 aserciones
-—y fue así como se descubrió que dos de ellas no probaban nada.
+`GeneracionDeImagenes`, mutar las cuatro decisiones centrales del motor hace fallar 7
+aserciones —y fue así como se descubrió que dos de ellas no probaban nada—; mutar las
+tres del semáforo hace fallar 18.
 
 **Cuidado al revertir una mutación con `Copy-Item`.** Restaurar un respaldo devuelve
 también su fecha de modificación, más vieja que el DLL que se compiló a partir del

@@ -93,9 +93,13 @@ class Banco
         CasoParseoDeCapacidades();
         CasoCapacidadesInvalidas();
 
+        Console.WriteLine("\n-- Semáforo de VRAM (E4.2) --");
+        BancoArbitro.Correr(Check);
+
         Console.WriteLine("\n-- Los fallos son datos, no excepciones --");
         CasoSinMotorInstalado().GetAwaiter().GetResult();
         CasoSinModelo().GetAwaiter().GetResult();
+        CasoResolucionBloqueada().GetAwaiter().GetResult();
 
         Console.WriteLine("\n-- Contra el motor real --");
         if (!HayMotor)
@@ -313,6 +317,30 @@ class Banco
         Check("prompt vacío avisa qué hacer",
             r.ErrorMessage is not null && r.ErrorMessage.Contains("prompt"), r.ErrorMessage ?? "");
         Check("prompt vacío no escribe archivo", !File.Exists(ruta));
+    }
+
+    /// <summary>
+    /// El límite de resolución se comprueba en el cliente y no solo en la interfaz,
+    /// porque pasarse mata el servidor: un aviso que el llamador pueda ignorar no
+    /// alcanza para algo que no se puede deshacer. Se verifica SIN servidor a
+    /// propósito, para que quede claro que corta antes de llegar a la red.
+    /// </summary>
+    static async Task CasoResolucionBloqueada()
+    {
+        using var m = new ImageServerManager();
+        using var c = new ImageGenClient(m);
+        var ruta = Path.Combine(CarpetaSalida(), "no-4096.png");
+        if (File.Exists(ruta)) File.Delete(ruta);
+
+        var r = await c.GenerateAsync(new ImageGenRequest
+        { Prompt = "algo", Width = 4096, Height = 4096 }, ruta);
+
+        Check("el cliente rechaza 4096 antes de contactar al motor", !r.Success);
+        Check("y explica el límite real",
+            r.ErrorMessage is not null && r.ErrorMessage.Contains("3072"), r.ErrorMessage ?? "");
+        Check("el rechazo de 4096 no es 'motor no listo'",
+            r.ErrorMessage is not null && !r.ErrorMessage.Contains("no está listo"), r.ErrorMessage ?? "");
+        Check("no escribe archivo", !File.Exists(ruta));
     }
 
     // ------------------------------------------------------------- contra el motor
