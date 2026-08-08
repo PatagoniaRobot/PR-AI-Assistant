@@ -882,27 +882,14 @@ public class MainViewModel : ObservableObject
 
     /// <summary>Carpeta de modelos efectiva, resuelta contra el directorio de la app.</summary>
     private string ResolveModelsDirectory() =>
-        Path.IsPathRooted(_settings.ModelPath)
-            ? _settings.ModelPath
-            : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, _settings.ModelPath);
+        ModelDirectoryResolver.ResolveModelsDirectory(_settings);
 
     /// <summary>
     /// Carpeta donde aterrizan las descargas, que el selector escanea además del catálogo.
-    ///
-    /// En la configuración Forense devuelve null: ese binario no descarga modelos y su
-    /// selector se limita al catálogo distribuido. Aceptar un .gguf de origen arbitrario
-    /// debilitaría la misma garantía que sostiene la barrera de compilación.
+    /// La comparte con la pantalla de selección de modo: ver <see cref="ModelDirectoryResolver"/>.
     /// </summary>
-    private string? ResolveDownloadDirectory()
-    {
-#if MODEL_DOWNLOAD
-        return string.IsNullOrWhiteSpace(_settings.ModelDownloadPath)
-            ? ResolveModelsDirectory()
-            : _settings.ModelDownloadPath;
-#else
-        return null;
-#endif
-    }
+    private string? ResolveDownloadDirectory() =>
+        ModelDirectoryResolver.ResolveDownloadDirectory(_settings);
 
     private bool CanExecuteSendMessage()
     {

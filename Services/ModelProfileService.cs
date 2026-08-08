@@ -63,8 +63,12 @@ public class ModelProfileService
     /// ahí se ofrecen como modelos seleccionables: bajar un modelo del catálogo de
     /// HuggingFace y después no poder elegirlo deja la descarga sin uso.
     /// Null o vacío para no escanear nada.
+    ///
+    /// Sin valor por defecto a propósito: cuando lo tuvo, el selector de la pantalla
+    /// de selección de modo omitió el argumento, compiló, corrió, y silenciosamente
+    /// no escaneó nada. Que el compilador obligue a decidir en cada llamada.
     /// </param>
-    public List<(ModelInfo Model, bool IsAvailable)> GetAvailableModels(string? downloadDirectory = null)
+    public List<(ModelInfo Model, bool IsAvailable)> GetAvailableModels(string? downloadDirectory)
     {
         var result = _catalog.Models
             .Select(m => (Model: m, IsAvailable: IsModelFileAvailable(m)))

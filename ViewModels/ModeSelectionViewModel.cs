@@ -51,7 +51,10 @@ public class ModeSelectionViewModel : ObservableObject
         {
             if (SetProperty(ref _selectedModelItem, value) && value != null)
             {
-                _settings.SelectedModel = value.Model.ModelFileName;
+                // SelectionKey trae la ruta completa para los modelos descargados,
+                // que no viven en la carpeta Models/. Guardar solo el nombre de
+                // archivo dejaría la selección irresoluble al lanzar el servidor.
+                _settings.SelectedModel = value.Model.SelectionKey;
                 _settings.MmprojFileName = value.Model.MmprojFileName;
                 _configManager.Save(_settings);
 
@@ -186,7 +189,22 @@ public class ModeSelectionViewModel : ObservableObject
         AvailableExecutionProfiles.Clear();
         _profileService.LoadCatalog();
 
-        var models = _profileService.GetAvailableModels();
+        string? downloadDirectory = ModelDirectoryResolver.ResolveDownloadDirectory(_settings);
+
+        // Una configuración sin descargas no debe honrar un modelo de ruta absoluta
+        // heredado de un settings.json escrito por el binario comercial: se descarta
+        // acá y más abajo se cae al primer modelo del catálogo.
+        if (downloadDirectory == null && System.IO.Path.IsPathRooted(_settings.SelectedModel))
+        {
+            _settings.SelectedModel = "";
+            _settings.MmprojFileName = "";
+            _configManager.Save(_settings);
+        }
+
+        // Los .gguf de la carpeta de descargas se ofrecen junto a los del catálogo:
+        // esta pantalla es la que fija el modelo con el que arranca el Modo
+        // Investigación, y sin ellos siempre caía en el primero del catálogo.
+        var models = _profileService.GetAvailableModels(downloadDirectory);
         foreach (var (model, isAvailable) in models)
         {
             AvailableModelItems.Add(new ModelDisplayItem(model, isAvailable));
@@ -199,7 +217,8 @@ public class ModeSelectionViewModel : ObservableObject
         }
 
         var savedMatch = AvailableModelItems.FirstOrDefault(m =>
-            m.IsAvailable && m.Model.ModelFileName == _settings.SelectedModel);
+            m.IsAvailable && string.Equals(m.Model.SelectionKey, _settings.SelectedModel,
+                                           StringComparison.OrdinalIgnoreCase));
 
         if (savedMatch != null)
         {
