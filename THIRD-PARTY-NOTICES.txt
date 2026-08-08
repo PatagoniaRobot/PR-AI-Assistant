@@ -1,0 +1,206 @@
+================================================================================
+PR-AI ASSISTANT — AVISOS DE COMPONENTES DE TERCEROS
+Patagonia Robot — Claudio Andino
+================================================================================
+
+PR-AI Assistant se distribuye bajo la Licencia Apache 2.0 (ver el archivo LICENSE).
+
+Este archivo reúne los avisos de copyright y licencia de los componentes de
+terceros que se distribuyen junto a la aplicación, tal como lo exigen sus
+respectivas licencias.
+
+No todos los componentes están presentes en todas las ediciones. La edición
+institucional (Forense) no incluye AngleSharp, porque no compila la búsqueda web.
+Los modelos de lenguaje pueden no estar presentes si el usuario aporta el suyo.
+
+--------------------------------------------------------------------------------
+ÍNDICE
+--------------------------------------------------------------------------------
+
+  1. llama.cpp / ggml .................... MIT
+  2. Modelos Gemma 4 (Google DeepMind) ... Apache License 2.0
+  3. NVIDIA CUDA Runtime ................. NVIDIA CUDA Toolkit EULA
+  4. LLVM OpenMP Runtime Library ......... Apache License 2.0 with LLVM Exceptions
+  5. .NET Runtime (Microsoft) ............ MIT
+  6. AngleSharp .......................... MIT  (solo edición comercial)
+
+
+================================================================================
+1. llama.cpp / ggml
+================================================================================
+
+Motor de inferencia local. Se distribuyen los binarios `llama-server.exe`,
+`llama.dll`, `mtmd.dll` y las bibliotecas `ggml*.dll`.
+
+Proyecto: https://github.com/ggml-org/llama.cpp
+
+MIT License
+
+Copyright (c) 2023-2026 The ggml authors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+================================================================================
+2. Modelos Gemma 4 — Google DeepMind
+================================================================================
+
+Cuando la distribución incluye modelos, se trata de Gemma 4 en sus variantes
+E2B y E4B (archivos .gguf), junto con sus proyectores multimodales (mmproj).
+
+Modelos:  https://huggingface.co/google/gemma-4-E2B-it
+          https://huggingface.co/google/gemma-4-E4B-it
+Ficha:    https://ai.google.dev/gemma/docs/core/model_card_4
+
+Gemma 4 se distribuye bajo la Licencia Apache 2.0. A diferencia de las
+versiones anteriores de Gemma —Gemma 1, 2, 3 y 3n—, NO está sujeto a los
+"Gemma Terms of Use" ni a su Prohibited Use Policy. Los propios Gemma Terms of
+Use excluyen expresamente a Gemma 4 de su alcance.
+
+Copyright 2026 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+El texto completo de la Licencia Apache 2.0 está en el archivo LICENSE que
+acompaña a esta distribución.
+
+NOTA PARA QUIEN CARGUE OTROS MODELOS. PR-AI Assistant permite usar modelos
+aportados por el usuario. Esos modelos NO son distribuidos por Patagonia Robot
+y se rigen por sus propias licencias, que el usuario debe verificar. En
+particular, los modelos Gemma anteriores a la versión 4 sí están sujetos a los
+Gemma Terms of Use, con obligaciones que se propagan a los usuarios finales.
+
+
+================================================================================
+3. NVIDIA CUDA Runtime
+================================================================================
+
+Se distribuyen las bibliotecas de runtime `cudart64_*.dll`, `cublas64_*.dll` y
+`cublasLt64_*.dll`, necesarias para la aceleración por GPU.
+
+Copyright (c) NVIDIA Corporation. All rights reserved.
+
+Estos archivos son componentes redistribuibles del CUDA Toolkit, enumerados
+como tales en el Attachment A ("Redistributable Software") del End User License
+Agreement del NVIDIA CUDA Toolkit, y se distribuyen aquí únicamente como parte
+integrante de esta aplicación, sin modificaciones.
+
+EULA: https://docs.nvidia.com/cuda/eula/index.html
+
+El uso de estos componentes está sujeto a los términos de dicho acuerdo.
+
+
+================================================================================
+4. LLVM OpenMP Runtime Library
+================================================================================
+
+Se distribuye `libomp140.x86_64.dll`, requerido por las bibliotecas de cómputo.
+
+Proyecto: https://github.com/llvm/llvm-project
+
+Copyright (c) LLVM Project contributors
+
+Licensed under the Apache License, Version 2.0, with LLVM Exceptions.
+Ver: https://llvm.org/LICENSE.txt
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
+
+================================================================================
+5. .NET Runtime — Microsoft
+================================================================================
+
+La aplicación se publica de forma autónoma (self-contained), de modo que
+incluye el runtime de .NET 8.
+
+Proyecto: https://github.com/dotnet/runtime
+
+The MIT License (MIT)
+
+Copyright (c) .NET Foundation and Contributors
+
+All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+================================================================================
+6. AngleSharp        (presente solo en la edición comercial)
+================================================================================
+
+Extracción de texto de páginas web para la función de búsqueda. La edición
+institucional (Forense) no lo incluye: esa configuración no compila el código
+de red ni referencia esta biblioteca.
+
+Proyecto: https://github.com/AngleSharp/AngleSharp
+
+The MIT License (MIT)
+
+Copyright (c) 2013 - 2026 AngleSharp
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+================================================================================
+Fin de los avisos de terceros.
+================================================================================

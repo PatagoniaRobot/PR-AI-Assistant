@@ -161,12 +161,16 @@ public class ModeSelectionViewModel : ObservableObject
         {
             System.Windows.MessageBox.Show(
                 "PR-AI Assistant utiliza los siguientes componentes de código abierto:\n\n" +
-                "• llama.cpp — Licencia MIT\n" +
-                "  https://github.com/ggerganov/llama.cpp\n" +
+                "• llama.cpp / ggml — Licencia MIT\n" +
+                "  https://github.com/ggml-org/llama.cpp\n" +
                 "  Motor de inferencia local para modelos de lenguaje.\n\n" +
                 "• Gemma 4 (variantes E2B y E4B) — Licencia Apache 2.0\n" +
                 "  https://ai.google.dev/gemma\n" +
-                "  Modelos de IA de Google DeepMind incluidos en la distribución.\n\n" +
+                "  Modelos de Google DeepMind, cuando se incluyen en la distribución.\n\n" +
+                "• NVIDIA CUDA Runtime — NVIDIA CUDA Toolkit EULA\n" +
+                "  Componentes redistribuibles para aceleración por GPU.\n\n" +
+                "• LLVM OpenMP Runtime — Apache 2.0 con excepciones LLVM\n" +
+                "  https://llvm.org\n\n" +
                 "• .NET 8 — Licencia MIT\n" +
                 "  https://dotnet.microsoft.com\n" +
                 "  Framework de desarrollo de Microsoft.\n\n" +
@@ -175,8 +179,12 @@ public class ModeSelectionViewModel : ObservableObject
                 "  https://anglesharp.github.io\n" +
                 "  Extracción de texto de páginas web.\n\n" +
 #endif
-                "PR-AI Assistant © 2026 Patagonia Robot.\n" +
-                "Todos los derechos reservados.",
+                "Los avisos completos están en THIRD-PARTY-NOTICES.txt, junto al\n" +
+                "ejecutable.\n\n" +
+                "Si cargó un modelo propio, ese modelo no forma parte de esta\n" +
+                "distribución y se rige por su propia licencia.\n\n" +
+                "PR-AI Assistant © 2026 Claudio Andino — Patagonia Robot.\n" +
+                "Distribuido bajo la Licencia Apache 2.0 (ver el archivo LICENSE).",
                 "PR-AI Assistant — Licencias de Terceros",
                 System.Windows.MessageBoxButton.OK,
                 System.Windows.MessageBoxImage.Information);

@@ -42,4 +42,8 @@ echo   - Carpeta Prompts\ (con system_forense.txt)
 echo   - Carpeta Config\ (con model_catalog.json, settings.json)
 echo   - Carpeta Tools\ (con llama-server.exe y dependencias)
 echo.
+echo LICENCIAS: LICENSE y THIRD-PARTY-NOTICES.txt se copian solos desde el .csproj.
+echo Verificar que esten en %OUTDIR%\ antes de entregar: incluirlos es una
+echo obligacion de las licencias MIT, Apache 2.0 y del EULA de NVIDIA.
+echo.
 pause

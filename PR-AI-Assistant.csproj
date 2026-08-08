@@ -91,6 +91,12 @@
     <!-- La ayuda se abre desde BaseDirectory\Help. Sin esto no se copiaba en el
          build y la carpeta publicada quedaba con una copia manual desactualizada. -->
     <None Update="Help\**" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Los avisos de terceros son una OBLIGACIÓN de las licencias MIT, Apache 2.0
+         y del EULA de NVIDIA: tienen que viajar con lo que se distribuye, no
+         quedarse en el repositorio. El diálogo de licencias en pantalla no
+         sustituye al archivo. Mismo criterio que Help\: si no está acá, no se copia. -->
+    <None Update="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="LICENSE" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- Models y Tools se copian manualmente por el perito (archivos >2 GB rompen SingleFile bundle) -->
