@@ -38,8 +38,14 @@ $simbolos = @(
     # IMAGE_GEN no va en esta lista: es una constante de preprocesador y no llega a
     # ningún binario, así que buscarla daría "ausente en Forense" siempre, incluso con
     # la barrera desmontada. El control positivo lo detectó al escribir este script.
-    @{ n = "ImageModelService";    futuro = $true  },
-    @{ n = "ImageModelPackage";    futuro = $true  }
+    @{ n = "ImageModelService";    futuro = $false },
+    @{ n = "ImageModelPackage";    futuro = $false },
+    # E4.3
+    @{ n = "ImagePackageDownloader";        futuro = $false },
+    @{ n = "ImagePackageSelectorViewModel"; futuro = $false },
+    @{ n = "ImageVramArbiter";              futuro = $false },
+    @{ n = "image_models.json";             futuro = $false },
+    @{ n = "Comfy-Org/z_image_turbo";       futuro = $false }
 )
 
 function Buscar([byte[]]$heno, [byte[]]$aguja) {

@@ -73,6 +73,7 @@ class Banco
         }
     }
 
+    [STAThread]
     static int Main(string[] args)
     {
         // Modo hijo: levanta el servidor y se queda esperando a que lo maten de
@@ -95,6 +96,10 @@ class Banco
 
         Console.WriteLine("\n-- Semáforo de VRAM (E4.2) --");
         BancoArbitro.Correr(Check);
+
+        Console.WriteLine("\n-- Paquetes de modelo (E4.3) --");
+        BancoPaquetes.Correr(Check);
+        BancoPaquetes.CorrerDescarga(Check, args.Contains("--con-red")).GetAwaiter().GetResult();
 
         Console.WriteLine("\n-- Los fallos son datos, no excepciones --");
         CasoSinMotorInstalado().GetAwaiter().GetResult();
@@ -122,8 +127,13 @@ class Banco
         }
 
         MatarTodo();
-        Console.WriteLine($"\n{_ok} OK, {_fail} fallas, {_omitidas} omitidas");
-        return _fail == 0 ? 0 : 1;
+
+        // El humo va al final: abre una ventana WPF de verdad y deja una captura, y
+        // conviene que no compita con el motor por la GPU mientras tanto.
+        int fallasHumo = HumoPaquetes.Correr();
+
+        Console.WriteLine($"\n{_ok} OK, {_fail} fallas, {_omitidas} omitidas, {fallasHumo} fallas de humo");
+        return _fail == 0 && fallasHumo == 0 ? 0 : 1;
     }
 
     // ---------------------------------------------------------------- configuración

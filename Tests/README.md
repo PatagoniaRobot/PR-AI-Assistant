@@ -28,7 +28,8 @@ dotnet run -p:EdicionApp=Debug      :: 46 aserciones + 11 de humo
 dotnet run -p:EdicionApp=Forense    :: igual: la carga no es capacidad de red
 
 cd ..\GeneracionDeImagenes
-dotnet run                          :: 99 aserciones (necesita el motor instalado)
+dotnet run                          :: 142 aserciones + 16 de humo (necesita el motor)
+dotnet run -- --con-red             :: además, la descarga real del VAE (0,31 GB)
 powershell .\verificar-barrera.ps1  :: la barrera de E4 sobre el binario Forense
 ```
 
@@ -119,6 +120,25 @@ Lo que ese banco protege, y que no es evidente:
 - **El semáforo mira la VRAM libre, no la total.** Es lo que lo distingue del de modelos
   de lenguaje: acá siempre hay algo más cargado.
 
+`Paquetes.cs` y `HumoPaquetes.cs` cubren E4.3: el paquete de tres archivos, la
+persistencia, la descarga y el selector.
+
+- **La descarga real se ejerce con `--con-red`**, y baja **solo el VAE** (0,31 GB) con
+  los otros dos componentes puestos como archivos de mentira. Alcanza para recorrer el
+  camino entero —salteo de lo existente, subcarpeta del repositorio, `.part`, armado del
+  paquete— sin bajar 6,5 GB en cada corrida. Ojo con recortar el descriptor para eso:
+  una primera versión usaba una fuente con **un solo componente** y eso escondió un
+  defecto real, porque el armado mapeaba por posición y le asignaba el VAE al hueco de
+  la difusión. **Un descriptor recortado no es el descriptor.**
+- `HumoPaquetes.cs` abre la ventana de verdad y deja una captura en
+  `%TEMP%\selector-de-paquetes.png`. **Hay que mirarla**: las 15 aserciones de la primera
+  versión pasaron sobre una ventana donde el estado del paquete incompleto salía cortado
+  —decía «faltan modelo de difusión, text encoder,» y ahí terminaba—. La aserción
+  buscaba puntos suspensivos, y el `DataGrid` recorta **sin ponerlos**. Ahora se mide el
+  ancho natural del texto con `FormattedText` contra el `ActualWidth` del control, que es
+  la única forma confiable; con la columna vuelta a 210 px, la aserción falla diciendo
+  «necesita 235px y tiene 210px».
+
 Necesita el motor instalado. Por defecto lo busca en `D:\PROYECTOS\PR-Tools\sd`; se
 cambia con la variable de entorno `SD_RAIZ`. Sin motor, informa cuántas pruebas omitió
 en lugar de pasar en silencio.
@@ -188,6 +208,11 @@ escribir `GeneracionDeImagenes`. Después de revertir, tocar la fecha:
 ```powershell
 Get-ChildItem Services\ImageGen\*.cs | ForEach-Object { $_.LastWriteTime = Get-Date }
 ```
+
+**Y no edites archivos con acentos usando `Get-Content -Raw | ... | Set-Content`.** En
+PowerShell 5.1 la lectura toma la codificación ANSI y la escritura pone UTF-8: el
+round-trip convierte `difusión` en `difusiÃ³n` y `—` en `â€”`, en silencio y en todo el
+archivo. Pasó al ajustar el XAML del selector. Para editar código, usar un editor.
 
 ## Al agregar un banco nuevo
 

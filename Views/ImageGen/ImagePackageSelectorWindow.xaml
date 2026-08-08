@@ -1,0 +1,295 @@
+<Window x:Class="PRImager.AIAssistant.Views.ImageGen.ImagePackageSelectorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:conv="clr-namespace:PRImager.AIAssistant.Views.Converters"
+        xmlns:vm="clr-namespace:PRImager.AIAssistant.ViewModels.ImageGen"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=vm:ImagePackageSelectorViewModel}"
+        Title="Modelos de imagen — PR-AI Assistant"
+        Height="620" Width="920"
+        Background="#1A1A2E"
+        WindowStartupLocation="CenterOwner"
+        FontFamily="{StaticResource MainFont}">
+
+    <Window.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVis" />
+        <conv:HexToBrushConverter x:Key="HexToBrush" />
+
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#E0E0E0" />
+            <Setter Property="FontFamily" Value="{StaticResource MainFont}" />
+        </Style>
+
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#94a3b8" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+        </Style>
+
+        <Style x:Key="PkgButton" TargetType="Button">
+            <Setter Property="Background" Value="#10B981" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Padding" Value="16,8" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.85" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bd" Property="Background" Value="#374151" />
+                                <Setter Property="Foreground" Value="#6B7280" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="NeutralPkgButton" TargetType="Button" BasedOn="{StaticResource PkgButton}">
+            <Setter Property="Background" Value="#334155" />
+        </Style>
+
+        <Style x:Key="DangerPkgButton" TargetType="Button" BasedOn="{StaticResource PkgButton}">
+            <Setter Property="Background" Value="#DC2626" />
+        </Style>
+
+        <Style TargetType="DataGrid">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="GridLinesVisibility" Value="Horizontal" />
+            <Setter Property="HorizontalGridLinesBrush" Value="#1e293b" />
+            <Setter Property="RowBackground" Value="Transparent" />
+            <Setter Property="AlternatingRowBackground" Value="#0d1526" />
+            <Setter Property="Foreground" Value="#E0E0E0" />
+            <Setter Property="HeadersVisibility" Value="Column" />
+            <Setter Property="AutoGenerateColumns" Value="False" />
+            <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="SelectionMode" Value="Single" />
+            <Setter Property="CanUserAddRows" Value="False" />
+            <Setter Property="RowHeaderWidth" Value="0" />
+        </Style>
+
+        <Style TargetType="DataGridColumnHeader" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+            <Setter Property="Background" Value="#0f172a" />
+            <Setter Property="Foreground" Value="#94a3b8" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="BorderBrush" Value="#334155" />
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="8,6" />
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#1e3a5f" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="RutaBox" TargetType="TextBox">
+            <Setter Property="Background" Value="#0f172a" />
+            <Setter Property="Foreground" Value="#E0E0E0" />
+            <Setter Property="BorderBrush" Value="#334155" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Encabezado -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="Modelos de imagen" FontSize="18" FontWeight="Bold" />
+            <TextBlock Text="{Binding GpuText}" Foreground="#00D4AA" FontSize="11" Margin="0,4,0,0"
+                       AutomationProperties.AutomationId="PkgGpuText" />
+            <TextBlock Text="Un modelo de imagen son tres archivos: difusión, text encoder y VAE."
+                       Foreground="#94a3b8" FontSize="11" Margin="0,4,0,0" />
+        </StackPanel>
+
+        <!-- Lista de paquetes -->
+        <DockPanel Grid.Row="1">
+            <TextBlock DockPanel.Dock="Top" Text="PAQUETES" Style="{StaticResource SectionLabel}" />
+            <DataGrid ItemsSource="{Binding Packages}" SelectedItem="{Binding SelectedRow}"
+                      AutomationProperties.AutomationId="PkgGrid">
+                <DataGrid.Columns>
+                    <!-- MinWidth para que la columna flexible no quede aplastada por las
+                         fijas: con Estado en 300 px, el nombre del paquete quedaba pegado
+                         a la columna siguiente. -->
+                    <DataGridTextColumn Header="Paquete" Binding="{Binding DisplayName}"
+                                        Width="*" MinWidth="200">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <!-- El gris de los incompletos sale del ViewModel, no de un
+                                     trigger, para que no dependa del orden de evaluación. -->
+                                <Setter Property="Foreground"
+                                        Value="{Binding NameColor, Converter={StaticResource HexToBrush}}" />
+                                <Setter Property="ToolTip" Value="{Binding Tooltip}" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="Familia" Binding="{Binding Family}" Width="90" />
+
+                    <!-- Ancho fijo a propósito: con Width="Auto" el DataGrid mide la columna
+                         contra el contenido inicial y el texto más largo queda cortado.
+                         Es el defecto 4.13 del maestro.
+
+                         Y fijo GRANDE: el peor caso es "faltan modelo de difusión, text
+                         encoder, VAE", que necesita 235 px. Con 210 entraba solo hasta la
+                         coma y el "VAE" se perdía; la primera versión de esta ventana salió
+                         así y las aserciones de humo no lo vieron, porque el DataGrid
+                         recorta SIN poner puntos suspensivos. TextTrimming los agrega, para
+                         que un desborde futuro se note a simple vista. -->
+                    <DataGridTextColumn Header="Estado" Binding="{Binding StatusText}" Width="260">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground"
+                                        Value="{Binding StatusColor, Converter={StaticResource HexToBrush}}" />
+                                <Setter Property="ToolTip" Value="{Binding Tooltip}" />
+                                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="En disco" Binding="{Binding SizeText}" Width="90" />
+                    <DataGridTextColumn Header="Parámetros" Binding="{Binding ParamsText}" Width="130" />
+
+                    <DataGridTextColumn Header="VRAM" Binding="{Binding VramLabel}" Width="110">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground"
+                                        Value="{Binding VramColor, Converter={StaticResource HexToBrush}}" />
+                                <Setter Property="ToolTip" Value="{Binding Tooltip}" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </DockPanel>
+
+        <!-- Los tres archivos del paquete seleccionado -->
+        <StackPanel Grid.Row="2" Margin="0,12,0,0">
+            <TextBlock Text="ARCHIVOS DEL PAQUETE SELECCIONADO" Style="{StaticResource SectionLabel}" />
+            <TextBlock Text="{Binding SelectedDetail}" Foreground="#94a3b8" FontSize="11"
+                       Margin="0,0,0,8" AutomationProperties.AutomationId="PkgDetail" />
+
+            <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="120" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Difusión" VerticalAlignment="Center" FontSize="12" />
+                <TextBox Grid.Column="1" Text="{Binding DiffusionPath, Mode=OneWay}"
+                         Style="{StaticResource RutaBox}"
+                         AutomationProperties.AutomationId="PkgDiffusionPath" />
+                <Button Grid.Column="2" Content="Examinar…" Command="{Binding BrowseDiffusionCommand}"
+                        Style="{StaticResource NeutralPkgButton}" Margin="8,0,0,0" />
+            </Grid>
+
+            <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="120" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Text encoder" VerticalAlignment="Center" FontSize="12" />
+                <TextBox Grid.Column="1" Text="{Binding TextEncoderPath, Mode=OneWay}"
+                         Style="{StaticResource RutaBox}"
+                         AutomationProperties.AutomationId="PkgTextEncoderPath" />
+                <Button Grid.Column="2" Content="Examinar…" Command="{Binding BrowseTextEncoderCommand}"
+                        Style="{StaticResource NeutralPkgButton}" Margin="8,0,0,0" />
+            </Grid>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="120" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="VAE" VerticalAlignment="Center" FontSize="12" />
+                <TextBox Grid.Column="1" Text="{Binding VaePath, Mode=OneWay}"
+                         Style="{StaticResource RutaBox}"
+                         AutomationProperties.AutomationId="PkgVaePath" />
+                <Button Grid.Column="2" Content="Examinar…" Command="{Binding BrowseVaeCommand}"
+                        Style="{StaticResource NeutralPkgButton}" Margin="8,0,0,0" />
+            </Grid>
+        </StackPanel>
+
+        <!-- Descarga del paquete recomendado -->
+        <Border Grid.Row="3" Background="#0f172a" CornerRadius="6" Padding="12" Margin="0,12,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock FontSize="12">
+                        <Run Text="Descargar el paquete recomendado (Z-Image Turbo Q4_K) — " />
+                        <Run Text="{Binding RecommendedSizeText, Mode=OneWay}" FontWeight="SemiBold" />
+                    </TextBlock>
+                    <TextBlock Text="{Binding DownloadStatus}" Foreground="#94a3b8" FontSize="11"
+                               Margin="0,4,0,0"
+                               AutomationProperties.AutomationId="PkgDownloadStatus"
+                               Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}" />
+                    <ProgressBar Height="4" Margin="0,6,0,0" Maximum="100"
+                                 Value="{Binding DownloadPercent, Mode=OneWay}"
+                                 Background="#1e293b" Foreground="#10B981" BorderThickness="0"
+                                 Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
+
+                <Button Grid.Column="1" Content="Descargar" Command="{Binding DownloadRecommendedCommand}"
+                        Style="{StaticResource PkgButton}" Margin="12,0,0,0"
+                        AutomationProperties.AutomationId="PkgDownloadButton" />
+                <Button Grid.Column="2" Content="Cancelar" Command="{Binding CancelDownloadCommand}"
+                        Style="{StaticResource DangerPkgButton}" Margin="8,0,0,0"
+                        Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}" />
+            </Grid>
+        </Border>
+
+        <!-- Pie -->
+        <Grid Grid.Row="4" Margin="0,12,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                <TextBlock Text="{Binding ActivePackageText}" Foreground="#00D4AA" FontSize="12"
+                           AutomationProperties.AutomationId="PkgActiveText" />
+                <TextBlock Text="{Binding Message}" Foreground="#94a3b8" FontSize="11" Margin="0,2,0,0"
+                           TextWrapping="Wrap"
+                           AutomationProperties.AutomationId="PkgMessage" />
+            </StackPanel>
+            <Button Grid.Column="1" Content="Usar este paquete" Command="{Binding UseSelectedCommand}"
+                    Style="{StaticResource PkgButton}"
+                    AutomationProperties.AutomationId="PkgUseButton" />
+        </Grid>
+    </Grid>
+</Window>
