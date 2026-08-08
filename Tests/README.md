@@ -26,6 +26,10 @@ dotnet run                          :: 52 aserciones + 12 de humo
 cd ..\CargaDeArchivos
 dotnet run -p:EdicionApp=Debug      :: 46 aserciones + 11 de humo
 dotnet run -p:EdicionApp=Forense    :: igual: la carga no es capacidad de red
+
+cd ..\GeneracionDeImagenes
+dotnet run                          :: 61 aserciones (necesita el motor instalado)
+powershell .\verificar-barrera.ps1  :: la barrera de E4 sobre el binario Forense
 ```
 
 Devuelven 0 si pasa todo y 1 si algo falla, así que sirven en un script.
@@ -79,6 +83,44 @@ vacío: el `ForensicLogger` mantiene el archivo abierto en escritura y
 cadena vacía. Una aserción negativa sobre una fuente vacía siempre pasa. Ahora la
 lectura falla ruidosamente si no puede leer.
 
+### `GeneracionDeImagenes` — E4.1
+
+Ejerce `ImageServerManager` e `ImageGenClient` contra `sd-server` de verdad. Lo que
+verifica no es que genere una imagen —eso ya se sabía del reconocimiento de E4.0— sino
+las tres cosas que la API del motor **no** da y hubo que resolver afuera:
+
+- **El progreso sale de stdout.** La respuesta del job no tiene ningún campo de avance.
+  La aserción que importa es que el progreso **ignore la barra de carga de tensores**,
+  que el motor dibuja casi igual pero con cientos de pasos y unidad `GB/s` en lugar de
+  `s/it`. Sin anclar la unidad en el patrón, el avance salta a 452 y vuelve a 8.
+- **Cancelar exige matar el proceso.** Un job que ya está generando devuelve 409. Se
+  comprueba que la cancelación corte, que no deje la imagen escrita, y que el motor
+  vuelva solo y pueda generar de nuevo — que es donde aparecería el puerto ocupado si
+  el relanzamiento no esperara la salida real del proceso.
+- **Los fallos son datos.** Sin motor, sin modelo, prompt vacío y puerto tomado por otro
+  modelo devuelven un mensaje legible en lugar de una excepción.
+
+Necesita el motor instalado. Por defecto lo busca en `D:\PROYECTOS\PR-Tools\sd`; se
+cambia con la variable de entorno `SD_RAIZ`. Sin motor, informa cuántas pruebas omitió
+en lugar de pasar en silencio.
+
+`verificar-barrera.ps1` busca los símbolos de E4 como **bytes, en cualquier alineación**
+y en UTF-8 y UTF-16, con control positivo sobre el binario Debug. Con la barrera puesta
+da 0 fallas; desmontándola a propósito en el `.csproj`, da 8.
+
+**Dos lecciones de este banco, las dos encontradas mutando y no escribiendo.**
+
+La primera: *una aserción puede pasar por el motivo equivocado*. «Prompt vacío no
+genera» pasaba aun quitando la validación, porque el banco corría sin servidor y frenaba
+en el chequeo de «motor no listo». Ahora corre **contra un servidor listo**, que es la
+única forma de que la validación sea lo único que pueda detenerlo.
+
+La segunda: *`Dispose()` no prueba el `JobObject`*. La aserción de huérfanos pasaba con
+el `JobObject` comentado, porque `Dispose()` mata el proceso explícitamente. Para
+ejercer «matar la aplicación a lo bruto» hace falta un proceso aparte —el banco se
+relanza a sí mismo con `--hijo-que-muere`— al que se le hace `Kill(entireProcessTree:
+false)`. Si `sd-server` sobrevive a eso, es que no está dentro de ningún `JobObject`.
+
 ## Cómo se comprueba que un banco sirve
 
 Un banco que pasa entero a la primera todavía no probó nada. Las dos formas de
@@ -113,7 +155,19 @@ git worktree remove ..\praia-baseline --force
 
 **Mutando el código.** Se desactiva a propósito la barrera que el banco dice cubrir y
 se comprueba que las aserciones fallan. Desactivar las dos barreras críticas del
-borrado hace fallar 6 aserciones y borra el modelo activo de verdad.
+borrado hace fallar 6 aserciones y borra el modelo activo de verdad. En
+`GeneracionDeImagenes`, mutar las cuatro decisiones centrales hace fallar 7 aserciones
+—y fue así como se descubrió que dos de ellas no probaban nada.
+
+**Cuidado al revertir una mutación con `Copy-Item`.** Restaurar un respaldo devuelve
+también su fecha de modificación, más vieja que el DLL que se compiló a partir del
+código mutado. MSBuild ve el fuente «al día» y **no recompila**: el banco vuelve a
+correr contra el binario mutado y uno cree estar mirando el código sano. Pasó al
+escribir `GeneracionDeImagenes`. Después de revertir, tocar la fecha:
+
+```powershell
+Get-ChildItem Services\ImageGen\*.cs | ForEach-Object { $_.LastWriteTime = Get-Date }
+```
 
 ## Al agregar un banco nuevo
 

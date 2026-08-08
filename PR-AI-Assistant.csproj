@@ -38,11 +38,21 @@
 
     Compilar el build institucional:  dotnet build -c Forense
   -->
+  <!--
+    Generación de imágenes (E4): misma doble barrera, aplicada desde el primer commit.
+
+    El motivo acá no es la red sino la credibilidad: una herramienta pericial que puede
+    FABRICAR imágenes es un problema ante una impugnación. "No lo compila" es más
+    defendible que "lo tiene desactivado". La edición Forense no debe poder generar
+    imágenes ni contener los símbolos que lo harían posible.
+  -->
   <PropertyGroup>
     <EnableWebSearch Condition="'$(Configuration)' != 'Forense'">true</EnableWebSearch>
     <EnableWebSearch Condition="'$(Configuration)' == 'Forense'">false</EnableWebSearch>
     <EnableModelDownload Condition="'$(Configuration)' != 'Forense'">true</EnableModelDownload>
     <EnableModelDownload Condition="'$(Configuration)' == 'Forense'">false</EnableModelDownload>
+    <EnableImageGen Condition="'$(Configuration)' != 'Forense'">true</EnableImageGen>
+    <EnableImageGen Condition="'$(Configuration)' == 'Forense'">false</EnableImageGen>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(EnableWebSearch)' == 'true'">
@@ -51,6 +61,10 @@
 
   <PropertyGroup Condition="'$(EnableModelDownload)' == 'true'">
     <DefineConstants>$(DefineConstants);MODEL_DOWNLOAD</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(EnableImageGen)' == 'true'">
+    <DefineConstants>$(DefineConstants);IMAGE_GEN</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Forense'">
@@ -76,6 +90,13 @@
     <Page Remove="Views\HuggingFace\**" />
     <Compile Remove="Views\HuggingFace\**" />
     <Compile Remove="ViewModels\HuggingFace\**" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(EnableImageGen)' != 'true'">
+    <Compile Remove="Services\ImageGen\**" />
+    <Page Remove="Views\ImageGen\**" />
+    <Compile Remove="Views\ImageGen\**" />
+    <Compile Remove="ViewModels\ImageGen\**" />
   </ItemGroup>
 
   <ItemGroup>

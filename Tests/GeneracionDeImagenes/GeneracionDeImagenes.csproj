@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>GeneracionDeImagenes</AssemblyName>
+    <RootNamespace>PRImager.AIAssistant.Tests.GeneracionDeImagenes</RootNamespace>
+
+    <!--
+      Solo corre contra la edición comercial: ImageServerManager e ImageGenClient no
+      existen en el binario Forense, que no compila Services\ImageGen. Que no existan
+      es justamente lo que verifica la barrera, no este banco.
+
+        -p:RaizApp=<ruta>   contra qué árbol (por defecto, este repo)
+        SD_RAIZ=<ruta>      dónde está instalado el motor (variable de entorno)
+    -->
+    <RaizApp Condition="'$(RaizApp)' == ''">$(MSBuildThisFileDirectory)..\..</RaizApp>
+    <DllDeLaApp>$(RaizApp)\bin\Debug\net8.0-windows\PR-AI-Assistant.dll</DllDeLaApp>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="PR-AI-Assistant">
+      <HintPath>$(DllDeLaApp)</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <!--
+    Un HintPath que no existe no hace fallar a MSBuild: omite la referencia en
+    silencio y el banco explota con decenas de "no se encontró el tipo PRImager",
+    que no dicen nada del problema real. Se falla acá, con el motivo.
+  -->
+  <Target Name="VerificarDllDeLaApp" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(DllDeLaApp)')"
+           Text="No está el binario de la aplicación en '$(DllDeLaApp)'.&#xA;  · Compilalo primero:  dotnet build -c Debug&#xA;  · Si apuntás a otro árbol con -p:RaizApp=, usá una ruta ABSOLUTA: las relativas se resuelven contra la carpeta de este banco, no contra el directorio actual." />
+  </Target>
+
+</Project>
