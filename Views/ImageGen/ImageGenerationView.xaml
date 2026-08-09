@@ -1,0 +1,377 @@
+<UserControl x:Class="PRImager.AIAssistant.Views.ImageGen.ImageGenerationView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:conv="clr-namespace:PRImager.AIAssistant.Views.Converters"
+             xmlns:vm="clr-namespace:PRImager.AIAssistant.ViewModels.ImageGen"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:ImageGenerationViewModel}"
+             Background="#1A1A2E" FontFamily="{StaticResource MainFont}">
+
+    <UserControl.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVis" />
+        <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
+        <conv:HexToBrushConverter x:Key="HexToBrush" />
+
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#E0E0E0" />
+            <Setter Property="FontFamily" Value="{StaticResource MainFont}" />
+        </Style>
+
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#94a3b8" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+        </Style>
+
+        <Style x:Key="Hint" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#64748B" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+
+        <Style x:Key="GenButton" TargetType="Button">
+            <Setter Property="Background" Value="#10B981" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Padding" Value="16,10" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.85" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bd" Property="Background" Value="#374151" />
+                                <Setter Property="Foreground" Value="#6B7280" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="NeutralGenButton" TargetType="Button" BasedOn="{StaticResource GenButton}">
+            <Setter Property="Background" Value="#334155" />
+            <Setter Property="Padding" Value="12,7" />
+            <Setter Property="FontWeight" Value="Normal" />
+        </Style>
+
+        <Style x:Key="DangerGenButton" TargetType="Button" BasedOn="{StaticResource GenButton}">
+            <Setter Property="Background" Value="#DC2626" />
+        </Style>
+
+        <Style x:Key="PromptBox" TargetType="TextBox">
+            <Setter Property="Background" Value="#0f172a" />
+            <Setter Property="Foreground" Value="#E0E0E0" />
+            <Setter Property="CaretBrush" Value="#E0E0E0" />
+            <Setter Property="BorderBrush" Value="#334155" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="AcceptsReturn" Value="True" />
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="SpellCheck.IsEnabled" Value="False" />
+        </Style>
+
+        <Style x:Key="ValueBox" TargetType="TextBox" BasedOn="{StaticResource PromptBox}">
+            <Setter Property="TextWrapping" Value="NoWrap" />
+            <Setter Property="AcceptsReturn" Value="False" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="400" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- ============================ PANEL DE CONTROLES ============================ -->
+        <Border Grid.Column="0" Background="#151527" BorderBrush="#252540" BorderThickness="0,0,1,0">
+            <!--
+                Dos filas y no un solo ScrollViewer: con los ajustes avanzados
+                desplegados, el botón de generar quedaba abajo del scroll y había que
+                buscarlo. La acción principal, el progreso y el estado van anclados al
+                pie, siempre visibles; lo que se configura de vez en cuando es lo que
+                scrollea. Lo mostró la captura de la primera versión.
+            -->
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+            <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Padding="16">
+                <StackPanel>
+
+                    <TextBlock Text="Generación de imágenes" FontSize="17" FontWeight="Bold" />
+
+                    <!-- Estado de la GPU y semáforo -->
+                    <Border Background="#0f172a" CornerRadius="6" Padding="10" Margin="0,12,0,0">
+                        <StackPanel>
+                            <TextBlock Text="{Binding GpuText}" Foreground="#00D4AA" FontSize="11"
+                                       TextWrapping="Wrap"
+                                       AutomationProperties.AutomationId="GenGpuText" />
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+                                         Fill="{Binding VramColor, Converter={StaticResource HexToBrush}}" />
+                                <TextBlock Text="{Binding VramLabel}" Margin="6,0,0,0" FontSize="12"
+                                           FontWeight="SemiBold"
+                                           Foreground="{Binding VramColor, Converter={StaticResource HexToBrush}}"
+                                           AutomationProperties.AutomationId="GenVramLabel" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding VramExplanation}" Style="{StaticResource Hint}"
+                                       Margin="0,4,0,0"
+                                       AutomationProperties.AutomationId="GenVramExplanation" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Paquete de modelo -->
+                    <TextBlock Text="MODELO" Style="{StaticResource SectionLabel}" Margin="0,14,0,6" />
+                    <TextBlock Text="{Binding PackageText}" FontSize="12" TextWrapping="Wrap"
+                               AutomationProperties.AutomationId="GenPackageText" />
+
+                    <!-- Prompt -->
+                    <TextBlock Text="PROMPT" Style="{StaticResource SectionLabel}" Margin="0,14,0,6" />
+                    <TextBox Text="{Binding Prompt, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource PromptBox}" Height="96"
+                             AutomationProperties.AutomationId="GenPromptBox" />
+
+                    <TextBlock Text="PROMPT NEGATIVO (opcional)" Style="{StaticResource SectionLabel}"
+                               Margin="0,12,0,6" />
+                    <TextBox Text="{Binding NegativePrompt, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource PromptBox}" Height="52"
+                             AutomationProperties.AutomationId="GenNegativeBox" />
+
+                    <!-- Tamaño -->
+                    <TextBlock Text="TAMAÑO" Style="{StaticResource SectionLabel}" Margin="0,14,0,6" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Grid.Column="0" Style="{StaticResource ModernComboBox}"
+                                  ItemsSource="{Binding SizeOptions}"
+                                  SelectedItem="{Binding SelectedSize}"
+                                  DisplayMemberPath="Label"
+                                  Margin="0,0,4,0"
+                                  AutomationProperties.AutomationId="GenSizeCombo" />
+                        <ComboBox Grid.Column="1" Style="{StaticResource ModernComboBox}"
+                                  ItemsSource="{Binding Orientations}"
+                                  SelectedItem="{Binding SelectedOrientation}"
+                                  DisplayMemberPath="Label"
+                                  Margin="4,0,0,0"
+                                  AutomationProperties.AutomationId="GenOrientationCombo" />
+                    </Grid>
+                    <TextBlock Text="{Binding SizeText}" FontSize="13" FontWeight="SemiBold"
+                               Foreground="#00D4AA" Margin="0,8,0,0"
+                               AutomationProperties.AutomationId="GenSizeText" />
+                    <TextBlock Text="{Binding SizeHint}" Style="{StaticResource Hint}" Margin="0,4,0,0" />
+
+                    <!-- Ajustes avanzados, plegados por defecto -->
+                    <Expander Header="Ajustes avanzados" Foreground="#94a3b8" Margin="0,14,0,0"
+                              FontSize="12" IsExpanded="False"
+                              AutomationProperties.AutomationId="GenAdvanced">
+                        <StackPanel Margin="0,10,0,0">
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="44" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Pasos" FontSize="12"
+                                           VerticalAlignment="Center" Width="56" />
+                                <Slider Grid.Column="1" Minimum="1" Maximum="50" TickFrequency="1"
+                                        IsSnapToTickEnabled="True" VerticalAlignment="Center"
+                                        Value="{Binding Steps}"
+                                        AutomationProperties.AutomationId="GenStepsSlider" />
+                                <TextBlock Grid.Column="2" Text="{Binding Steps}" FontSize="12"
+                                           HorizontalAlignment="Right" VerticalAlignment="Center"
+                                           AutomationProperties.AutomationId="GenStepsValue" />
+                            </Grid>
+
+                            <Grid Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="44" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="CFG" FontSize="12"
+                                           VerticalAlignment="Center" Width="56" />
+                                <Slider Grid.Column="1" Minimum="0" Maximum="15" TickFrequency="0.5"
+                                        IsSnapToTickEnabled="True" VerticalAlignment="Center"
+                                        Value="{Binding CfgScale}"
+                                        AutomationProperties.AutomationId="GenCfgSlider" />
+                                <TextBlock Grid.Column="2" Text="{Binding CfgScale, StringFormat={}{0:0.#}}"
+                                           FontSize="12" HorizontalAlignment="Right"
+                                           VerticalAlignment="Center"
+                                           AutomationProperties.AutomationId="GenCfgValue" />
+                            </Grid>
+
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0"
+                                       Text="Los pasos y el CFG salen del paquete de modelo, no del motor: un Turbo destilado necesita 8 pasos y CFG 1, y con los 20 pasos y CFG 7 que informa el motor la imagen sale mal." />
+
+                            <TextBlock Text="Sampler" FontSize="12" Margin="0,10,0,4" />
+                            <ComboBox Style="{StaticResource ModernComboBox}"
+                                      ItemsSource="{Binding Samplers}"
+                                      SelectedItem="{Binding SelectedSampler}"
+                                      AutomationProperties.AutomationId="GenSamplerCombo" />
+
+                            <TextBlock Text="Scheduler" FontSize="12" Margin="0,8,0,4" />
+                            <ComboBox Style="{StaticResource ModernComboBox}"
+                                      ItemsSource="{Binding Schedulers}"
+                                      SelectedItem="{Binding SelectedScheduler}"
+                                      AutomationProperties.AutomationId="GenSchedulerCombo" />
+
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
+                                       Text="Vacío deja que el motor elija el que corresponde a la familia del modelo. Las listas las informa el motor al arrancar." />
+
+                            <CheckBox Content="Semilla aleatoria" Foreground="#E0E0E0" FontSize="12"
+                                      Margin="0,12,0,0"
+                                      IsChecked="{Binding UseRandomSeed}"
+                                      AutomationProperties.AutomationId="GenRandomSeedCheck" />
+                            <TextBox Text="{Binding Seed}" Style="{StaticResource ValueBox}"
+                                     Margin="0,6,0,0"
+                                     IsEnabled="{Binding CanEditSeed}"
+                                     AutomationProperties.AutomationId="GenSeedBox" />
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
+                                       Text="La semilla aleatoria la sortea la aplicación y queda guardada en la metadata: el motor no informa cuál usó, así que mandarle -1 haría que la imagen no se pudiera reproducir." />
+                        </StackPanel>
+                    </Expander>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Anclado al pie: la acción principal no scrollea -->
+            <Border Grid.Row="1" Background="#0f172a" BorderBrush="#252540" BorderThickness="0,1,0,0"
+                    Padding="16,12">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="Generar imagen"
+                                Command="{Binding GenerateCommand}"
+                                Style="{StaticResource GenButton}"
+                                AutomationProperties.AutomationId="GenerateButton" />
+                        <Button Grid.Column="1" Content="Cancelar"
+                                Command="{Binding CancelCommand}"
+                                Style="{StaticResource DangerGenButton}" Margin="8,0,0,0"
+                                Visibility="{Binding IsGenerating, Converter={StaticResource BoolToVis}}"
+                                AutomationProperties.AutomationId="GenCancelButton" />
+                    </Grid>
+
+                    <!-- Progreso: sale de stdout del motor, no de la API -->
+                    <StackPanel Margin="0,10,0,0"
+                                Visibility="{Binding IsGenerating, Converter={StaticResource BoolToVis}}">
+                        <ProgressBar Height="6" Maximum="100" Value="{Binding ProgressPercent, Mode=OneWay}"
+                                     Background="#1e293b" Foreground="#10B981" BorderThickness="0"
+                                     AutomationProperties.AutomationId="GenProgressBar" />
+                        <TextBlock Text="{Binding ProgressText}" Style="{StaticResource Hint}"
+                                   Margin="0,6,0,0"
+                                   AutomationProperties.AutomationId="GenProgressText" />
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding StatusMessage}" FontSize="11" Foreground="#94a3b8"
+                               TextWrapping="Wrap" Margin="0,8,0,0"
+                               AutomationProperties.AutomationId="GenStatus" />
+                </StackPanel>
+            </Border>
+            </Grid>
+        </Border>
+
+        <!-- ============================== RESULTADO ============================== -->
+        <Grid Grid.Column="1" Margin="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- La imagen actual -->
+            <Border Grid.Row="0" Background="#0f172a" CornerRadius="8" Padding="12">
+                <Grid>
+                    <TextBlock Style="{StaticResource Hint}" FontSize="13"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               TextAlignment="Center" MaxWidth="360"
+                               Text="Escribí un prompt y presioná «Generar imagen». Se genera de a una por vez."
+                               Visibility="{Binding HasCurrentImage, Converter={StaticResource InverseBoolToVis}}"
+                               AutomationProperties.AutomationId="GenPlaceholder" />
+
+                    <Image Source="{Binding CurrentImage.Preview}" Stretch="Uniform"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           Visibility="{Binding HasCurrentImage, Converter={StaticResource BoolToVis}}"
+                           AutomationProperties.AutomationId="GenPreview" />
+                </Grid>
+            </Border>
+
+            <!-- Pie de la imagen actual -->
+            <Grid Grid.Row="1" Margin="0,10,0,0"
+                  Visibility="{Binding HasCurrentImage, Converter={StaticResource BoolToVis}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding CurrentImage.Caption}" FontSize="12" TextWrapping="Wrap"
+                               AutomationProperties.AutomationId="GenCaption" />
+                    <TextBlock Text="{Binding CurrentImage.FileName}" Style="{StaticResource Hint}"
+                               Margin="0,2,0,0"
+                               AutomationProperties.AutomationId="GenFileName" />
+                </StackPanel>
+                <Button Grid.Column="1" Content="Abrir carpeta"
+                        Command="{Binding OpenFolderCommand}"
+                        Style="{StaticResource NeutralGenButton}"
+                        AutomationProperties.AutomationId="GenOpenFolderButton" />
+            </Grid>
+
+            <!-- Galería de la sesión: lo ya generado, que no es una cola de pendientes -->
+            <StackPanel Grid.Row="2" Margin="0,14,0,0"
+                        Visibility="{Binding HasImages, Converter={StaticResource BoolToVis}}">
+                <TextBlock Text="GENERADAS EN ESTA SESIÓN" Style="{StaticResource SectionLabel}" />
+                <ListBox ItemsSource="{Binding Gallery}" SelectedItem="{Binding CurrentImage}"
+                         Height="120" Background="Transparent" BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                         ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                         AutomationProperties.AutomationId="GenGallery">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="#0f172a" CornerRadius="4" Padding="3" Margin="0,0,6,0"
+                                    ToolTip="{Binding Tooltip}">
+                                <Image Source="{Binding Thumbnail}" Width="88" Height="88"
+                                       Stretch="UniformToFill"
+                                       RenderOptions.BitmapScalingMode="HighQuality">
+                                    <Image.InputBindings>
+                                        <MouseBinding MouseAction="LeftDoubleClick"
+                                                      Command="{Binding DataContext.OpenImageCommand,
+                                                                RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                      CommandParameter="{Binding}" />
+                                    </Image.InputBindings>
+                                </Image>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
+                           Text="Doble clic abre la imagen en el visor del sistema. Cada archivo lleva su metadata al lado, en un .json con todo lo necesario para reproducirla." />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

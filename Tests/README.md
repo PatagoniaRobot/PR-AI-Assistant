@@ -28,8 +28,9 @@ dotnet run -p:EdicionApp=Debug      :: 46 aserciones + 11 de humo
 dotnet run -p:EdicionApp=Forense    :: igual: la carga no es capacidad de red
 
 cd ..\GeneracionDeImagenes
-dotnet run                          :: 142 aserciones + 16 de humo (necesita el motor)
+dotnet run                          :: 213 aserciones + 43 de humo (necesita el motor)
 dotnet run -- --con-red             :: además, la descarga real del VAE (0,31 GB)
+dotnet run -- --sin-alternancias    :: saltea las diez cancelaciones seguidas (~90 s)
 powershell .\verificar-barrera.ps1  :: la barrera de E4 sobre el binario Forense
 ```
 
@@ -84,16 +85,30 @@ vacío: el `ForensicLogger` mantiene el archivo abierto en escritura y
 cadena vacía. Una aserción negativa sobre una fuente vacía siempre pasa. Ahora la
 lectura falla ruidosamente si no puede leer.
 
-### `GeneracionDeImagenes` — E4.1
+### `GeneracionDeImagenes` — E4.1 a E4.4
 
 Ejerce `ImageServerManager` e `ImageGenClient` contra `sd-server` de verdad. Lo que
 verifica no es que genere una imagen —eso ya se sabía del reconocimiento de E4.0— sino
 las tres cosas que la API del motor **no** da y hubo que resolver afuera:
 
-- **El progreso sale de stdout.** La respuesta del job no tiene ningún campo de avance.
-  La aserción que importa es que el progreso **ignore la barra de carga de tensores**,
-  que el motor dibuja casi igual pero con cientos de pasos y unidad `GB/s` en lugar de
-  `s/it`. Sin anclar la unidad en el patrón, el avance salta a 452 y vuelve a 8.
+- **El progreso sale de stdout, y hay tres barras que se dibujan igual.** La respuesta
+  del job no tiene ningún campo de avance, así que hay que parsear la salida — y el motor
+  imprime `%s %i/%i - %s` para el muestreo, para la carga de tensores y para la
+  decodificación del VAE en tiles:
+
+  ```
+    |####| 108/386 - 2.34GB/s     carga de tensores
+    |####| 3/8     - 1.84s/it     MUESTREO — la que importa
+    |####| 47/49   - 14.08it/s    decodificación del VAE en tiles (7x7)
+  ```
+
+  **De la línea sola no se distinguen.** La unidad tampoco alcanza: el muestreo usa
+  `s/it` o `it/s` según si la iteración pasa del segundo. El patrón original solo aceptaba
+  `s/it` y por eso funcionaba a 1024×1024 y **perdía el progreso entero a 512×512**; al
+  aceptar las dos, entró la barra del VAE y el avance saltaba de 8 a 49. El discriminador
+  correcto es el número de pasos que se pidió, que lo declara `ImageGenClient` con
+  `BeginJob`. Las dos trampas tienen su aserción, y las dos unidades se prueban sin motor
+  contra líneas reales capturadas de la salida.
 - **Cancelar exige matar el proceso.** Un job que ya está generando devuelve 409. Se
   comprueba que la cancelación corte, que no deje la imagen escrita, y que el motor
   vuelva solo y pueda generar de nuevo — que es donde aparecería el puerto ocupado si
@@ -138,6 +153,36 @@ persistencia, la descarga y el selector.
   ancho natural del texto con `FormattedText` contra el `ActualWidth` del control, que es
   la única forma confiable; con la columna vuelta a 210 px, la aserción falla diciendo
   «necesita 235px y tiene 210px».
+
+`Generacion.cs` y `HumoGeneracion.cs` cubren E4.4: la vista de generación.
+
+- **El hilo de UI se mide, no se supone.** `ContextoDeUnHilo` es un
+  `SynchronizationContext` de un solo hilo que cronometra cada continuación mientras el
+  ViewModel real genera contra el motor real. Es la misma herramienta que encontró el
+  defecto 4.10 del maestro. Imprime el máximo y el total: hoy 7 ms de bloqueo máximo y
+  35 ms sobre 10,5 s de generación.
+- **Diez alternancias de generar y cancelar**, que era un criterio de E4.2 que había
+  quedado sin cumplir. Se salta con `--sin-alternancias` cuando se necesita una corrida
+  rápida; son ~90 s.
+- **La metadata se verifica ida y vuelta contra el disco**, y se comprueba que la semilla
+  guardada sea la que produjo la imagen — el motor no informa cuál usó, así que mandarle
+  `-1` daría un archivo irreproducible.
+- `HumoGeneracion.cs` abre la vista de verdad y deja `%TEMP%\vista-de-generacion.png`.
+  **Hay que mirarla.** Las 25 aserciones de la primera versión pasaban sobre una vista en
+  la que, con los ajustes avanzados desplegados, **el botón de generar quedaba abajo del
+  scroll**, y donde la galería vacía ocupaba una franja muerta. Ninguna aserción lo vio.
+
+**Dos trampas de WPF que costaron entender, anotadas para no repetirlas:**
+
+- **`Visibility` no responde «¿lo ve el usuario?».** Es la propiedad local del control,
+  así que algo adentro de un contenedor colapsado informa `Visible` igual. La que
+  corresponde es **`IsVisible`**, que mira a los ancestros. Y para saber si algo quedó
+  fuera del área de un `ScrollViewer` no sirve ninguna de las dos: hay que comparar su
+  rectángulo contra el de la ventana, como hace `EstaDentro`.
+- **Cerrar la ventana del primer humo apaga la aplicación.** `ShutdownMode` es
+  `OnLastWindowClose` de fábrica, y con la `Application` apagándose la ventana siguiente
+  se muestra sin lanzar pero **no arma su árbol visual**: todo se busca y no se encuentra.
+  Por eso existe `EntornoWpf.Preparar()`, que lo fija una sola vez; hacerlo tarde lanza.
 
 Necesita el motor instalado. Por defecto lo busca en `D:\PROYECTOS\PR-Tools\sd`; se
 cambia con la variable de entorno `SD_RAIZ`. Sin motor, informa cuántas pruebas omitió

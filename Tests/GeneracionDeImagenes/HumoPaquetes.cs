@@ -41,13 +41,9 @@ static class HumoPaquetes
         System.Diagnostics.PresentationTraceSources.DataBindingSource.Switch.Level =
             System.Diagnostics.SourceLevels.Error;
 
-        var app = Application.Current ?? new Application();
-        app.Resources.MergedDictionaries.Add(new ResourceDictionary
-        {
-            Source = new Uri("pack://application:,,,/PR-AI-Assistant;component/Styles/ModernControls.xaml")
-        });
-        app.Resources["MainFont"] = new FontFamily("Segoe UI");
-        app.Resources["MonoFont"] = new FontFamily("Consolas");
+        // Ver EntornoWpf: si esta ventana se cierra con el ShutdownMode de fábrica, la
+        // aplicación empieza a apagarse y el humo siguiente encuentra un árbol vacío.
+        EntornoWpf.Preparar();
 
         var raiz = Path.Combine(Path.GetTempPath(), "BancoPaquetes", "humo");
         if (Directory.Exists(raiz)) Directory.Delete(raiz, true);

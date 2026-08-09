@@ -45,7 +45,14 @@ $simbolos = @(
     @{ n = "ImagePackageSelectorViewModel"; futuro = $false },
     @{ n = "ImageVramArbiter";              futuro = $false },
     @{ n = "image_models.json";             futuro = $false },
-    @{ n = "Comfy-Org/z_image_turbo";       futuro = $false }
+    @{ n = "Comfy-Org/z_image_turbo";       futuro = $false },
+    # E4.4 — la vista de generación
+    @{ n = "ImageGenerationViewModel";      futuro = $false },
+    @{ n = "ImageGenerationView";           futuro = $false },
+    @{ n = "ImageGenMetadata";              futuro = $false },
+    @{ n = "ImageEngineLocator";            futuro = $false },
+    @{ n = "ImageOutputFolder";             futuro = $false },
+    @{ n = "ImagenesGeneradas";             futuro = $false }
 )
 
 function Buscar([byte[]]$heno, [byte[]]$aguja) {

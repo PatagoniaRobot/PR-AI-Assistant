@@ -47,6 +47,22 @@ class Banco
     static bool HayMotor => File.Exists(Exe) && File.Exists(Difusion)
                             && File.Exists(TextEncoder) && File.Exists(Vae);
 
+    /// <summary>
+    /// El paquete instalado de verdad, para las pruebas que pasan por ImageModelService.
+    /// Los pasos y el CFG son los de Z-Image Turbo, no los del motor.
+    /// </summary>
+    static ImageModelPackage PaqueteReal() => new()
+    {
+        Id = "z-image-turbo-real",
+        DisplayName = "Z-Image Turbo Q4_K",
+        Family = "z-image",
+        DefaultSteps = 8,
+        DefaultCfgScale = 1.0,
+        DiffusionModelPath = Difusion,
+        TextEncoderPath = TextEncoder,
+        VaePath = Vae
+    };
+
     static ImageServerConfig ConfigReal(int puerto = 1234) => new()
     {
         ServerExecutablePath = Exe,
@@ -101,6 +117,9 @@ class Banco
         BancoPaquetes.Correr(Check);
         BancoPaquetes.CorrerDescarga(Check, args.Contains("--con-red")).GetAwaiter().GetResult();
 
+        Console.WriteLine("\n-- La vista de generación (E4.4) --");
+        BancoGeneracion.Correr(Check);
+
         Console.WriteLine("\n-- Los fallos son datos, no excepciones --");
         CasoSinMotorInstalado().GetAwaiter().GetResult();
         CasoSinModelo().GetAwaiter().GetResult();
@@ -115,7 +134,9 @@ class Banco
                                       "genera una imagen real", "el progreso viene de stdout",
                                       "el progreso ignora la barra de carga", "prompt vacío con el motor listo",
                                       "la cancelación corta de verdad",
-                                      "no deja sd-server huérfano", "puerto ocupado por otro modelo" })
+                                      "no deja sd-server huérfano", "puerto ocupado por otro modelo",
+                                      "la vista genera de punta a punta", "el hilo de UI no se bloquea",
+                                      "alternar diez veces no deja nada colgado" })
                 Omitida(n, "sin motor instalado");
         }
         else
@@ -124,13 +145,31 @@ class Banco
             CasoCancelacion().GetAwaiter().GetResult();
             CasoSinHuerfanos().GetAwaiter().GetResult();
             CasoPuertoOcupadoOtroModelo().GetAwaiter().GetResult();
+
+            // E4.4 de punta a punta: el ViewModel real contra el motor real, midiendo el
+            // bloqueo del hilo de UI. Las cancelaciones repetidas van aparte porque son
+            // lentas y se pueden saltear con --sin-alternancias.
+            Console.WriteLine("\n-- La vista contra el motor (E4.4) --");
+            MatarTodo();
+            BancoGeneracion.CorrerContraElMotor(Check, Exe, PaqueteReal()).GetAwaiter().GetResult();
+
+            if (args.Contains("--sin-alternancias"))
+            {
+                Omitida("alternar diez veces no degrada ni deja procesos colgados", "--sin-alternancias");
+            }
+            else
+            {
+                Console.WriteLine("\n-- Cancelar diez veces seguidas (criterio arrastrado de E4.2) --");
+                MatarTodo();
+                BancoGeneracion.CorrerCancelaciones(Check, Exe, PaqueteReal()).GetAwaiter().GetResult();
+            }
         }
 
         MatarTodo();
 
-        // El humo va al final: abre una ventana WPF de verdad y deja una captura, y
-        // conviene que no compita con el motor por la GPU mientras tanto.
-        int fallasHumo = HumoPaquetes.Correr();
+        // El humo va al final: abre ventanas WPF de verdad y deja capturas, y conviene
+        // que no compita con el motor por la GPU mientras tanto.
+        int fallasHumo = HumoPaquetes.Correr() + HumoGeneracion.Correr();
 
         Console.WriteLine($"\n{_ok} OK, {_fail} fallas, {_omitidas} omitidas, {fallasHumo} fallas de humo");
         return _fail == 0 && fallasHumo == 0 ? 0 : 1;

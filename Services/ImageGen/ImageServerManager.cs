@@ -23,16 +23,63 @@ public sealed class ImageServerManager : IDisposable
 {
     /// <summary>
     /// Progreso de muestreo tal como lo escribe el motor:
-    ///   |======>          | 3/8 - 1.84s/it
+    ///   |======&gt;          | 3/8 - 1.84s/it
+    ///   |======&gt;          | 3/8 - 1.27it/s
     ///
-    /// El "s/it" del final no es decorativo: el motor usa una barra de aspecto casi
-    /// idéntico para la CARGA de tensores, pero terminada en "GB/s"
-    /// (|####| 108/386 - 2.34GB/s). Sin anclar la unidad, la barra de carga se
-    /// informaría como progreso de generación y el avance saltaría de 386 a 8.
+    /// **El motor cambia de unidad según la velocidad.** El formato es
+    /// <c>%s %i/%i - %s</c> y ese último <c>%s</c> vale <c>s/it</c> cuando una iteración
+    /// pasa del segundo y <c>it/s</c> cuando no llega. Una primera versión de este patrón
+    /// solo aceptaba <c>s/it</c> y por eso funcionaba a 1024×1024 —donde se midió en
+    /// E4.0, a 1,85 s/it— y **perdía el progreso a 512×512**, que va por debajo del
+    /// segundo: llegaba el primer paso, todavía lento, y ninguno más. Lo encontró el
+    /// banco de E4.4 al generar en el tamaño chico, que E4.1 nunca había ejercido.
+    ///
+    /// La unidad tiene que seguir anclada, eso sí: el motor usa una barra de aspecto casi
+    /// idéntico para la CARGA de tensores, terminada en <c>GB/s</c>
+    /// (<c>|####| 108/386 - 2.34GB/s</c>). Sin la unidad, esa barra se informaría como
+    /// progreso de generación y el avance saltaría de 386 a 8. Aceptar las dos unidades
+    /// reales y ninguna más es lo que distingue un caso del otro.
     /// </summary>
     private static readonly Regex ProgressPattern = new(
-        @"\|\s*(\d+)/(\d+)\s*-\s*([\d.]+)s/it",
+        @"\|\s*(\d+)/(\d+)\s*-\s*([\d.]+)(s/it|it/s)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// Interpreta una línea de stdout del motor como progreso de muestreo.
+    ///
+    /// Es público y estático para poder ejercerlo contra líneas reales sin levantar el
+    /// motor: el caso que importa —que la unidad cambie con la velocidad— solo aparece
+    /// generando en tamaños chicos, y una prueba que dependa de eso es lenta y frágil.
+    /// </summary>
+    /// <returns>false si la línea no es progreso de muestreo.</returns>
+    public static bool TryParseProgress(string line, out ImageGenProgress progress)
+    {
+        progress = new ImageGenProgress();
+
+        var m = ProgressPattern.Match(line);
+        if (!m.Success) return false;
+
+        if (!int.TryParse(m.Groups[1].Value, out var paso)) return false;
+        if (!int.TryParse(m.Groups[2].Value, out var total) || total <= 0) return false;
+
+        _ = double.TryParse(m.Groups[3].Value,
+            System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var valor);
+
+        // Se normaliza siempre a segundos por iteración, que es lo que necesita la
+        // estimación de tiempo restante. Con "it/s" el número viene invertido.
+        double porIteracion = m.Groups[4].Value == "it/s"
+            ? (valor > 0 ? 1.0 / valor : 0)
+            : valor;
+
+        progress = new ImageGenProgress
+        {
+            Step = paso,
+            TotalSteps = total,
+            SecondsPerIteration = porIteracion
+        };
+        return true;
+    }
 
     private readonly HttpClient _httpClient;
     private readonly object _lock = new();
@@ -300,26 +347,69 @@ public sealed class ImageServerManager : IDisposable
     }
 
     /// <summary>
-    /// Extrae el progreso de muestreo de una línea de stdout. Ver ProgressPattern para
-    /// por qué la unidad "s/it" es parte del patrón y no un adorno.
+    /// Pasos que se le pidieron al motor para el trabajo en curso. 0 = no hay trabajo.
+    /// Es lo único que distingue el muestreo de las otras barras: ver BeginJob.
+    /// </summary>
+    private int _expectedSteps;
+
+    /// <summary>El muestreo del trabajo actual ya llegó a su último paso.</summary>
+    private bool _samplingFinished;
+
+    /// <summary>
+    /// Declara cuántos pasos va a tener el trabajo que se está por mandar.
+    ///
+    /// **Sin esto no se puede saber cuál de las barras de stdout es el muestreo.** El
+    /// motor dibuja al menos tres barras con el mismo formato exacto
+    /// (<c>%s %i/%i - %s</c>) y hay que quedarse con una sola:
+    ///
+    /// <code>
+    ///   |####| 108/386 - 2.34GB/s    carga de tensores
+    ///   |####| 3/8    - 1.84s/it     MUESTREO — la que importa
+    ///   |####| 47/49  - 14.08it/s    decodificación del VAE en tiles (7x7)
+    /// </code>
+    ///
+    /// La unidad no alcanza para separarlas: el muestreo usa <c>s/it</c> o <c>it/s</c>
+    /// según la velocidad, y la del VAE usa <c>it/s</c> siempre. Una primera versión se
+    /// apoyaba en la unidad y funcionaba por casualidad —solo aceptaba <c>s/it</c>, que a
+    /// 1024×1024 es lo que imprime el muestreo—, a costa de perder el progreso entero en
+    /// los tamaños chicos. Al aceptar las dos unidades apareció la barra del VAE, que
+    /// hacía saltar el avance de 8 a 49.
+    ///
+    /// Comparar contra los pasos pedidos sí es seguro, porque el que los pidió es quien
+    /// llama. Lo hace <see cref="ImageGenClient"/> por cada generación.
+    /// </summary>
+    public void BeginJob(int expectedSteps)
+    {
+        _expectedSteps = expectedSteps > 0 ? expectedSteps : 0;
+        _samplingFinished = false;
+    }
+
+    /// <summary>Cierra el trabajo: deja de informar progreso hasta el próximo BeginJob.</summary>
+    public void EndJob()
+    {
+        _expectedSteps = 0;
+        _samplingFinished = false;
+    }
+
+    /// <summary>
+    /// Extrae el progreso de muestreo de una línea de stdout y lo informa si de verdad
+    /// es del muestreo. Ver BeginJob para por qué el filtro no puede salir de la línea.
     /// </summary>
     private void ParseProgress(string line)
     {
-        var m = ProgressPattern.Match(line);
-        if (!m.Success) return;
+        if (!TryParseProgress(line, out var progreso)) return;
 
-        if (!int.TryParse(m.Groups[1].Value, out var paso)) return;
-        if (!int.TryParse(m.Groups[2].Value, out var total) || total <= 0) return;
-        _ = double.TryParse(m.Groups[3].Value,
-            System.Globalization.NumberStyles.Float,
-            System.Globalization.CultureInfo.InvariantCulture, out var porIteracion);
+        // Sin trabajo declarado no se informa nada: es preferible quedarse sin barra que
+        // mostrar el avance de otra cosa.
+        if (_expectedSteps <= 0 || progreso.TotalSteps != _expectedSteps) return;
 
-        ProgressReported?.Invoke(this, new ImageGenProgress
-        {
-            Step = paso,
-            TotalSteps = total,
-            SecondsPerIteration = porIteracion
-        });
+        // Y una vez que el muestreo terminó, cualquier barra posterior con el mismo total
+        // es de otra etapa. Pasa si los tiles del VAE coinciden en número con los pasos:
+        // la barra volvería a empezar y el avance iría para atrás.
+        if (_samplingFinished) return;
+        if (progreso.Step >= progreso.TotalSteps) _samplingFinished = true;
+
+        ProgressReported?.Invoke(this, progreso);
     }
 
     private void StartHealthCheck()

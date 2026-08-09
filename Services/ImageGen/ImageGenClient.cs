@@ -68,6 +68,27 @@ public sealed class ImageGenClient : IDisposable
         if (!_manager.IsReady)
             return ImageGenResult.Fail("El motor de imágenes no está listo.");
 
+        // El manager necesita saber cuántos pasos se pidieron para poder distinguir la
+        // barra del muestreo de las otras que el motor dibuja igual —la carga de tensores
+        // y la decodificación del VAE en tiles—. Se declara acá y no en la interfaz para
+        // que cualquier llamador tenga el progreso bien, no solo la vista.
+        _manager.BeginJob(request.Steps);
+        try
+        {
+            return await GenerateCoreAsync(request, outputPath, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            // Sin esto, las barras que el motor sigue imprimiendo después del trabajo
+            // —o las del siguiente, si tuviera otro número de pasos— se informarían como
+            // progreso de una generación que ya terminó.
+            _manager.EndJob();
+        }
+    }
+
+    private async Task<ImageGenResult> GenerateCoreAsync(
+        ImageGenRequest request, string outputPath, CancellationToken ct)
+    {
         var baseUrl = _manager.BaseUrl;
         string jobId;
 
@@ -136,6 +157,19 @@ public sealed class ImageGenClient : IDisposable
                     return await CancelJobAsync(baseUrl, jobId).ConfigureAwait(false);
                 }
             }
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancelar mientras la consulta de estado está EN VUELO no es un error: es
+            // el mismo pedido del usuario, que llegó en otro momento del ciclo.
+            //
+            // Sin este catch la excepción caía en el genérico de abajo y el usuario veía
+            // «Error mientras se generaba la imagen: The operation was canceled.» —un
+            // error, y en inglés— en lugar de «Generación cancelada.». Pasaba solo cuando
+            // el cancelar coincidía con el momento del poll, así que aparecía de a
+            // ratos: en el banco de las diez alternancias salió una sola vez, en la
+            // primera vuelta, que es la más lenta porque carga el modelo en frío.
+            return await CancelJobAsync(baseUrl, jobId).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -256,6 +290,12 @@ public sealed class ImageGenClient : IDisposable
             File.Move(parcial, outputPath, overwrite: true);
 
             return ImageGenResult.Ok(outputPath, seedPedida);
+        }
+        catch (OperationCanceledException)
+        {
+            // Mismo criterio que en el polling: una cancelación no se informa como
+            // fallo de guardado. Se propaga para que el llamador la trate como tal.
+            throw;
         }
         catch (Exception ex)
         {
