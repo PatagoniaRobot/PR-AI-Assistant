@@ -555,9 +555,25 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
         RefreshVerdict();
 
         if (!HasPackage)
+        {
             StatusMessage = "Elegí un paquete de modelo de imagen para poder generar.";
-        else if (!ImageEngineLocator.IsInstalled)
-            StatusMessage = "El motor de imágenes no está instalado. Se avisará al generar.";
+        }
+        else
+        {
+            // Se pregunta por la ruta que se va a USAR, no por la que descubriría el
+            // localizador. No es lo mismo desde que la ruta del motor se puede configurar:
+            // con una configurada a mano, `ImageEngineLocator.IsInstalled` sigue mirando
+            // SD_RAIZ y Tools\sd\bin\, así que la vista avisaba «el motor no está
+            // instalado» con el motor perfectamente instalado en otro lado. Lo encontró
+            // abrir la aplicación de verdad: la generación andaba y el cartel mentía.
+            var motor = _enginePathResolver();
+            if (!File.Exists(motor))
+            {
+                StatusMessage = $"No se encontró el motor de imágenes en:\n{motor}\n\n" +
+                                "Elegilo desde «Modelos de imagen» o descomprimí ahí " +
+                                "stable-diffusion.cpp.";
+            }
+        }
     }
 
     /// <summary>

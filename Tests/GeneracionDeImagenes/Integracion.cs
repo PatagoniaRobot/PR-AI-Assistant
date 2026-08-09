@@ -7,6 +7,7 @@ using PRImager.AIAssistant.Services;
 using PRImager.AIAssistant.Services.ImageGen;
 using PRImager.AIAssistant.Services.Models;
 using PRImager.AIAssistant.ViewModels;
+using PRImager.AIAssistant.ViewModels.ImageGen;
 
 // Banco de E4.5: integración.
 //
@@ -299,6 +300,56 @@ static class BancoIntegracion
         Check("y la ruta de instalación nombra Tools\\sd",
             ImageEngineLocator.InstalledPath.Contains(Path.Combine("Tools", "sd")),
             ImageEngineLocator.InstalledPath);
+
+        // El aviso de la vista tiene que hablar de la ruta que se VA A USAR, no de la que
+        // descubriría el localizador. Con el motor configurado a mano en otra carpeta, la
+        // primera versión avisaba «el motor no está instalado» con el motor instalado: la
+        // generación andaba y el cartel mentía. Lo encontró abrir la aplicación de verdad.
+        var dirVm = NuevaCarpeta("motor-vm");
+        var svcVm = new ImageModelService(Path.Combine(dirVm, "image_models.json"));
+        string Falso(string n)
+        {
+            var r = Path.Combine(dirVm, n);
+            File.WriteAllBytes(r, new byte[1024]);
+            return r;
+        }
+        svcVm.Save(new ImageModelPackage
+        {
+            Id = "p", DisplayName = "Paquete", Family = "z-image",
+            DiffusionModelPath = Falso("dif.gguf"),
+            TextEncoderPath = Falso("te.gguf"),
+            VaePath = Falso("ae.safetensors")
+        });
+        svcVm.Select("p");
+
+        var motorReal = Path.Combine(dirVm, "sd-server.exe");
+        File.WriteAllBytes(motorReal, new byte[16]);
+
+        using (var conMotor = new ImageGenerationViewModel(svcVm, new ImageServerManager(),
+                   gpuInfo: null, enginePathResolver: () => motorReal,
+                   outputDirectory: Path.Combine(dirVm, "salidas")))
+        {
+            conMotor.InitializeAsync().GetAwaiter().GetResult();
+
+            // Se exige que NO haya aviso ninguno, no que no diga cierta frase: la versión
+            // anterior avisaba con otras palabras -«el motor no está instalado»- y una
+            // aserción sobre el texto nuevo habría pasado sobre el defecto.
+            Check("con el motor configurado en otra carpeta, no avisa nada",
+                conMotor.StatusMessage == "", conMotor.StatusMessage);
+        }
+
+        // Control positivo: si de verdad no está, tiene que avisarlo y nombrar dónde miró.
+        var inexistente = Path.Combine(dirVm, "no-esta", "sd-server.exe");
+        using (var sinMotor = new ImageGenerationViewModel(svcVm, new ImageServerManager(),
+                   gpuInfo: null, enginePathResolver: () => inexistente,
+                   outputDirectory: Path.Combine(dirVm, "salidas")))
+        {
+            sinMotor.InitializeAsync().GetAwaiter().GetResult();
+            Check("y si falta de verdad, avisa", sinMotor.StatusMessage.Contains("No se encontró el motor"),
+                sinMotor.StatusMessage);
+            Check("y dice en qué ruta miró", sinMotor.StatusMessage.Contains(inexistente),
+                sinMotor.StatusMessage);
+        }
     }
 
     // ------------------------------------------------- la barra lateral del chat

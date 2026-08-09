@@ -28,7 +28,7 @@ dotnet run -p:EdicionApp=Debug      :: 46 aserciones + 11 de humo
 dotnet run -p:EdicionApp=Forense    :: igual: la carga no es capacidad de red
 
 cd ..\GeneracionDeImagenes
-dotnet run                          :: 283 aserciones + 61 de humo (necesita el motor)
+dotnet run                          :: 286 aserciones + 61 de humo (necesita el motor)
 dotnet run -- --con-red             :: además, la descarga real del VAE (0,31 GB)
 dotnet run -- --sin-alternancias    :: saltea las diez cancelaciones seguidas (~90 s)
 powershell .\verificar-barrera.ps1  :: la barrera de E4 sobre el binario Forense
