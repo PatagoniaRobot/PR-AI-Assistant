@@ -69,6 +69,9 @@ public class ProfileManagerViewModel : ObservableObject
     private bool _editModelDownload;
     public bool EditModelDownloadEnabled { get => _editModelDownload; set => SetProperty(ref _editModelDownload, value); }
 
+    private bool _editImageGen;
+    public bool EditImageGenEnabled { get => _editImageGen; set => SetProperty(ref _editImageGen, value); }
+
     private bool _editFileUpload;
     public bool EditFileUploadEnabled { get => _editFileUpload; set => SetProperty(ref _editFileUpload, value); }
 
@@ -121,6 +124,7 @@ public class ProfileManagerViewModel : ObservableObject
         EditContextTokens = profile.ContextTokens;
         EditWebSearchEnabled = profile.WebSearchEnabled;
         EditModelDownloadEnabled = profile.ModelDownloadEnabled;
+        EditImageGenEnabled = profile.ImageGenEnabled;
         EditFileUploadEnabled = profile.FileUploadEnabled;
         EditMandatoryLog = profile.MandatoryLog;
         EditAccentColor = profile.AccentColor;
@@ -159,6 +163,7 @@ public class ProfileManagerViewModel : ObservableObject
             DefaultModelPath = _selectedProfile.DefaultModelPath,
             WebSearchEnabled = EditWebSearchEnabled,
             ModelDownloadEnabled = EditModelDownloadEnabled,
+            ImageGenEnabled = EditImageGenEnabled,
             FileUploadEnabled = EditFileUploadEnabled,
             MandatoryLog = EditMandatoryLog,
             AccentColor = EditAccentColor

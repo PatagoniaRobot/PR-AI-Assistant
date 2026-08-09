@@ -98,6 +98,11 @@ class Banco
         if (args.Length > 0 && args[0] == "--hijo-que-muere")
             return HijoQueMuere().GetAwaiter().GetResult();
 
+        // Modo hijo: mira el binario Forense por reflexión. Va en otro proceso porque
+        // cargarlo acá rompe la resolución de recursos XAML de las pruebas de humo.
+        if (args.Length > 0 && args[0] == BancoIntegracion.ArgumentoDelHijo)
+            return BancoIntegracion.CorrerComoHijo();
+
         Console.WriteLine("Banco del motor de generación de imágenes (E4.1)\n");
         MatarTodo();
 
@@ -119,6 +124,9 @@ class Banco
 
         Console.WriteLine("\n-- La vista de generación (E4.4) --");
         BancoGeneracion.Correr(Check);
+
+        Console.WriteLine("\n-- Integración y capacidad del perfil (E4.5) --");
+        BancoIntegracion.Correr(Check);
 
         Console.WriteLine("\n-- Los fallos son datos, no excepciones --");
         CasoSinMotorInstalado().GetAwaiter().GetResult();
@@ -169,7 +177,7 @@ class Banco
 
         // El humo va al final: abre ventanas WPF de verdad y deja capturas, y conviene
         // que no compita con el motor por la GPU mientras tanto.
-        int fallasHumo = HumoPaquetes.Correr() + HumoGeneracion.Correr();
+        int fallasHumo = HumoPaquetes.Correr() + HumoGeneracion.Correr() + HumoBarraLateral.Correr();
 
         Console.WriteLine($"\n{_ok} OK, {_fail} fallas, {_omitidas} omitidas, {fallasHumo} fallas de humo");
         return _fail == 0 && fallasHumo == 0 ? 0 : 1;

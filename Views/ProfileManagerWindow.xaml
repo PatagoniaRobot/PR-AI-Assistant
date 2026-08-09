@@ -192,6 +192,10 @@
                               Content="Búsqueda web habilitada" />
                     <CheckBox IsChecked="{Binding EditModelDownloadEnabled}" IsEnabled="{Binding IsEditable}"
                               Content="Descarga de modelos habilitada" />
+                    <CheckBox IsChecked="{Binding EditImageGenEnabled}" IsEnabled="{Binding IsEditable}"
+                              Content="Generación de imágenes habilitada"
+                              AutomationProperties.AutomationId="EditImageGenCheck"
+                              ToolTip="El Modo Investigación siempre la deshabilita, y la edición institucional no la incluye en absoluto." />
                     <CheckBox IsChecked="{Binding EditFileUploadEnabled}" IsEnabled="{Binding IsEditable}"
                               Content="Adjuntar archivos e imágenes"
                               ToolTip="El Modo Investigación siempre la habilita: cargar evidencia es parte del marco institucional y un perfil no puede quitarla." />

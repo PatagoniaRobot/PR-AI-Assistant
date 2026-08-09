@@ -37,6 +37,17 @@ public sealed class UsageProfile
     public bool ModelDownloadEnabled { get; set; }
 
     /// <summary>
+    /// Habilita la generación de imágenes (E4).
+    ///
+    /// Se comporta como <see cref="WebSearchEnabled"/> y <see cref="ModelDownloadEnabled"/>:
+    /// el Modo Investigación la fuerza a <c>false</c>. Una herramienta pericial que puede
+    /// fabricar imágenes es un problema de credibilidad, no de funcionalidad — por eso
+    /// además E4 no se compila en la edición Forense, y esta bandera es la segunda
+    /// barrera para la edición comercial usada dentro de una investigación.
+    /// </summary>
+    public bool ImageGenEnabled { get; set; }
+
+    /// <summary>
     /// Habilita adjuntar archivos e imágenes al mensaje.
     ///
     /// A diferencia de las otras dos capacidades, el Modo Investigación la fuerza a
@@ -69,6 +80,7 @@ public sealed class UsageProfile
         DefaultModelPath = DefaultModelPath,
         WebSearchEnabled = WebSearchEnabled,
         ModelDownloadEnabled = ModelDownloadEnabled,
+        ImageGenEnabled = ImageGenEnabled,
         FileUploadEnabled = FileUploadEnabled,
         MandatoryLog = MandatoryLog,
         AccentColor = AccentColor,

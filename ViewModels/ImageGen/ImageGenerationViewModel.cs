@@ -144,14 +144,27 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
     private bool _shutdown;
     private bool _disposed;
 
+    /// <summary>
+    /// Registro de auditoría. Se le pasa el hecho, **nunca el contenido**: queda que se
+    /// generó una imagen, con qué modelo, qué tamaño y qué semilla, pero no el prompt.
+    ///
+    /// Es el mismo criterio con el que 9.3 resolvió la carga de archivos en Modo General:
+    /// auditar lo que el usuario escribe en el modo personal lo convertiría en otra cosa.
+    /// El prompt no se pierde — está en el sidecar, al lado de la imagen, que es donde
+    /// sirve para reproducirla.
+    /// </summary>
+    private readonly Action<string, string>? _auditLog;
+
     public ImageGenerationViewModel(
         ImageModelService modelService,
         ImageServerManager? manager = null,
         GpuInfoService? gpuInfo = null,
         Func<string>? enginePathResolver = null,
-        string? outputDirectory = null)
+        string? outputDirectory = null,
+        Action<string, string>? auditLog = null)
     {
         _modelService = modelService;
+        _auditLog = auditLog;
         _ownsManager = manager is null;
         _manager = manager ?? new ImageServerManager();
         _client = new ImageGenClient(_manager);
@@ -663,6 +676,14 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
                                         .ConfigureAwait(true);
 
             await AgregarALaGaleriaAsync(resultado.ImagePath, metadata).ConfigureAwait(true);
+
+            // Cultura invariante, como el resto del log: tiene que poder parsearse sin
+            // depender del locale. Fue el defecto 4.1 y no se repite.
+            _auditLog?.Invoke("IMAGE_GENERATED", string.Format(
+                CultureInfo.InvariantCulture,
+                "file=\"{0}\" size={1}x{2} steps={3} cfg={4:F2} seed={5} modelo=\"{6}\" segundos={7:F1}",
+                Path.GetFileName(resultado.ImagePath), request.Width, request.Height,
+                request.Steps, request.CfgScale, semilla, paquete.Id, cron.Elapsed.TotalSeconds));
 
             StatusMessage = sidecar is null
                 ? $"Imagen lista en {cron.Elapsed.TotalSeconds:N1} s. " +

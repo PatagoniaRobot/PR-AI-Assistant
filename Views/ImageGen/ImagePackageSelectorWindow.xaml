@@ -8,7 +8,7 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:ImagePackageSelectorViewModel}"
         Title="Modelos de imagen — PR-AI Assistant"
-        Height="620" Width="920"
+        Height="740" Width="920"
         Background="#1A1A2E"
         WindowStartupLocation="CenterOwner"
         FontFamily="{StaticResource MainFont}">
@@ -239,6 +239,27 @@
                 <Button Grid.Column="2" Content="Examinar…" Command="{Binding BrowseVaeCommand}"
                         Style="{StaticResource NeutralPkgButton}" Margin="8,0,0,0" />
             </Grid>
+
+            <!-- El motor. Va acá y no en la configuración general porque es de las
+                 imágenes, y esta ventana está detrás de la barrera de compilación. -->
+            <TextBlock Text="MOTOR DE GENERACIÓN" Style="{StaticResource SectionLabel}" Margin="0,14,0,6" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="120" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="sd-server.exe" VerticalAlignment="Center" FontSize="12" />
+                <TextBox Grid.Column="1" Text="{Binding EnginePath, Mode=OneWay}"
+                         Style="{StaticResource RutaBox}"
+                         AutomationProperties.AutomationId="PkgEnginePath" />
+                <Button Grid.Column="2" Content="Examinar…" Command="{Binding BrowseEngineCommand}"
+                        Style="{StaticResource NeutralPkgButton}" Margin="8,0,0,0" />
+            </Grid>
+            <TextBlock Text="{Binding EngineStatusText}" FontSize="11" Margin="120,4,0,0"
+                       TextWrapping="Wrap"
+                       Foreground="{Binding EngineStatusColor, Converter={StaticResource HexToBrush}}"
+                       AutomationProperties.AutomationId="PkgEngineStatus" />
         </StackPanel>
 
         <!-- Descarga del paquete recomendado -->

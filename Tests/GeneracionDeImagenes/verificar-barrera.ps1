@@ -52,8 +52,49 @@ $simbolos = @(
     @{ n = "ImageGenMetadata";              futuro = $false },
     @{ n = "ImageEngineLocator";            futuro = $false },
     @{ n = "ImageOutputFolder";             futuro = $false },
-    @{ n = "ImagenesGeneradas";             futuro = $false }
+    @{ n = "ImagenesGeneradas";             futuro = $false },
+    # E4.5 — integración
+    @{ n = "ImageGenerationWindow";         futuro = $false },
+    @{ n = "IMAGE_GEN_OPENED";              futuro = $false },
+
+    # Excepción declarada. Los dos comandos son propiedades de MainViewModel, que se
+    # compila entero en las dos ediciones, así que sus NOMBRES llegan a los metadatos del
+    # binario Forense. El cuerpo de lo que ejecutan no: está dentro de #if IMAGE_GEN, así
+    # que ahí son métodos vacíos y CanExecute devuelve false siempre.
+    #
+    # Se aceptan con el mismo criterio con el que 1.3 del maestro admite ResolveDownload-
+    # Directory y el DTO WebSource: son andamiaje local inerte, no la capacidad. Sacarlos
+    # exigiría quitar el binding del XAML, que no admite #if, y eso rompería con errores
+    # de binding el banco de CargaDeArchivos, que sí corre en las dos ediciones.
+    #
+    # Se listan igual —en vez de omitirlos— para que la excepción esté a la vista y se
+    # revise, y para que un cambio de nombre no la haga desaparecer en silencio.
+    @{ n = "OpenImageGenerationCommand";    inerte = $true;
+       motivo = "propiedad de MainViewModel; el cuerpo va tras #if y CanExecute es false" },
+    @{ n = "OpenImagePackagesCommand";      inerte = $true;
+       motivo = "idem" }
 )
+
+# ImageGenEnabled NO va en esta lista, y la omisión es deliberada.
+#
+# Vive en UsageProfile, que SÍ se compila en Forense: es configuración, no código de
+# imágenes. Buscarla acá daría una falla legítima y no probaría nada.
+#
+# Lo que hay que garantizar es otra cosa —que en esa edición la capacidad no pueda quedar
+# en true aunque el profiles.json lo pida— y eso no se verifica contando bytes. Lo prueba
+# el banco cargando el binario Forense en un proceso aparte y ejerciendo
+# EffectiveProfile.Resolve sobre él. Ver Integracion.cs.
+
+# ImageGenEnabled NO va en esta lista, y la omisión es deliberada.
+#
+# Vive en UsageProfile, que SÍ se compila en Forense: es configuración, no código de
+# imágenes, con el mismo criterio con el que 1.3 admite el DTO WebSource. Buscarla acá
+# daría una falla legítima y no probaría nada.
+#
+# Lo que hay que garantizar es otra cosa —que en esa edición la capacidad no pueda
+# quedar en true aunque el profiles.json lo pida— y eso no se puede verificar contando
+# bytes. Lo prueba el banco, cargando el binario Forense en un proceso aparte y
+# ejerciendo EffectiveProfile.Resolve sobre él. Ver Integracion.cs.
 
 function Buscar([byte[]]$heno, [byte[]]$aguja) {
     $limite = $heno.Length - $aguja.Length
@@ -90,6 +131,22 @@ foreach ($s in $simbolos) {
         $veredicto = if (-not $enForense -and -not $enDebug) { "aun no existe (E4.3)" }
                      else { "REVISAR: ya existe, sacar el marcador de futuro" }
         $color = "DarkGray"
+    }
+    elseif ($s.inerte) {
+        # Excepción declarada: se espera que esté en las dos ediciones. Si DESAPARECIERA
+        # de Forense habría que sacarlo de las excepciones, y si desapareciera de Debug
+        # es que le cambiaron el nombre y esta entrada dejó de vigilar algo.
+        if ($enForense -and $enDebug) {
+            $veredicto = "aceptado inerte: " + $s.motivo; $color = "Yellow"
+        }
+        elseif (-not $enDebug) {
+            $veredicto = "FALLA: no esta en Debug, la excepcion ya no vigila nada"
+            $color = "Red"; $fallas++
+        }
+        else {
+            $veredicto = "REVISAR: ya no esta en Forense, sacarlo de las excepciones"
+            $color = "Red"; $fallas++
+        }
     }
     elseif ($enForense) {
         $veredicto = "FALLA: esta en Forense"; $color = "Red"; $fallas++

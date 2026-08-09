@@ -46,6 +46,33 @@ public sealed class ImageModelService
 
     public IReadOnlyList<ImageModelPackage> Packages => _store.Packages;
 
+    /// <summary>
+    /// Ruta a sd-server.exe elegida por el usuario, o vacío para que la resuelva
+    /// <see cref="ImageEngineLocator"/>.
+    ///
+    /// Vive acá y no en settings.json a propósito: es configuración **de la generación de
+    /// imágenes**, y este archivo ya está detrás de la barrera de compilación. Ponerla en
+    /// settings.json la habría metido en el binario institucional, que no tiene motor.
+    /// </summary>
+    public string EngineExecutablePath
+    {
+        get => _store.EngineExecutablePath ?? "";
+        set
+        {
+            _store.EngineExecutablePath = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+            Persist();
+        }
+    }
+
+    /// <summary>
+    /// Ruta efectiva del motor: la configurada si hay una, o la que se descubra sola.
+    /// Es lo que hay que pasarle al ViewModel de generación.
+    /// </summary>
+    public string ResolveEnginePath() =>
+        string.IsNullOrWhiteSpace(_store.EngineExecutablePath)
+            ? ImageEngineLocator.ResolveExecutablePath()
+            : _store.EngineExecutablePath;
+
     /// <summary>Paquetes con los tres archivos presentes.</summary>
     public IReadOnlyList<ImageModelPackage> CompletePackages =>
         _store.Packages.Where(p => p.IsComplete).ToList();
@@ -232,6 +259,9 @@ public sealed class ImageModelService
     {
         public List<ImageModelPackage> Packages { get; set; } = new();
         public string? SelectedPackageId { get; set; }
+
+        /// <summary>Null = descubrir el motor solo. Ver ImageEngineLocator.</summary>
+        public string? EngineExecutablePath { get; set; }
     }
 }
 

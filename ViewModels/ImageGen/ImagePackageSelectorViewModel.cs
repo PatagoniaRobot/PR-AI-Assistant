@@ -115,6 +115,7 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
         _gpuInfo = gpuInfo ?? new GpuInfoService();
         _downloaderFactory = downloaderFactory ?? (() => new ImagePackageDownloader());
 
+        BrowseEngineCommand = new RelayCommand(BrowseEngine);
         BrowseDiffusionCommand = new RelayCommand(() => Browse("modelo de difusión"));
         BrowseTextEncoderCommand = new RelayCommand(() => Browse("text encoder"));
         BrowseVaeCommand = new RelayCommand(() => Browse("VAE"));
@@ -179,6 +180,35 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
         }
     }
 
+    // --- El motor ---
+
+    /// <summary>
+    /// Ruta efectiva de sd-server.exe. Se muestra siempre, esté configurada a mano o
+    /// descubierta sola, para que el usuario vea contra qué binario va a generar — el
+    /// mismo criterio con el que E2 muestra la URL de SearXNG en un TextBox y no en un
+    /// PasswordBox.
+    /// </summary>
+    public string EnginePath => _service.ResolveEnginePath();
+
+    public string EngineStatusText => File.Exists(EnginePath)
+        ? "Motor encontrado."
+        : "No se encontró el motor. Descargá stable-diffusion.cpp (build CUDA) y elegí sd-server.exe.";
+
+    public string EngineStatusColor => File.Exists(EnginePath) ? "#10B981" : "#F59E0B";
+
+    private void BrowseEngine()
+    {
+        var elegido = _dialogs.OpenFiles("Elegir sd-server.exe",
+            "Motor de imágenes (sd-server.exe)|sd-server.exe|Ejecutables (*.exe)|*.exe|Todos los archivos|*.*");
+
+        if (elegido is not { Length: > 0 }) return;
+
+        _service.EngineExecutablePath = elegido[0];
+        OnPropertyChanged(nameof(EnginePath));
+        OnPropertyChanged(nameof(EngineStatusText));
+        OnPropertyChanged(nameof(EngineStatusColor));
+    }
+
     // --- Estado de la GPU ---
 
     public string GpuText => _gpu.Available
@@ -228,6 +258,7 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
 
     // --- Comandos ---
 
+    public RelayCommand BrowseEngineCommand { get; }
     public RelayCommand BrowseDiffusionCommand { get; }
     public RelayCommand BrowseTextEncoderCommand { get; }
     public RelayCommand BrowseVaeCommand { get; }

@@ -11,7 +11,9 @@ namespace PRImager.AIAssistant.Services.Models;
 ///
 ///   - SystemPrompt: gana el prompt institucional de investigación.
 ///   - MandatoryLog: forzado a true.
-///   - WebSearchEnabled / ModelDownloadEnabled: forzados a false.
+///   - WebSearchEnabled / ModelDownloadEnabled / ImageGenEnabled: forzados a false.
+///     ImageGenEnabled además es false SIEMPRE en la edición institucional, por
+///     compilación y no por configuración. Ver <see cref="ImageGenCompiledIn"/>.
 ///   - FileUploadEnabled: forzado a TRUE. Es la única capacidad que el marco
 ///     institucional habilita en vez de quitar: cargar evidencia es constitutivo de
 ///     la investigación y un perfil no puede sacárselo al perito.
@@ -36,6 +38,35 @@ public sealed class EffectiveProfile
 
     /// <summary>Descarga de modelos efectivamente disponible.</summary>
     public bool ModelDownloadEnabled { get; }
+
+    /// <summary>
+    /// Generación de imágenes efectivamente disponible.
+    ///
+    /// **En la edición institucional es false siempre**, cualquiera sea el perfil y
+    /// cualquiera sea el modo: ver <see cref="ImageGenCompiledIn"/>.
+    /// </summary>
+    public bool ImageGenEnabled { get; }
+
+    /// <summary>
+    /// True si la generación de imágenes existe en este binario.
+    ///
+    /// `UsageProfile` sí se compila en la edición Forense —es configuración, no código de
+    /// red ni de imágenes—, así que sin esta constante un `profiles.json` con
+    /// `image_gen_enabled: true` haría que un binario pericial informara la capacidad
+    /// como disponible. No podría hacer nada con ella, porque el código no está, pero
+    /// **un flag en true es exactamente lo que la sección 1.3 del maestro no quiere tener
+    /// que explicar ante una impugnación**: «no la tiene» es más sólido que «la tiene
+    /// apagada».
+    ///
+    /// Por eso la barrera de compilación entra acá, en el único lugar donde vive la
+    /// precedencia, y no repartida por la interfaz.
+    /// </summary>
+    public const bool ImageGenCompiledIn =
+#if IMAGE_GEN
+        true;
+#else
+        false;
+#endif
 
     /// <summary>Carga de archivos e imágenes efectivamente disponible.</summary>
     public bool FileUploadEnabled { get; }
@@ -62,6 +93,7 @@ public sealed class EffectiveProfile
         double temperature,
         bool webSearchEnabled,
         bool modelDownloadEnabled,
+        bool imageGenEnabled,
         bool fileUploadEnabled,
         bool mandatoryLog,
         bool isSystemPromptOverridden)
@@ -71,6 +103,7 @@ public sealed class EffectiveProfile
         Temperature = temperature;
         WebSearchEnabled = webSearchEnabled;
         ModelDownloadEnabled = modelDownloadEnabled;
+        ImageGenEnabled = imageGenEnabled;
         FileUploadEnabled = fileUploadEnabled;
         MandatoryLog = mandatoryLog;
         IsSystemPromptOverridden = isSystemPromptOverridden;
@@ -91,6 +124,9 @@ public sealed class EffectiveProfile
             temperature: profile.Temperature,
             webSearchEnabled: !isInvestigation && profile.WebSearchEnabled,
             modelDownloadEnabled: !isInvestigation && profile.ModelDownloadEnabled,
+            // Tres condiciones, y la primera es de compilación: en Forense es false
+            // constante, así que el compilador se lleva la rama entera.
+            imageGenEnabled: ImageGenCompiledIn && !isInvestigation && profile.ImageGenEnabled,
             // Nótese el || y no el &&: acá el modo habilita, no restringe
             fileUploadEnabled: isInvestigation || profile.FileUploadEnabled,
             mandatoryLog: isInvestigation || profile.MandatoryLog,

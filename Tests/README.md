@@ -28,7 +28,7 @@ dotnet run -p:EdicionApp=Debug      :: 46 aserciones + 11 de humo
 dotnet run -p:EdicionApp=Forense    :: igual: la carga no es capacidad de red
 
 cd ..\GeneracionDeImagenes
-dotnet run                          :: 213 aserciones + 43 de humo (necesita el motor)
+dotnet run                          :: 283 aserciones + 61 de humo (necesita el motor)
 dotnet run -- --con-red             :: además, la descarga real del VAE (0,31 GB)
 dotnet run -- --sin-alternancias    :: saltea las diez cancelaciones seguidas (~90 s)
 powershell .\verificar-barrera.ps1  :: la barrera de E4 sobre el binario Forense
@@ -85,7 +85,7 @@ vacío: el `ForensicLogger` mantiene el archivo abierto en escritura y
 cadena vacía. Una aserción negativa sobre una fuente vacía siempre pasa. Ahora la
 lectura falla ruidosamente si no puede leer.
 
-### `GeneracionDeImagenes` — E4.1 a E4.4
+### `GeneracionDeImagenes` — E4.1 a E4.5
 
 Ejerce `ImageServerManager` e `ImageGenClient` contra `sd-server` de verdad. Lo que
 verifica no es que genere una imagen —eso ya se sabía del reconocimiento de E4.0— sino
@@ -171,6 +171,29 @@ persistencia, la descarga y el selector.
   **Hay que mirarla.** Las 25 aserciones de la primera versión pasaban sobre una vista en
   la que, con los ajustes avanzados desplegados, **el botón de generar quedaba abajo del
   scroll**, y donde la galería vacía ocupaba una franja muerta. Ninguna aserción lo vio.
+
+`Integracion.cs` y `HumoBarraLateral.cs` cubren E4.5: la capacidad del perfil y la entrada
+en la barra lateral.
+
+- **La edición institucional se prueba de verdad, no por lectura del código.** El banco
+  carga `bin\Forense\...\PR-AI-Assistant.dll` por reflexión y ejerce
+  `EffectiveProfile.Resolve` con un perfil que trae `image_gen_enabled: true`. Tiene que
+  dar false. Con control positivo sobre el binario comercial, que tiene que dar true: sin
+  eso la aserción pasaría igual si `Resolve` devolviera false siempre.
+- **Eso corre en un PROCESO APARTE**, y no es prolijidad. Los dos binarios se llaman
+  `PR-AI-Assistant` y tienen la misma versión, así que con los dos en memoria WPF resuelve
+  mal los pack URI y las pruebas de humo posteriores fallan con «No se encuentra el
+  recurso …imagepackageselectorwindow.xaml», hablando de una ventana que no tiene nada que
+  ver. Un `AssemblyLoadContext` colectible no alcanza: aísla los tipos, pero la descarga
+  es diferida y WPF ya se confundió.
+- **Y antes de eso hay otra trampa:** `Assembly.LoadFrom` devuelve el ensamblado **ya
+  cargado** cuando la identidad coincide, así que la prueba habría corrido contra el
+  binario comercial sin mirar nunca el institucional. Por eso se verifica que
+  `asm.Location` sea la ruta esperada y que ahí **no exista** `ImageServerManager`.
+- `HumoBarraLateral.cs` abre `ChatView` de verdad y deja
+  `%TEMP%\barra-lateral-imagenes.png`. **La barra lateral arranca cerrada**: la primera
+  versión no la abría y tres aserciones de visibilidad pasaban leyendo una pantalla que no
+  se estaba dibujando. Ahora se abre y hay un control positivo que lo comprueba.
 
 **Dos trampas de WPF que costaron entender, anotadas para no repetirlas:**
 

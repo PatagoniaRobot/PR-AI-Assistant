@@ -783,6 +783,36 @@
                                 <TextBlock Text="{Binding SelectedModelCapabilitiesText}" Foreground="#3B82F6" FontSize="9" Margin="0,2,0,0" />
                                 <TextBlock Text="{Binding SelectedModelContextInfo}" Foreground="#777777" FontFamily="{StaticResource MonoFont}" FontSize="9" Margin="0,2,0,0" />
 
+                                <!-- Generación de imágenes (E4): dos barreras.
+                                     La sección entera desaparece si el binario no la
+                                     incluye -edición Forense-, y los botones se
+                                     deshabilitan si el perfil efectivo no la permite.
+                                     Que se vean deshabilitados y no ocultos es
+                                     deliberado: el usuario tiene que poder descubrir que
+                                     la capacidad existe y que su perfil se la quita. -->
+                                <StackPanel Margin="0,16,0,0"
+                                            Visibility="{Binding IsImageGenCompiledIn, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="IMÁGENES" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                    <Button Command="{Binding OpenImageGenerationCommand}"
+                                            AutomationProperties.AutomationId="OpenImageGenButton"
+                                            Style="{StaticResource SecondaryButtonStyle}" Background="#1E1E3A"
+                                            MinHeight="28"
+                                            ToolTip="Genera una imagen a partir de un prompt. Se abre en su propia ventana y podés seguir conversando mientras genera.">
+                                        <TextBlock Text="🖼 Generar imágenes" FontSize="11" />
+                                    </Button>
+                                    <Button Command="{Binding OpenImagePackagesCommand}"
+                                            AutomationProperties.AutomationId="OpenImagePackagesButton"
+                                            Style="{StaticResource SecondaryButtonStyle}" Background="#1E1E3A"
+                                            MinHeight="28" Margin="0,6,0,0"
+                                            ToolTip="Elegí o descargá el paquete de modelo de imagen. Son tres archivos: difusión, text encoder y VAE.">
+                                        <TextBlock Text="⤓ Modelos de imagen" FontSize="11" />
+                                    </Button>
+                                    <TextBlock Text="El perfil activo no habilita la generación de imágenes."
+                                               Foreground="#F59E0B" FontSize="10" TextWrapping="Wrap" Margin="0,6,0,0"
+                                               AutomationProperties.AutomationId="ImageGenDisabledNotice"
+                                               Visibility="{Binding IsImageGenAvailable, Converter={StaticResource InverseBoolToVis}}" />
+                                </StackPanel>
+
                                 <!-- Perfil de ejecución: toggle buttons -->
                                 <TextBlock Text="EJECUCIÓN" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,16,0,8" />
                                 <ItemsControl ItemsSource="{Binding AvailableExecutionProfiles}">

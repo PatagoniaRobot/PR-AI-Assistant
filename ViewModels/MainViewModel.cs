@@ -436,16 +436,18 @@ public class MainViewModel : ObservableObject
         // Cultura invariante: el log de auditoría debe ser parseable sin depender del locale
         _orchestrator.Logger.LogCustom("PROFILE_APPLIED", string.Format(
             System.Globalization.CultureInfo.InvariantCulture,
-            "id={0} mode={1} temp={2:F2} web={3} descargas={4} archivos={5} log_obligatorio={6} prompt_pisado={7}",
+            "id={0} mode={1} temp={2:F2} web={3} descargas={4} imagenes={5} archivos={6} " +
+            "log_obligatorio={7} prompt_pisado={8}",
             profile.Id, CurrentMode, effective.Temperature, effective.WebSearchEnabled,
-            effective.ModelDownloadEnabled, effective.FileUploadEnabled, effective.MandatoryLog,
-            effective.IsSystemPromptOverridden));
+            effective.ModelDownloadEnabled, effective.ImageGenEnabled, effective.FileUploadEnabled,
+            effective.MandatoryLog, effective.IsSystemPromptOverridden));
 
         OnPropertyChanged(nameof(Temperature));
         OnPropertyChanged(nameof(AccentColor));
         OnPropertyChanged(nameof(ProfileName));
         OnPropertyChanged(nameof(IsWebSearchAvailable));
         OnPropertyChanged(nameof(IsModelDownloadAvailable));
+        OnPropertyChanged(nameof(IsImageGenAvailable));
         OnPropertyChanged(nameof(IsFileUploadAvailable));
         OnPropertyChanged(nameof(FileUploadIsForensic));
         OnPropertyChanged(nameof(ShowFileButtons));
@@ -457,6 +459,8 @@ public class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(WebSearchToggleTooltip));
 
         ((RelayCommand)OpenModelCatalogCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)OpenImageGenerationCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)OpenImagePackagesCommand).RaiseCanExecuteChanged();
 
         UsageProfileApplied?.Invoke(this, profile);
         UpdateContextUsage();
@@ -473,6 +477,16 @@ public class MainViewModel : ObservableObject
 
     /// <summary>Descarga de modelos efectivamente disponible (perfil + modo). Consumido por E3.</summary>
     public bool IsModelDownloadAvailable => _effectiveProfile?.ModelDownloadEnabled ?? false;
+
+    /// <summary>
+    /// Generación de imágenes efectivamente disponible (perfil + modo + edición).
+    ///
+    /// No repite la comprobación de compilación: <c>EffectiveProfile.Resolve</c> ya la
+    /// aplica, y la regla de precedencia vive en un único lugar por diseño (1.2 del
+    /// maestro). <see cref="IsImageGenCompiledIn"/> se usa para otra cosa: esconder la
+    /// sección entera de la barra lateral en lugar de mostrarla deshabilitada.
+    /// </summary>
+    public bool IsImageGenAvailable => _effectiveProfile?.ImageGenEnabled ?? false;
 
     /// <summary>
     /// Carga de archivos efectivamente disponible (perfil + modo).
@@ -731,6 +745,12 @@ public class MainViewModel : ObservableObject
     /// <summary>Abre el catálogo de modelos de HuggingFace.</summary>
     public ICommand OpenModelCatalogCommand { get; }
 
+    /// <summary>Abre la ventana de generación de imágenes (E4).</summary>
+    public ICommand OpenImageGenerationCommand { get; }
+
+    /// <summary>Abre el selector de paquetes de modelo de imagen (E4.3).</summary>
+    public ICommand OpenImagePackagesCommand { get; }
+
     public ICommand ToggleSidebarCommand { get; }
 
     public MainViewModel(ChatOrchestrator orchestrator, IFileDialogService fileDialogService, ConfigManager configManager, ModelProfileService profileService, UsageProfileService usageProfileService)
@@ -777,6 +797,8 @@ public class MainViewModel : ObservableObject
         ToggleSidebarCommand = new RelayCommand(() => IsSidebarOpen = !IsSidebarOpen);
         ManageProfilesCommand = new RelayCommand(ExecuteManageProfiles);
         OpenModelCatalogCommand = new RelayCommand(ExecuteOpenModelCatalog, () => IsModelDownloadAvailable);
+        OpenImageGenerationCommand = new RelayCommand(ExecuteOpenImageGeneration, () => IsImageGenAvailable);
+        OpenImagePackagesCommand = new RelayCommand(ExecuteOpenImagePackages, () => IsImageGenAvailable);
 
         _orchestrator.ServerStatusChanged += (s, status) =>
             System.Windows.Application.Current.Dispatcher.Invoke(() => ServerStatus = status);
@@ -935,6 +957,99 @@ public class MainViewModel : ObservableObject
         vm.Dispose();
 #endif
     }
+
+    /// <summary>
+    /// True si la generación de imágenes fue compilada en este binario.
+    /// El XAML no puede evaluar #if, así que lo consulta por acá — mismo criterio que
+    /// <see cref="IsModelCatalogCompiledIn"/>.
+    /// </summary>
+    public bool IsImageGenCompiledIn =>
+#if IMAGE_GEN
+        true;
+#else
+        false;
+#endif
+
+#if IMAGE_GEN
+    /// <summary>
+    /// Ventana de generación abierta, si hay una. Se guarda para no abrir dos: cada una
+    /// levantaría su propio sd-server y pelearían por el mismo puerto.
+    /// </summary>
+    private Views.ImageGen.ImageGenerationWindow? _imageGenWindow;
+#endif
+
+    /// <summary>
+    /// Abre la ventana de generación de imágenes, **no modal**.
+    ///
+    /// No modal no es un detalle de comodidad: E4.0 midió que los dos motores conviven en
+    /// esta GPU y que el chat responde en 0,3 s mientras se genera una imagen. Una ventana
+    /// modal desperdiciaría eso — se podría hacer una cosa o la otra, nunca las dos.
+    ///
+    /// Si ya hay una abierta se la trae al frente en lugar de abrir otra: dos ventanas
+    /// levantarían dos `sd-server` en el mismo puerto y la segunda fallaría con un mensaje
+    /// que hablaría de puertos, no del problema real.
+    /// </summary>
+    private void ExecuteOpenImageGeneration()
+    {
+#if IMAGE_GEN
+        if (_imageGenWindow is not null)
+        {
+            if (_imageGenWindow.WindowState == System.Windows.WindowState.Minimized)
+                _imageGenWindow.WindowState = System.Windows.WindowState.Normal;
+            _imageGenWindow.Activate();
+            return;
+        }
+
+        var servicio = ImageModelServiceCompartido;
+        var vm = new ImageGen.ImageGenerationViewModel(
+            servicio,
+            enginePathResolver: servicio.ResolveEnginePath,
+            auditLog: (evento, detalle) => _orchestrator.Logger.LogCustom(evento, detalle));
+
+        var window = new Views.ImageGen.ImageGenerationWindow(vm)
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+        _imageGenWindow = window;
+        window.Closed += (_, _) => _imageGenWindow = null;
+
+        _orchestrator.Logger.LogCustom("IMAGE_GEN_OPENED", $"perfil={_selectedUsageProfile?.Id}");
+        window.Show();
+#endif
+    }
+
+    /// <summary>
+    /// Abre el selector de paquetes de modelo de imagen. Es modal: configurar qué modelo
+    /// se usa mientras se está generando con él no tendría sentido.
+    /// </summary>
+    private void ExecuteOpenImagePackages()
+    {
+#if IMAGE_GEN
+        var vm = new ImageGen.ImagePackageSelectorViewModel(ImageModelServiceCompartido, _fileDialogService);
+        var window = new Views.ImageGen.ImagePackageSelectorWindow(vm)
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+        window.ShowDialog();
+
+        // La ventana de generación lee el paquete al generar, así que un cambio acá se
+        // toma solo. Los pasos y el CFG se rehacen del lado del ViewModel cuando detecta
+        // que el paquete cambió, que es lo que evita generar con los valores del anterior.
+#endif
+    }
+
+#if IMAGE_GEN
+    private Services.ImageGen.ImageModelService? _imageModelService;
+
+    /// <summary>
+    /// Un solo <c>ImageModelService</c> para las dos ventanas.
+    ///
+    /// Con instancias separadas, elegir un paquete en el selector no se vería desde la
+    /// generación hasta reabrirla: cada una tendría su copia en memoria del mismo archivo.
+    /// </summary>
+    private Services.ImageGen.ImageModelService ImageModelServiceCompartido =>
+        _imageModelService ??= new Services.ImageGen.ImageModelService();
+#endif
 
     /// <summary>Carpeta de modelos efectiva, resuelta contra el directorio de la app.</summary>
     private string ResolveModelsDirectory() =>

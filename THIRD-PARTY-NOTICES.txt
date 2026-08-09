@@ -10,8 +10,13 @@ terceros que se distribuyen junto a la aplicación, tal como lo exigen sus
 respectivas licencias.
 
 No todos los componentes están presentes en todas las ediciones. La edición
-institucional (Forense) no incluye AngleSharp, porque no compila la búsqueda web.
-Los modelos de lenguaje pueden no estar presentes si el usuario aporta el suyo.
+institucional (Forense) no incluye AngleSharp, porque no compila la búsqueda web,
+ni nada de la generación de imágenes. Los modelos de lenguaje pueden no estar
+presentes si el usuario aporta el suyo.
+
+La sección 7 cubre componentes que la aplicación USA pero NO distribuye: el motor
+de generación de imágenes y sus modelos los descarga el usuario. Se listan igual
+porque hacen falta para saber bajo qué términos se está trabajando.
 
 --------------------------------------------------------------------------------
 ÍNDICE
@@ -23,6 +28,11 @@ Los modelos de lenguaje pueden no estar presentes si el usuario aporta el suyo.
   4. LLVM OpenMP Runtime Library ......... Apache License 2.0 with LLVM Exceptions
   5. .NET Runtime (Microsoft) ............ MIT
   6. AngleSharp .......................... MIT  (solo edición comercial)
+  7. Generación de imágenes ............... no distribuido, ver la sección
+       7.1 stable-diffusion.cpp ........... MIT
+       7.2 Z-Image Turbo (difusión) ....... Apache License 2.0
+       7.3 Qwen3-4B-Instruct (encoder) .... Apache License 2.0
+       7.4 VAE de Z-Image ................. Apache License 2.0 (ver la salvedad)
 
 
 ================================================================================
@@ -199,6 +209,119 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+================================================================================
+7. GENERACIÓN DE IMÁGENES — componentes NO distribuidos
+================================================================================
+
+Nada de esta sección viaja con la aplicación. El motor pesa cientos de megabytes
+y los modelos varios gigabytes, así que los descarga el usuario: el motor a mano,
+y los modelos con el botón «Descargar el paquete recomendado» de la ventana de
+modelos de imagen.
+
+Se listan igual porque el usuario tiene que saber bajo qué términos trabaja, y
+porque si alguna vez se decidiera empaquetarlos, los avisos ya están escritos.
+
+**Nada de esto existe en la edición institucional (Forense)**, que no compila la
+generación de imágenes.
+
+Licencias verificadas contra los metadatos de cada repositorio de HuggingFace el
+9 de agosto de 2026.
+
+--------------------------------------------------------------------------------
+7.1 stable-diffusion.cpp
+--------------------------------------------------------------------------------
+
+Motor de generación de imágenes. Se usa el ejecutable `sd-server.exe` y las
+bibliotecas que lo acompañan.
+
+Proyecto: https://github.com/leejet/stable-diffusion.cpp
+
+MIT License
+
+Copyright (c) 2023-2026 leejet
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+La build distribuida por ese proyecto trae además, con sus propias licencias:
+
+  · ggml ................. MIT, los mismos términos de la sección 1. El propio
+                           paquete incluye el texto en `bin\ggml.txt`.
+  · NVIDIA CUDA Runtime .. NVIDIA CUDA Toolkit EULA, ver la sección 3.
+  · libwebp / libsharpyuv  BSD 3-Clause, Copyright (c) 2010, Google Inc.
+                           https://chromium.googlesource.com/webm/libwebp
+
+--------------------------------------------------------------------------------
+7.2 Z-Image Turbo — modelo de difusión
+--------------------------------------------------------------------------------
+
+Modelo de difusión del paquete recomendado. Archivo `z_image_turbo-Q4_K.gguf`.
+
+Repositorio: https://huggingface.co/leejet/Z-Image-Turbo-GGUF
+Modelo base:  https://huggingface.co/Tongyi-MAI/Z-Image-Turbo
+Autor del modelo base: Tongyi Lab, Alibaba Group
+
+Apache License 2.0 — declarada en los dos repositorios, el de origen y el de la
+cuantización a GGUF.
+
+El texto completo de la Apache License 2.0 está en el archivo LICENSE que
+acompaña a esta distribución: es la misma licencia bajo la que se publica
+PR-AI Assistant.
+
+--------------------------------------------------------------------------------
+7.3 Qwen3-4B-Instruct-2507 — text encoder
+--------------------------------------------------------------------------------
+
+Text encoder del paquete recomendado. Archivo
+`Qwen3-4B-Instruct-2507-Q4_K_M.gguf`.
+
+Repositorio: https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF
+Modelo base:  https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507
+Autor del modelo base: Qwen Team, Alibaba Group
+
+Apache License 2.0 — declarada en los dos repositorios.
+
+Nótese que este modelo cumple acá el papel de codificador de texto para la
+generación de imágenes, no el de modelo de lenguaje del asistente.
+
+--------------------------------------------------------------------------------
+7.4 VAE de Z-Image
+--------------------------------------------------------------------------------
+
+Autoencoder del paquete recomendado. Archivo `ae.safetensors`, 335.304.388 bytes.
+
+Repositorio desde el que se descarga:
+  https://huggingface.co/Comfy-Org/z_image_turbo  (ruta split_files/vae/)
+
+SALVEDAD, y se deja asentada en lugar de resolverla por conveniencia: **ese
+repositorio no declara ningún campo de licencia** en sus metadatos. Es un espejo
+de los pesos de `Tongyi-MAI/Z-Image-Turbo`, que sí está bajo Apache License 2.0,
+y esos son los términos que corresponden al archivo.
+
+Se eligió este espejo, y no el repositorio de origen del VAE que proponía la
+especificación de E4, porque aquel exige autenticación y devuelve 401 sin un
+token de HuggingFace. Un paquete recomendado que no se puede descargar sin
+credenciales no es un paquete recomendado.
+
+Quien necesite una cadena de procedencia formal para el VAE debería tomarlo del
+repositorio de origen con un token, en lugar de este espejo.
 
 
 ================================================================================

@@ -170,6 +170,7 @@ public class UsageProfileService
         existing.DefaultModelPath = edited.DefaultModelPath;
         existing.WebSearchEnabled = edited.WebSearchEnabled;
         existing.ModelDownloadEnabled = edited.ModelDownloadEnabled;
+        existing.ImageGenEnabled = edited.ImageGenEnabled;
         existing.FileUploadEnabled = edited.FileUploadEnabled;
         existing.MandatoryLog = edited.MandatoryLog;
         existing.AccentColor = edited.AccentColor;
@@ -222,6 +223,10 @@ public class UsageProfileService
         ContextTokens = 8192,
         WebSearchEnabled = false,
         ModelDownloadEnabled = false,
+        // Apagada también fuera de Investigación, a diferencia de la carga de archivos:
+        // el perfil Forense se usa cuando el trabajo es pericial, y fabricar imágenes no
+        // tiene lugar ahí ni siquiera en Modo Consulta. Quien la quiera, que clone.
+        ImageGenEnabled = false,
         // En Investigación el modo lo fuerza igual; queda explícito para cuando este
         // perfil se use en Modo Consulta, donde cargar un archivo sigue teniendo sentido.
         FileUploadEnabled = true,
@@ -239,6 +244,7 @@ public class UsageProfileService
         ContextTokens = 8192,
         WebSearchEnabled = true,
         ModelDownloadEnabled = true,
+        ImageGenEnabled = true,
         FileUploadEnabled = true,
         MandatoryLog = false,
         AccentColor = "#B85C38",

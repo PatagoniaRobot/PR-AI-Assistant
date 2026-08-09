@@ -1,0 +1,19 @@
+<Window x:Class="PRImager.AIAssistant.Views.ImageGen.ImageGenerationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:views="clr-namespace:PRImager.AIAssistant.Views.ImageGen"
+        xmlns:vm="clr-namespace:PRImager.AIAssistant.ViewModels.ImageGen"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=vm:ImageGenerationViewModel}"
+        Title="Generación de imágenes — PR-AI Assistant"
+        Icon="pack://application:,,,/Assets/app.ico"
+        Height="820" Width="1280"
+        MinHeight="620" MinWidth="1000"
+        Background="#1A1A2E"
+        WindowStartupLocation="CenterOwner"
+        FontFamily="{StaticResource MainFont}">
+
+    <views:ImageGenerationView />
+</Window>
