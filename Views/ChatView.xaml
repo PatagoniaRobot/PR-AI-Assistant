@@ -813,6 +813,25 @@
                                                Visibility="{Binding IsImageGenAvailable, Converter={StaticResource InverseBoolToVis}}" />
                                 </StackPanel>
 
+                                <!-- Carpetas de datos. La sección entera desaparece cuando
+                                     la edición no administra ninguna: la institucional no
+                                     descarga modelos ni genera imágenes, así que no tiene
+                                     ninguna carpeta de datos del usuario que elegir. Acá se
+                                     oculta en lugar de deshabilitar, al revés que arriba,
+                                     porque no hay ninguna capacidad que descubrir: no es
+                                     que el perfil la quite, es que no existe. -->
+                                <StackPanel Margin="0,16,0,0"
+                                            Visibility="{Binding AreFoldersConfigurable, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="CARPETAS" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                    <Button Command="{Binding OpenFolderSettingsCommand}"
+                                            AutomationProperties.AutomationId="OpenFolderSettingsButton"
+                                            Style="{StaticResource SecondaryButtonStyle}" Background="#1E1E3A"
+                                            MinHeight="28"
+                                            ToolTip="Elegí dónde viven los modelos y las imágenes. Podés tener el programa en un disco y los archivos grandes en otro.">
+                                        <TextBlock Text="📁 Carpetas" FontSize="11" />
+                                    </Button>
+                                </StackPanel>
+
                                 <!-- Perfil de ejecución: toggle buttons -->
                                 <TextBlock Text="EJECUCIÓN" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,16,0,8" />
                                 <ItemsControl ItemsSource="{Binding AvailableExecutionProfiles}">

@@ -112,3 +112,57 @@ public class AsyncRelayCommand : ICommand
 
     public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 }
+
+/// <summary>
+/// Implementación estándar de ICommand para MVVM puro (asíncrono con parámetro).
+///
+/// Hace falta cuando la acción larga es por fila de una lista —mover los archivos de una
+/// carpeta, por ejemplo— y no alcanza con un solo estado «ejecutando» en el ViewModel.
+/// </summary>
+public class AsyncRelayCommand<T> : ICommand
+{
+    private readonly Func<T?, Task> _executeAsync;
+    private readonly Func<T?, bool>? _canExecute;
+    private bool _isExecuting;
+
+    public event EventHandler? CanExecuteChanged;
+
+    public AsyncRelayCommand(Func<T?, Task> executeAsync, Func<T?, bool>? canExecute = null)
+    {
+        _executeAsync = executeAsync ?? throw new ArgumentNullException(nameof(executeAsync));
+        _canExecute = canExecute;
+    }
+
+    public bool CanExecute(object? parameter)
+    {
+        if (_isExecuting) return false;
+        if (_canExecute is null) return true;
+        if (parameter is null && typeof(T).IsValueType) return _canExecute(default);
+        if (parameter is null || parameter is T) return _canExecute((T?)parameter);
+        return false;
+    }
+
+    public async void Execute(object? parameter)
+    {
+        if (!CanExecute(parameter)) return;
+
+        _isExecuting = true;
+        RaiseCanExecuteChanged();
+
+        try
+        {
+            await _executeAsync(parameter is null && typeof(T).IsValueType ? default : (T?)parameter);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Falló la ejecución del comando asíncrono", ex);
+        }
+        finally
+        {
+            _isExecuting = false;
+            RaiseCanExecuteChanged();
+        }
+    }
+
+    public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+}

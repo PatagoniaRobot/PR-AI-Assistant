@@ -25,6 +25,22 @@ public class BoolToVisibilityConverter : IValueConverter
     }
 }
 
+/// <summary>
+/// Muestra el elemento solo cuando el texto tiene contenido.
+///
+/// Existe para no dejar franjas muertas: un aviso o un resultado con su margen ocupando
+/// lugar desde el arranque es exactamente lo que la galería vacía de la vista de generación
+/// hacía, y lo encontró mirar la captura, no una aserción.
+/// </summary>
+public class StringToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+        string.IsNullOrWhiteSpace(value as string) ? Visibility.Collapsed : Visibility.Visible;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 public class InverseBoolToVisibilityConverter : IValueConverter
 {
     public Visibility TrueValue { get; set; } = Visibility.Collapsed;

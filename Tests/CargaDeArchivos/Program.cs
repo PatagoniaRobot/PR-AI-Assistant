@@ -35,6 +35,7 @@ class Banco
         public string[] OpenImages(string title) { UltimoTituloImagen = title; return Imagenes; }
         public string[] OpenFiles(string title, string filter) => Array.Empty<string>();
         public string SaveFile(string title, string filter, string defaultFileName) => null;
+        public string SelectFolder(string title, string initialFolder) => null;
     }
 
     static string _raiz;

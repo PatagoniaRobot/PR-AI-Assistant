@@ -25,6 +25,14 @@ sealed class DialogosFalsos : IFileDialogService
     public string[]? OpenImages(string title) { TitulosVistos.Add(title); return Proximo; }
     public string[]? OpenTextFiles(string title) { TitulosVistos.Add(title); return Proximo; }
     public string? SaveFile(string title, string filter, string defaultFileName) => null;
+
+    /// <summary>Carpeta que va a devolver el próximo «Examinar…» de carpeta.</summary>
+    public string? ProximaCarpeta { get; set; }
+    public string? SelectFolder(string title, string initialFolder)
+    {
+        TitulosVistos.Add(title);
+        return ProximaCarpeta;
+    }
 }
 
 static class BancoPaquetes

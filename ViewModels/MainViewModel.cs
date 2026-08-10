@@ -751,6 +751,9 @@ public class MainViewModel : ObservableObject
     /// <summary>Abre el selector de paquetes de modelo de imagen (E4.3).</summary>
     public ICommand OpenImagePackagesCommand { get; }
 
+    /// <summary>Abre la configuración de carpetas de datos.</summary>
+    public ICommand OpenFolderSettingsCommand { get; }
+
     public ICommand ToggleSidebarCommand { get; }
 
     public MainViewModel(ChatOrchestrator orchestrator, IFileDialogService fileDialogService, ConfigManager configManager, ModelProfileService profileService, UsageProfileService usageProfileService)
@@ -799,6 +802,7 @@ public class MainViewModel : ObservableObject
         OpenModelCatalogCommand = new RelayCommand(ExecuteOpenModelCatalog, () => IsModelDownloadAvailable);
         OpenImageGenerationCommand = new RelayCommand(ExecuteOpenImageGeneration, () => IsImageGenAvailable);
         OpenImagePackagesCommand = new RelayCommand(ExecuteOpenImagePackages, () => IsImageGenAvailable);
+        OpenFolderSettingsCommand = new RelayCommand(ExecuteOpenFolderSettings, () => AreFoldersConfigurable);
 
         _orchestrator.ServerStatusChanged += (s, status) =>
             System.Windows.Application.Current.Dispatcher.Invoke(() => ServerStatus = status);
@@ -1050,6 +1054,60 @@ public class MainViewModel : ObservableObject
     private Services.ImageGen.ImageModelService ImageModelServiceCompartido =>
         _imageModelService ??= new Services.ImageGen.ImageModelService();
 #endif
+
+    private Services.Folders.AppFolderService? _folderService;
+
+    /// <summary>
+    /// Las tres carpetas de datos del usuario, en un solo servicio.
+    ///
+    /// Se le conecta **la misma** instancia de <c>ImageModelService</c> que usan las dos
+    /// ventanas de imágenes: con una copia aparte, cambiar la carpeta acá no se vería del
+    /// otro lado hasta reabrir, que es el mismo motivo por el que esa instancia se comparte.
+    /// </summary>
+    private Services.Folders.AppFolderService FolderServiceCompartido
+    {
+        get
+        {
+            if (_folderService is null)
+            {
+                _folderService = new Services.Folders.AppFolderService(
+                    _settings, () => _configManager.Save(_settings));
+#if IMAGE_GEN
+                _folderService.UseImageModelService(ImageModelServiceCompartido);
+#endif
+            }
+            return _folderService;
+        }
+    }
+
+    /// <summary>
+    /// True si esta edición administra alguna carpeta de datos del usuario. En la edición
+    /// institucional es false —no descarga modelos ni genera imágenes— y la entrada de la
+    /// barra lateral no se muestra, en lugar de abrir una ventana vacía.
+    /// </summary>
+    public bool AreFoldersConfigurable => FolderServiceCompartido.List().Count > 0;
+
+    /// <summary>
+    /// Abre la ventana de carpetas. Es modal, como el selector de paquetes: mover
+    /// gigabytes mientras se descarga o se genera con esa misma carpeta sería pedirle al
+    /// usuario que se pise a sí mismo.
+    /// </summary>
+    private void ExecuteOpenFolderSettings()
+    {
+        var vm = new FolderSettingsViewModel(
+            FolderServiceCompartido,
+            _fileDialogService,
+            auditLog: (evento, detalle) => _orchestrator.Logger.LogCustom(evento, detalle));
+
+        var window = new Views.FolderSettingsWindow(vm)
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+        window.ShowDialog();
+
+        // La carpeta de descargas pudo cambiar, y el selector de modelos la escanea.
+        ExecuteRefreshModels();
+    }
 
     /// <summary>Carpeta de modelos efectiva, resuelta contra el directorio de la app.</summary>
     private string ResolveModelsDirectory() =>

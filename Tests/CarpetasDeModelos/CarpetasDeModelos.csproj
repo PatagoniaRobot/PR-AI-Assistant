@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>disable</Nullable>
+    <AssemblyName>CarpetasDeModelos</AssemblyName>
+    <RootNamespace>PRImager.AIAssistant.Tests.CarpetasDeModelos</RootNamespace>
+
+    <!--
+      Corre contra las dos ediciones. En Forense verifica lo contrario que en Debug:
+      que no haya NINGUNA carpeta configurable, porque esa edición no descarga modelos
+      ni genera imágenes.
+
+        -p:EdicionApp=Debug|Forense   contra qué binario
+        -p:RaizApp=<ruta>             contra qué árbol (por defecto, este repo)
+    -->
+    <EdicionApp Condition="'$(EdicionApp)' == ''">Debug</EdicionApp>
+
+    <!--
+      El banco toca ImageModelService y ImageModelPackage, que en el binario Forense NO
+      EXISTEN: es lo que verifica la barrera de compilación de E4. Contra ese binario
+      esos casos no se compilan.
+
+      Los otros bancos detectan la edición por reflexión y evitan el #if a propósito, pero
+      ahí alcanza porque no nombran tipos ausentes. Acá no se puede: un tipo que no está en
+      el ensamblado referenciado es un error de compilación, no una rama en tiempo de
+      ejecución.
+    -->
+    <DefineConstants Condition="'$(EdicionApp)' != 'Forense'">$(DefineConstants);APP_CON_IMAGENES</DefineConstants>
+    <RaizApp Condition="'$(RaizApp)' == ''">$(MSBuildThisFileDirectory)..\..</RaizApp>
+    <DllDeLaApp>$(RaizApp)\bin\$(EdicionApp)\net8.0-windows\PR-AI-Assistant.dll</DllDeLaApp>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="PR-AI-Assistant">
+      <HintPath>$(DllDeLaApp)</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <!--
+    Un HintPath que no existe no hace fallar a MSBuild: omite la referencia en
+    silencio y el banco explota con decenas de "no se encontró el tipo PRImager".
+    Se falla acá, con el motivo.
+  -->
+  <Target Name="VerificarDllDeLaApp" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(DllDeLaApp)')"
+           Text="No está el binario de la aplicación en '$(DllDeLaApp)'.&#xA;  · Compilalo primero:  dotnet build -c $(EdicionApp)&#xA;  · Si apuntás a otro árbol con -p:RaizApp=, usá una ruta ABSOLUTA." />
+  </Target>
+
+</Project>

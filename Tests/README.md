@@ -27,6 +27,11 @@ cd ..\CargaDeArchivos
 dotnet run -p:EdicionApp=Debug      :: 46 aserciones + 11 de humo
 dotnet run -p:EdicionApp=Forense    :: igual: la carga no es capacidad de red
 
+cd ..\CarpetasDeModelos
+dotnet run -p:EdicionApp=Debug      :: 93 aserciones (incluye humo y cableado)
+dotnet run -p:EdicionApp=Forense    :: 55: verifica que NO haya carpetas configurables
+dotnet run -- --sin-humo            :: saltea la ventana dibujada
+
 cd ..\GeneracionDeImagenes
 dotnet run                          :: 286 aserciones + 61 de humo (necesita el motor)
 dotnet run -- --con-red             :: además, la descarga real del VAE (0,31 GB)
@@ -84,6 +89,58 @@ vacío: el `ForensicLogger` mantiene el archivo abierto en escritura y
 `File.ReadAllText` chocaba con eso, pero la `IOException` estaba atrapada y devolvía
 cadena vacía. Una aserción negativa sobre una fuente vacía siempre pasa. Ahora la
 lectura falla ruidosamente si no puede leer.
+
+### `CarpetasDeModelos` — dónde viven los modelos y las imágenes
+
+Cubre la configuración de las tres carpetas de datos y el movimiento de lo que quedó
+atrás. Lo que verifica no es que mueva archivos, sino las tres decisiones que pueden
+perder trabajo del usuario:
+
+- **Cambiar la carpeta NO mueve nada.** Es una redirección instantánea que no puede
+  fallar; mover es una acción aparte que el usuario pide y puede cancelar. Si las dos se
+  juntaran, un movimiento cortado a la mitad dejaría la configuración a medias.
+- **Entre volúmenes se copia, se verifica por SHA-256 y recién ahí se borra el origen.**
+  Mientras el destino no esté completo y promovido a su nombre final, el original sigue
+  intacto. Ese camino **no se ejerce en una sola máquina por casualidad**:
+  `FolderMigrator` decide por la raíz de la ruta, así que el banco monta una unidad
+  virtual con `subst`. Sin eso, la parte con riesgo real quedaría sin probar y las
+  aserciones pasarían igual — la misma clase de agujero que el descriptor recortado de
+  E4.3.
+- **Un archivo que ya existe en el destino no se pisa nunca**, y tampoco se borra el de
+  la carpeta anterior: saltear no puede significar perderlo.
+
+`Cableado.cs` instancia un `MainViewModel` real. Es la lección de 4.19: el resto del
+banco construye el servicio de carpetas a mano, con la instancia de imágenes ya
+conectada, así que ejerce el camino bueno por construcción. Quien lo arma de verdad es
+`MainViewModel`, y esa costura solo existe ahí.
+
+`Humo.cs` abre la ventana y deja dos capturas —`ventana-de-carpetas-aviso.png` y
+`ventana-de-carpetas.png`—. **Hay que mirarlas**, y ya valieron la pena: la ruta larga
+quedaba cortada contra el borde de su campo, que es lo peor que puede pasarle a una
+ventana cuyo contenido *son* las rutas. Ninguna aserción lo veía porque un `TextBox` no
+recorta el texto, lo desplaza: `Text` sigue entero.
+
+**Tres cosas que este banco aprendió mutando, y las tres son la misma trampa de siempre.**
+
+1. **Una aserción de dibujo medida en el momento equivocado no prueba nada.** La
+   comprobación de rutas cortadas corría *después* de cambiar la carpeta, cuando lo que
+   se dibuja es una ruta corta de `%TEMP%` que entra de sobra: pasaba con
+   `TextWrapping="NoWrap"`, o sea sobre el defecto exacto que existe para detectar.
+   Movida a donde está la ruta larga, falla diciendo «necesita 659px y tiene 628px».
+   Es la misma forma que el progreso medido solo a 1024×1024.
+2. **Poner la reapuntada de paquetes en `Set()` no hizo fallar ninguna aserción**, y
+   revisarlo valió más que el arreglo: la invariante «cambiar la carpeta no rompe el
+   paquete» está protegida por **dos** cosas independientes —no reapuntar al cambiar, y
+   exigir que el archivo esté del otro lado— así que una aserción sobre el resultado pasa
+   mientras cualquiera de las dos siga en pie. Se agregó una que mira el mecanismo, con
+   su control positivo; quitando el guarda de existencia, fallan cuatro.
+3. **El humo fabricaba un estado que la aplicación nunca produce.** Seteaba
+   `HasPendingMove` a mano y el botón salía deshabilitado, porque el comando solo
+   reevalúa su `CanExecute` cuando el ViewModel lo pide. Habría reportado un defecto
+   inexistente. Ahora ejerce el comando que aprieta el usuario.
+
+Mutaciones que sí muerden: saltear la colisión, borrar el origen antes de tener la copia
+buena, y quitar el guarda de existencia al reapuntar — 4, 4 y 4 aserciones.
 
 ### `GeneracionDeImagenes` — E4.1 a E4.5
 

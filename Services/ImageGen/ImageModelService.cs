@@ -73,6 +73,123 @@ public sealed class ImageModelService
             ? ImageEngineLocator.ResolveExecutablePath()
             : _store.EngineExecutablePath;
 
+    /// <summary>
+    /// Carpeta donde viven los archivos de los paquetes, o vacío para usar la de fábrica.
+    /// La gestiona <c>AppFolderService</c>; acá se guarda porque este archivo ya está
+    /// detrás de la barrera de compilación y settings.json no lo está (defecto 4.17).
+    /// </summary>
+    public string ModelsDirectory
+    {
+        get => _store.ModelsDirectory ?? "";
+        set
+        {
+            _store.ModelsDirectory = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+            Persist();
+        }
+    }
+
+    /// <summary>Carpeta donde se guardan las imágenes generadas y sus sidecars.</summary>
+    public string OutputDirectory
+    {
+        get => _store.OutputDirectory ?? "";
+        set
+        {
+            _store.OutputDirectory = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+            Persist();
+        }
+    }
+
+    /// <summary>Carpeta efectiva de los modelos de imagen.</summary>
+    public string ResolveModelsDirectory() =>
+        string.IsNullOrWhiteSpace(_store.ModelsDirectory)
+            ? DefaultModelsDirectory
+            : _store.ModelsDirectory;
+
+    /// <summary>Carpeta efectiva de las imágenes generadas.</summary>
+    public string ResolveOutputDirectory() =>
+        string.IsNullOrWhiteSpace(_store.OutputDirectory)
+            ? ImageOutputFolder.DefaultDirectory
+            : _store.OutputDirectory;
+
+    /// <summary>
+    /// Reapunta a <paramref name="newDirectory"/> los archivos de los paquetes que hoy
+    /// viven en <paramref name="oldDirectory"/>.
+    ///
+    /// Hace falta porque un paquete **no guarda una carpeta sino una ruta absoluta por
+    /// cada uno de sus tres archivos**. Cambiar la carpeta de modelos de imagen sin esto
+    /// dejaría todos los paquetes apuntando al lugar viejo: después de mover los archivos
+    /// el selector los mostraría incompletos, con los tres componentes faltantes, y el
+    /// mensaje no diría nada sobre la carpeta.
+    ///
+    /// Solo toca las rutas cuya carpeta es exactamente la vieja. Un paquete que el usuario
+    /// armó a mano apuntando a otro lado no se toca: nunca estuvo en la carpeta que se movió.
+    ///
+    /// Y solo reapunta **si el archivo efectivamente está** en la carpeta nueva. Eso es lo
+    /// que hace que un movimiento cancelado a la mitad no rompa nada: cada uno de los tres
+    /// archivos queda apuntado adonde está de verdad, unos al lugar nuevo y otros al viejo,
+    /// y el paquete sigue completo mientras los tres existan en algún lado.
+    /// </summary>
+    public int RepointPackages(string oldDirectory, string newDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(oldDirectory) || string.IsNullOrWhiteSpace(newDirectory))
+            return 0;
+
+        int cambiados = 0;
+        var lista = new List<ImageModelPackage>();
+
+        foreach (var p in _store.Packages)
+        {
+            var difusion = Repoint(p.DiffusionModelPath, oldDirectory, newDirectory);
+            var encoder = Repoint(p.TextEncoderPath, oldDirectory, newDirectory);
+            var vae = Repoint(p.VaePath, oldDirectory, newDirectory);
+
+            if (difusion == p.DiffusionModelPath && encoder == p.TextEncoderPath && vae == p.VaePath)
+            {
+                lista.Add(p);
+                continue;
+            }
+
+            cambiados++;
+            lista.Add(p with
+            {
+                DiffusionModelPath = difusion,
+                TextEncoderPath = encoder,
+                VaePath = vae
+            });
+        }
+
+        if (cambiados > 0)
+        {
+            _store.Packages = lista;
+            Persist();
+        }
+
+        return cambiados;
+    }
+
+    private static string Repoint(string ruta, string oldDirectory, string newDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(ruta)) return ruta;
+
+        try
+        {
+            var carpeta = Path.GetDirectoryName(Path.GetFullPath(ruta));
+            if (carpeta is null) return ruta;
+
+            var vieja = Path.TrimEndingDirectorySeparator(Path.GetFullPath(oldDirectory));
+            if (!string.Equals(Path.TrimEndingDirectorySeparator(carpeta), vieja,
+                    StringComparison.OrdinalIgnoreCase))
+                return ruta;
+
+            var candidata = Path.Combine(newDirectory, Path.GetFileName(ruta));
+            return File.Exists(candidata) ? candidata : ruta;
+        }
+        catch (Exception)
+        {
+            return ruta;
+        }
+    }
+
     /// <summary>Paquetes con los tres archivos presentes.</summary>
     public IReadOnlyList<ImageModelPackage> CompletePackages =>
         _store.Packages.Where(p => p.IsComplete).ToList();
@@ -228,7 +345,9 @@ public sealed class ImageModelService
         if (_store.Packages.Any(p => p.Id == RecommendedPackageId)) return;
 
         var lista = _store.Packages.ToList();
-        lista.Insert(0, BuildRecommendedPackage(DefaultModelsDirectory));
+        // La carpeta efectiva, no la de fábrica: si el usuario la cambió, el paquete
+        // recomendado tiene que nacer apuntando adonde van a caer sus descargas.
+        lista.Insert(0, BuildRecommendedPackage(ResolveModelsDirectory()));
         _store.Packages = lista;
     }
 
@@ -262,6 +381,12 @@ public sealed class ImageModelService
 
         /// <summary>Null = descubrir el motor solo. Ver ImageEngineLocator.</summary>
         public string? EngineExecutablePath { get; set; }
+
+        /// <summary>Null = la carpeta de fábrica. La gestiona AppFolderService.</summary>
+        public string? ModelsDirectory { get; set; }
+
+        /// <summary>Null = la carpeta de fábrica de las imágenes generadas.</summary>
+        public string? OutputDirectory { get; set; }
     }
 }
 

@@ -43,6 +43,28 @@ public class FileDialogService : IFileDialogService
         };
         return dialog.ShowDialog() == true ? dialog.FileName : null;
     }
+
+    public string? SelectFolder(string title, string initialFolder)
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = title,
+            Multiselect = false
+        };
+
+        // Abrir el diálogo en la carpeta actual le ahorra al usuario navegar hasta ella
+        // para elegir la de al lado. Si ya no existe, se abre donde el sistema decida.
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(initialFolder) && System.IO.Directory.Exists(initialFolder))
+                dialog.InitialDirectory = initialFolder;
+        }
+        catch (Exception)
+        {
+        }
+
+        return dialog.ShowDialog() == true ? dialog.FolderName : null;
+    }
 }
 
 /// <summary>

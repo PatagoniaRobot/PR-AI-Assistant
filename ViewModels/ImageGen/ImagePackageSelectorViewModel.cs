@@ -361,7 +361,9 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
 
         try
         {
-            var carpeta = ImageModelService.DefaultModelsDirectory;
+            // La carpeta efectiva, no la de fábrica: si el usuario la cambió desde la
+            // ventana de carpetas, el paquete recomendado tiene que bajar ahí.
+            var carpeta = _service.ResolveModelsDirectory();
             var r = await descargador.DownloadAsync(
                 ImageModelService.RecommendedSource, carpeta, _downloadCts.Token);
 

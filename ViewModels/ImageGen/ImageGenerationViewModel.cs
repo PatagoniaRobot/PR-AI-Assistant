@@ -124,7 +124,18 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
     private readonly ImageGenClient _client;
     private readonly GpuInfoService _gpuInfo;
     private readonly Func<string> _enginePathResolver;
-    private readonly string _outputDirectory;
+
+    /// <summary>
+    /// Carpeta de salida, resuelta **en cada uso** y no capturada al construir.
+    ///
+    /// Es un resolutor y no una cadena por la lección del defecto 4.19: la carpeta se puede
+    /// cambiar desde la ventana de carpetas con esta abierta, y una copia tomada en el
+    /// constructor guardaría las imágenes en la carpeta vieja mientras el botón de abrir la
+    /// carpeta mostraría la nueva. Dos fuentes para la misma pregunta es exactamente lo que
+    /// hizo que la vista avisara que faltaba el motor con el motor instalado.
+    /// </summary>
+    private readonly Func<string> _outputDirectoryResolver;
+
     private readonly bool _ownsManager;
 
     /// <summary>
@@ -170,7 +181,11 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
         _client = new ImageGenClient(_manager);
         _gpuInfo = gpuInfo ?? new GpuInfoService();
         _enginePathResolver = enginePathResolver ?? ImageEngineLocator.ResolveExecutablePath;
-        _outputDirectory = outputDirectory ?? ImageOutputFolder.DefaultDirectory;
+        // Una carpeta explícita —la que pasan los bancos— manda; si no, se pregunta al
+        // servicio cada vez, que es quien sabe si el usuario la cambió.
+        _outputDirectoryResolver = outputDirectory is not null
+            ? () => outputDirectory
+            : modelService.ResolveOutputDirectory;
         _uiContext = SynchronizationContext.Current;
 
         // Se fijan acá y no en el inicializador del campo porque dependen de las listas,
@@ -667,8 +682,9 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
                 return;
             }
 
-            Directory.CreateDirectory(_outputDirectory);
-            var destino = ImageOutputFolder.BuildPath(_outputDirectory, semilla);
+            var carpetaSalida = _outputDirectoryResolver();
+            Directory.CreateDirectory(carpetaSalida);
+            var destino = ImageOutputFolder.BuildPath(carpetaSalida, semilla);
 
             StatusMessage = $"Generando {Width}×{Height} con semilla {semilla}…";
 
@@ -881,10 +897,11 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
     {
         try
         {
-            Directory.CreateDirectory(_outputDirectory);
+            var carpeta = _outputDirectoryResolver();
+            Directory.CreateDirectory(carpeta);
             Process.Start(new ProcessStartInfo
             {
-                FileName = _outputDirectory,
+                FileName = carpeta,
                 UseShellExecute = true
             });
         }
@@ -920,8 +937,11 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>Carpeta donde aterrizan las imágenes. La usa el banco de pruebas.</summary>
-    public string OutputDirectory => _outputDirectory;
+    /// <summary>
+    /// Carpeta donde aterrizan las imágenes. La usa el banco de pruebas.
+    /// Se resuelve al leerla, así que refleja un cambio hecho con la ventana abierta.
+    /// </summary>
+    public string OutputDirectory => _outputDirectoryResolver();
 
     public void Dispose()
     {
