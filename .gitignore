@@ -35,3 +35,7 @@ ImagenesGeneradas/
 *.pdb
 *.msi
 *.nupkg
+
+# Documentacion interna de trabajo (el documento maestro). Vive en el proyecto
+# por prolijidad, pero no se versiona: es interna.
+Documentacion/
