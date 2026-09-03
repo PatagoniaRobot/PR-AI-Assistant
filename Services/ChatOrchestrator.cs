@@ -47,7 +47,7 @@ public class ChatOrchestrator : IDisposable
             ReservedResponseTokens = _currentSettings.MaxTokens
         };
 
-        _serverManager.StatusChanged += (s, e) => ServerStatusChanged?.Invoke(this, e.NewStatus);
+        _serverManager.StatusChanged += (s, e) => ServerStatusChanged?.Invoke(this, e);
         _serverManager.DetectedBackendChanged += (s, backend) => DetectedBackendChanged?.Invoke(this, backend);
         _chatClient.TokenReceived += (s, e) => StreamingTokenReceived?.Invoke(this, e.Token);
     }
@@ -67,7 +67,11 @@ public class ChatOrchestrator : IDisposable
     public event EventHandler<string>? StreamingTokenReceived;
     public event EventHandler<string>? ResponseCompleted;
     public event EventHandler<string>? ErrorOccurred;
-    public event EventHandler<ServerStatus>? ServerStatusChanged;
+    /// <summary>
+    /// Cambio de estado del servidor, con el motivo cuando el estado es Error.
+    /// Antes solo viajaba el enum y la causa que informaba llama-server se perdía.
+    /// </summary>
+    public event EventHandler<ServerStatusChangedEventArgs>? ServerStatusChanged;
     public event EventHandler<string>? DetectedBackendChanged;
     /// <summary>Se dispara cuando se recortan mensajes del historial por límite de contexto.</summary>
     public event EventHandler<int>? HistoryTrimmed;

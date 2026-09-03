@@ -26,6 +26,27 @@ public class LlamaServerManager : IDisposable
     private JobObject? _jobObject;
     private string _detectedBackend = "Detectando...";
 
+    /// <summary>
+    /// Última línea de llama-server que explica por qué no pudo cargar el modelo.
+    /// El motor imprime el motivo exacto —«missing tensor», «unknown model architecture»,
+    /// falta de memoria— y sin esto se perdía: la vista quedaba en «Iniciando modelo...»
+    /// para siempre sin decir nunca qué había pasado.
+    /// </summary>
+    private string? _lastLoadError;
+
+    /// <summary>Reinicios ya consumidos por el servidor que sí llegó a estar listo alguna vez.</summary>
+    private int _restartsDone;
+
+    /// <summary>Cerrojo para que haya un solo reinicio en vuelo. 0 = libre, 1 = tomado.</summary>
+    private int _restartInFlight;
+
+    /// <summary>
+    /// Tope de reinicios automáticos. Reiniciar sin límite convierte un modelo que no
+    /// carga en un bucle perpetuo que relee el .gguf cada medio minuto y mantiene la
+    /// carpeta de modelos tomada.
+    /// </summary>
+    private const int MaxRestarts = 3;
+
     // --- Eventos ---
 
     /// <summary>Notifica cambios de estado del servidor.</summary>
@@ -42,18 +63,30 @@ public class LlamaServerManager : IDisposable
     public ServerStatus CurrentStatus
     {
         get { lock (_lock) return _currentStatus; }
-        private set
-        {
-            ServerStatus old;
-            lock (_lock)
-            {
-                old = _currentStatus;
-                if (old == value) return;
-                _currentStatus = value;
-            }
-            StatusChanged?.Invoke(this, new ServerStatusChangedEventArgs(old, value));
-        }
+        private set => SetStatus(value, null);
     }
+
+    /// <summary>
+    /// Cambia el estado adjuntando, cuando lo hay, el motivo que dio el motor.
+    /// <see cref="ServerStatusChangedEventArgs.ErrorMessage"/> existía desde el principio
+    /// y nunca se llenaba: el estado llegaba a la vista sin la razón.
+    /// </summary>
+    private void SetStatus(ServerStatus value, string? errorMessage)
+    {
+        ServerStatus old;
+        lock (_lock)
+        {
+            old = _currentStatus;
+            if (old == value && errorMessage is null) return;
+            _currentStatus = value;
+        }
+        StatusChanged?.Invoke(this, new ServerStatusChangedEventArgs(old, value, errorMessage));
+    }
+
+    /// <summary>
+    /// Motivo del último fallo de carga, tal como lo informó llama-server.
+    /// </summary>
+    public string? LastLoadError => _lastLoadError;
 
     public bool IsReady => CurrentStatus == ServerStatus.Ready;
 
@@ -124,6 +157,9 @@ public class LlamaServerManager : IDisposable
         _currentConfig = config;
         _consecutiveFailures = 0;
         _modelLoadedOnce = false;
+        _restartsDone = 0;
+        _restartInFlight = 0;
+        _lastLoadError = null;
         DetectedBackend = "Detectando...";
         CurrentStatus = ServerStatus.Starting;
 
@@ -177,9 +213,7 @@ public class LlamaServerManager : IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        _healthCheckCts?.Cancel();
-        _healthCheckCts?.Dispose();
-        _healthCheckCts = null;
+        StopHealthCheck();
 
         KillProcess();
 
@@ -209,6 +243,9 @@ public class LlamaServerManager : IDisposable
 
         OnLog($"Iniciando: {startInfo.FileName} {startInfo.Arguments}");
 
+        // El Process anterior se soltaba sin Dispose en cada relanzamiento: con el bucle
+        // de reinicio eso acumulaba un handle por vuelta.
+        _serverProcess?.Dispose();
         _serverProcess = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
 
         _serverProcess.OutputDataReceived += (_, e) =>
@@ -216,6 +253,7 @@ public class LlamaServerManager : IDisposable
             if (e.Data is not null)
             {
                 ParseBackendInfo(e.Data);
+                CaptureLoadError(e.Data);
                 OnLog(e.Data);
             }
         };
@@ -225,25 +263,24 @@ public class LlamaServerManager : IDisposable
             if (e.Data is not null)
             {
                 ParseBackendInfo(e.Data);
+                CaptureLoadError(e.Data);
                 OnLog($"[stderr] {e.Data}");
             }
         };
 
-        _serverProcess.Exited += (_, _) =>
-        {
-            OnLog("El proceso llama-server terminó inesperadamente.");
-            if (!_disposed && CurrentStatus != ServerStatus.Stopped)
-                CurrentStatus = ServerStatus.Error;
-        };
+        _serverProcess.Exited += (_, _) => OnProcessExited();
 
         try
         {
             Debug.WriteLine($"LlamaServerManager: Iniciando proceso con args: {startInfo.Arguments}");
             _serverProcess.Start();
 
-            // Gestionar proceso huérfano
+            // Gestionar proceso huérfano. El job anterior se cierra recién acá: cerrarlo
+            // antes mataría al proceso que todavía estamos por reemplazar.
+            var previousJob = _jobObject;
             _jobObject = new JobObject();
             _jobObject.AssignProcess(_serverProcess);
+            previousJob?.Dispose();
 
             _serverProcess.BeginOutputReadLine();
             _serverProcess.BeginErrorReadLine();
@@ -310,6 +347,7 @@ public class LlamaServerManager : IDisposable
                 if (!_modelLoadedOnce)
                 {
                     _modelLoadedOnce = true;
+                    _restartsDone = 0;
                     OnLog("Modelo cargado correctamente. Servidor listo.");
                 }
 
@@ -332,40 +370,165 @@ public class LlamaServerManager : IDisposable
     }
 
     /// <summary>
+    /// Guarda el motivo por el que llama-server no pudo cargar el modelo.
+    /// El motor lo imprime y después se va; si no se retiene acá, cuando el proceso
+    /// termina ya no queda nada que mostrarle al usuario.
+    /// </summary>
+    private void CaptureLoadError(string line)
+    {
+        if (_modelLoadedOnce) return;
+
+        if (line.Contains("error loading model:", StringComparison.OrdinalIgnoreCase)
+            || line.Contains("failed to load model", StringComparison.OrdinalIgnoreCase)
+            || line.Contains("unknown model architecture", StringComparison.OrdinalIgnoreCase)
+            || line.Contains("error while handling argument", StringComparison.OrdinalIgnoreCase))
+        {
+            // Se queda con la primera, que es la causa; las siguientes son su arrastre
+            // («failed to load model» viene después de «error loading model:»).
+            _lastLoadError ??= line.Trim();
+        }
+    }
+
+    /// <summary>
+    /// El proceso terminó por su cuenta. Es la señal de fallo confiable, no el health
+    /// check: llama-server se va solo cuando no puede cargar el modelo.
+    /// </summary>
+    /// <remarks>
+    /// La distinción que importa es si el modelo llegó a cargar alguna vez. Si nunca
+    /// cargó, el modelo no sirve y relanzarlo repite el mismo fallo para siempre —era
+    /// el bucle que dejaba la vista en «Iniciando modelo...» releyendo el .gguf cada
+    /// medio minuto—. Si sí cargó y después se cayó, reiniciar es lo correcto.
+    /// </remarks>
+    private void OnProcessExited()
+    {
+        if (_disposed) return;
+        if (CurrentStatus == ServerStatus.Stopped) return;
+
+        if (!_modelLoadedOnce)
+        {
+            StopHealthCheck();
+            string reason = _lastLoadError
+                ?? "llama-server terminó sin llegar a cargar el modelo.";
+            OnLog($"El modelo no se pudo cargar: {reason}");
+            SetStatus(ServerStatus.Error, reason);
+            return;
+        }
+
+        OnLog("El proceso llama-server terminó inesperadamente.");
+        RestartOrGiveUp("el servidor se cerró solo");
+    }
+
+    /// <summary>
+    /// Reinicia el servidor que ya había funcionado, hasta <see cref="MaxRestarts"/> veces.
+    /// </summary>
+    private void RestartOrGiveUp(string reason)
+    {
+        var config = _currentConfig;
+        if (config is null) return;
+
+        // Un solo reinicio en vuelo. La caída de un servidor que estaba listo llega por
+        // dos caminos a la vez —el evento Exited y los health checks que empiezan a
+        // fallar— y sin este cerrojo cada uno lanzaría su propio llama-server.
+        if (Interlocked.CompareExchange(ref _restartInFlight, 1, 0) != 0) return;
+
+        // Se corta acá, no dentro de la tarea: mientras el reinicio corre no debe seguir
+        // habiendo chequeos que lo vuelvan a disparar.
+        StopHealthCheck();
+
+        if (_restartsDone >= MaxRestarts)
+        {
+            string message = $"El servidor falló {MaxRestarts} veces seguidas ({reason}). Se dejó de reintentar.";
+            OnLog(message);
+            SetStatus(ServerStatus.Error, message);
+            Interlocked.Exchange(ref _restartInFlight, 0);
+            return;
+        }
+
+        _restartsDone++;
+        OnLog($"Reiniciando servidor (intento {_restartsDone} de {MaxRestarts}): {reason}");
+        CurrentStatus = ServerStatus.Error;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                KillProcess();
+
+                // Esperar la salida real antes de relanzar: si el proceso viejo todavía
+                // tiene el puerto, el nuevo no puede escuchar y se va también.
+                await WaitForProcessExitAsync(TimeSpan.FromSeconds(10));
+
+                if (_disposed || CurrentStatus == ServerStatus.Stopped) return;
+
+                _consecutiveFailures = 0;
+                _modelLoadedOnce = false;
+                _lastLoadError = null;
+                CurrentStatus = ServerStatus.Starting;
+                LaunchProcess(config);
+                StartHealthCheck();
+            }
+            catch (Exception ex)
+            {
+                OnLog($"Error durante reinicio automático: {ex.Message}");
+                SetStatus(ServerStatus.Error, $"Error durante el reinicio: {ex.Message}");
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _restartInFlight, 0);
+            }
+        });
+    }
+
+    /// <summary>Espera a que el proceso actual termine de verdad, con tope.</summary>
+    private async Task WaitForProcessExitAsync(TimeSpan timeout)
+    {
+        var process = _serverProcess;
+        if (process is null) return;
+
+        try
+        {
+            using var cts = new CancellationTokenSource(timeout);
+            await process.WaitForExitAsync(cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            OnLog("El proceso anterior no terminó dentro del plazo.");
+        }
+        catch (InvalidOperationException)
+        {
+            // El proceso nunca llegó a arrancar; no hay nada que esperar.
+        }
+    }
+
+    /// <summary>Detiene el bucle de health check sin tocar el proceso.</summary>
+    private void StopHealthCheck()
+    {
+        _healthCheckCts?.Cancel();
+        _healthCheckCts?.Dispose();
+        _healthCheckCts = null;
+    }
+
+    /// <summary>
     /// Registra un fallo de health check. Tras 3 fallos consecutivos, reinicia el servidor.
     /// </summary>
     private void OnHealthCheckFailed(string reason)
     {
+        // Mientras el modelo carga, llama-server responde 503 y rechaza conexiones: es
+        // progreso normal, no un fallo. Contarlo como fallo mataba a los quince segundos
+        // un arranque perfectamente sano —tres chequeos de cinco— y volvía a lanzar otro
+        // que moría en el mismo punto. Un modelo grande en un disco lento no cargaba nunca.
+        // Acá el fallo real lo señala la salida del proceso, en OnProcessExited.
+        if (!_modelLoadedOnce)
+        {
+            OnLog($"Todavía cargando el modelo ({reason}).");
+            return;
+        }
+
         _consecutiveFailures++;
         OnLog($"Health check fallido ({_consecutiveFailures}/3): {reason}");
 
         if (_consecutiveFailures >= 3)
-        {
-            OnLog("3 fallos consecutivos. Reiniciando servidor...");
-            CurrentStatus = ServerStatus.Error;
-
-            // Reiniciar en background para no bloquear el health check loop
-            var config = _currentConfig;
-            if (config is not null)
-            {
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        KillProcess();
-                        await Task.Delay(1000);
-                        _consecutiveFailures = 0;
-                        _modelLoadedOnce = false;
-                        CurrentStatus = ServerStatus.Starting;
-                        LaunchProcess(config);
-                    }
-                    catch (Exception ex)
-                    {
-                        OnLog($"Error durante reinicio automático: {ex.Message}");
-                    }
-                });
-            }
-        }
+            RestartOrGiveUp($"tres health checks fallidos: {reason}");
     }
 
     /// <summary>
@@ -373,9 +536,7 @@ public class LlamaServerManager : IDisposable
     /// </summary>
     private async Task StopInternalAsync(CancellationToken ct)
     {
-        _healthCheckCts?.Cancel();
-        _healthCheckCts?.Dispose();
-        _healthCheckCts = null;
+        StopHealthCheck();
 
         if (_serverProcess is null || _serverProcess.HasExited)
         {

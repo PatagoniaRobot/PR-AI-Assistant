@@ -804,8 +804,18 @@ public class MainViewModel : ObservableObject
         OpenImagePackagesCommand = new RelayCommand(ExecuteOpenImagePackages, () => IsImageGenAvailable);
         OpenFolderSettingsCommand = new RelayCommand(ExecuteOpenFolderSettings, () => AreFoldersConfigurable);
 
-        _orchestrator.ServerStatusChanged += (s, status) =>
-            System.Windows.Application.Current.Dispatcher.Invoke(() => ServerStatus = status);
+        _orchestrator.ServerStatusChanged += (s, e) =>
+            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+            {
+                // El motivo se fija antes que el estado: la vista de error se muestra
+                // por ServerStatus y tiene que encontrar el texto ya puesto.
+                if (!string.IsNullOrWhiteSpace(e.ErrorMessage))
+                    StartupError = e.ErrorMessage!;
+                else if (e.NewStatus == ServerStatus.Ready)
+                    StartupError = string.Empty;
+
+                ServerStatus = e.NewStatus;
+            });
         _orchestrator.StreamingTokenReceived += OnStreamingTokenReceived;
         _orchestrator.ResponseCompleted += OnResponseCompleted;
         _orchestrator.MetricsCalculated += OnMetricsCalculated;
