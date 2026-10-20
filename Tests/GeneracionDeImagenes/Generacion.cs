@@ -270,6 +270,36 @@ static class BancoGeneracion
             md.Engine.CommandLine.Contains("--vae-tiling"),
             md.Engine.CommandLine);
 
+        // --- el build del motor (pendiente 6.6) ---
+        // Cambia los bytes de la imagen y no aparece en ningún flag: la línea de comandos
+        // no lo atrapa, por eso va aparte.
+        Check("sin build conocido, la metadata dice desconocido y no queda vacía",
+            md.Engine.Build == ImageEngineVersion.Unknown, md.Engine.Build);
+        var conBuild = ImageGenMetadata.For(request, paquete, config, 19.4, "bfbef5b");
+        Check("la metadata registra el build del motor", conBuild.Engine.Build == "bfbef5b");
+
+        Check("el commit se lee de la salida real de --version",
+            ImageEngineVersion.ParseCommit("stable-diffusion.cpp version unknown, commit bfbef5b") == "bfbef5b");
+        Check("el commit se lee aunque venga en mayúsculas o con más líneas",
+            ImageEngineVersion.ParseCommit("algo\r\nversion master-841, commit 6B3EDAA\r\n") == "6b3edaa");
+        Check("sin commit en la salida no se inventa uno",
+            ImageEngineVersion.ParseCommit("stable-diffusion.cpp version unknown") is null &&
+            ImageEngineVersion.ParseCommit("") is null && ImageEngineVersion.ParseCommit(null) is null);
+
+        Check("un motor que no existe da desconocido, sin lanzar",
+            ImageEngineVersion.ReadAsync(Path.Combine(dir, "no-esta.exe")).GetAwaiter().GetResult()
+                == ImageEngineVersion.Unknown);
+
+        var motor = Path.Combine(
+            Environment.GetEnvironmentVariable("SD_RAIZ") ?? @"D:\PROYECTOS\PR-Tools\sd",
+            "bin", "sd-server.exe");
+        if (File.Exists(motor))
+        {
+            var build = ImageEngineVersion.ReadAsync(motor).GetAwaiter().GetResult();
+            Check("el motor instalado informa su commit",
+                build != ImageEngineVersion.Unknown && build.Length >= 7, build);
+        }
+
         // --- ida y vuelta contra el disco ---
         var png = Path.Combine(dir, "imagen.png");
         File.WriteAllBytes(png, new byte[64]);
@@ -298,6 +328,11 @@ static class BancoGeneracion
         Check("el sidecar es legible a ojo y nombra los flags",
             texto.Contains("flash_attention") && texto.Contains("vae_tiling") &&
             texto.Contains("command_line"));
+        var textoConBuild = File.ReadAllText(conBuild.WriteAsync(png).GetAwaiter().GetResult()!);
+        Check("el build llega al archivo",
+            textoConBuild.Contains("\"build\": \"bfbef5b\""), textoConBuild.Length.ToString());
+        Check("el build sobrevive al ida y vuelta",
+            ImageGenMetadata.Read(ImageGenMetadata.SidecarPathFor(png))?.Engine.Build == "bfbef5b");
     }
 
     static void CasoNombresDeArchivo(Comprobar Check)
@@ -626,6 +661,11 @@ static class BancoGeneracion
                 {
                     Check("la metadata guarda el prompt que se pidió",
                         md.Prompt.Contains("red fox"), md.Prompt);
+                    // El cableado del 6.6: que el ViewModel le pregunte el build al motor
+                    // de verdad y no se quede con el valor por defecto.
+                    Check("la metadata de la vista guarda el build del motor",
+                        md.Engine.Build != ImageEngineVersion.Unknown && md.Engine.Build.Length >= 7,
+                        md.Engine.Build);
 
                     // Lo que hace reproducible a la imagen: la semilla concreta. Con -1
                     // el archivo diría «aleatoria» y no habría forma de volver a sacarla.

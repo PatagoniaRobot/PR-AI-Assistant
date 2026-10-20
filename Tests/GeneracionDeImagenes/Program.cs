@@ -612,8 +612,15 @@ class Banco
 
         // Mismo puerto, otro modelo de difusión: NO se puede reutilizar, porque el
         // usuario recibiría imágenes de un modelo distinto del que eligió.
-        var otro = Path.Combine(RaizMotor, "models", "z_image_turbo-Q3_K.gguf");
-        if (File.Exists(otro))
+        //
+        // El otro modelo no se carga nunca —el puerto ocupado se detecta antes—, así que
+        // alcanza con un archivo vacío que tenga otro nombre. Hasta el 20 de octubre de
+        // 2026 se usaba el Q3_K real, y al borrarlo la prueba pasó a omitirse.
+        var dirOtro = Path.Combine(Path.GetTempPath(), "banco-imagenes-otro-modelo");
+        Directory.CreateDirectory(dirOtro);
+        var otro = Path.Combine(dirOtro, "z_image_turbo-Q3_K.gguf");
+        File.WriteAllBytes(otro, Array.Empty<byte>());
+        try
         {
             using var distinto = new ImageServerManager();
             var e3 = await distinto.StartAsync(ConfigReal() with { DiffusionModelPath = otro });
@@ -621,9 +628,9 @@ class Banco
             Check("el motivo nombra los dos modelos",
                 e3 is not null && e3.Contains("Q3_K") && e3.Contains("Q4_K"), e3 ?? "");
         }
-        else
+        finally
         {
-            Omitida("puerto ocupado por otro modelo", "falta el Q3_K para comparar");
+            try { Directory.Delete(dirOtro, recursive: true); } catch { }
         }
 
         await primero.StopAsync();

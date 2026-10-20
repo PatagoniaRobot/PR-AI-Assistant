@@ -703,7 +703,9 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
                 return;
             }
 
-            var metadata = ImageGenMetadata.For(request, paquete, config, cron.Elapsed.TotalSeconds);
+            var build = await ImageEngineVersion.ReadAsync(config.ServerExecutablePath, CancellationToken.None)
+                                                .ConfigureAwait(true);
+            var metadata = ImageGenMetadata.For(request, paquete, config, cron.Elapsed.TotalSeconds, build);
             var sidecar = await metadata.WriteAsync(resultado.ImagePath, CancellationToken.None)
                                         .ConfigureAwait(true);
 

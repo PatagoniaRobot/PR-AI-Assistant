@@ -28,6 +28,9 @@ namespace PRImager.AIAssistant.Services.ImageGen;
 /// afecten el resultado. Por eso además del desglose se guarda **la línea de comandos
 /// entera**: si alguna vez se agrega una palanca nueva, queda registrada sin que haya
 /// que acordarse de sumarla a este archivo.
+///
+/// La línea de comandos no alcanzó para una: **el build del motor**, que también cambia
+/// los bytes y no aparece en ningún flag. Por eso <see cref="ImageGenEngineInfo.Build"/>.
 /// </summary>
 public sealed class ImageGenMetadata
 {
@@ -79,7 +82,8 @@ public sealed class ImageGenMetadata
         ImageGenRequest request,
         ImageModelPackage package,
         ImageServerConfig config,
-        double elapsedSeconds) => new()
+        double elapsedSeconds,
+        string engineBuild = ImageEngineVersion.Unknown) => new()
         {
             Prompt = request.Prompt,
             NegativePrompt = request.NegativePrompt,
@@ -103,6 +107,7 @@ public sealed class ImageGenMetadata
             Engine = new ImageGenEngineInfo
             {
                 Executable = Path.GetFileName(config.ServerExecutablePath),
+                Build = engineBuild,
                 FlashAttention = config.FlashAttention,
                 VaeTiling = config.VaeTiling,
                 OffloadToCpu = config.OffloadToCpu,
@@ -171,6 +176,11 @@ public sealed class ImageGenModelInfo
 public sealed class ImageGenEngineInfo
 {
     public string Executable { get; init; } = "";
+
+    /// <summary>Commit del motor (pendiente 6.6). Cambia los bytes de la imagen aunque
+    /// a la vista sea la misma. Los sidecars anteriores al 20 de octubre de 2026 no lo
+    /// tienen: salieron todos de <c>bfbef5b</c>, el único build que usó la aplicación.</summary>
+    public string Build { get; init; } = "";
 
     /// <summary>--diffusion-fa. Cambia la imagen.</summary>
     public bool FlashAttention { get; init; }

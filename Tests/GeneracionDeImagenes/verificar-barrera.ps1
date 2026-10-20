@@ -52,6 +52,8 @@ $simbolos = @(
     @{ n = "ImageGenMetadata";              futuro = $false },
     @{ n = "ImageEngineLocator";            futuro = $false },
     @{ n = "ImageOutputFolder";             futuro = $false },
+    # pendiente 6.6 — el build del motor en el sidecar
+    @{ n = "ImageEngineVersion";            futuro = $false },
     @{ n = "ImagenesGeneradas";             futuro = $false },
     # E4.5 — integración
     @{ n = "ImageGenerationWindow";         futuro = $false },
