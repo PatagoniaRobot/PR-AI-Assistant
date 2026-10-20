@@ -31,6 +31,19 @@ public class UsageProfileService
     /// <summary>Id del perfil de fábrica general.</summary>
     public const string GeneralProfileId = "general";
 
+    /// <summary>
+    /// El perfil con que arranca una instalación nueva. En la edición estándar, General:
+    /// PR-AIA se publica sin modelos, y con Forense —que no habilita descargas— quien lo
+    /// abría por primera vez no tenía cómo bajar uno (primer arranque, 20/10/2026). En la
+    /// edición Forense, que no compila el catálogo, sigue siendo Forense.
+    /// </summary>
+    public const string DefaultActiveProfileId =
+#if MODEL_DOWNLOAD
+        GeneralProfileId;
+#else
+        ForensicProfileId;
+#endif
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -68,7 +81,7 @@ public class UsageProfileService
         EnsureFactoryProfiles();
 
         if (!_store.Profiles.Any(p => p.Id == _store.ActiveProfileId))
-            _store.ActiveProfileId = ForensicProfileId;
+            _store.ActiveProfileId = DefaultActiveProfileId;
 
         Save();
     }

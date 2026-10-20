@@ -280,6 +280,40 @@
                         <TextBlock Text="{Binding SelectedModelItem.DisplayName}" FontFamily="{StaticResource MainFont}" FontSize="13" Foreground="#64748b" HorizontalAlignment="Center" Margin="0,4,0,0" />
                     </StackPanel>
 
+                    <!-- Estado 0: primer arranque, sin ningún modelo. PR-AIA se publica sin
+                         modelos: esto es lo primero que ve quien lo baja. -->
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="560"
+                                AutomationProperties.AutomationId="FirstRunGuide">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasAvailableModel}" Value="False">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <TextBlock Text="Todavía no hay ningún modelo" FontFamily="{StaticResource MainFont}" FontSize="18"
+                                   FontWeight="SemiBold" Foreground="#e2e8f0" HorizontalAlignment="Center" />
+                        <TextBlock Text="{Binding FirstRunText}" FontFamily="{StaticResource MainFont}" FontSize="14"
+                                   Foreground="#94a3b8" TextWrapping="Wrap" TextAlignment="Center" Margin="0,10,0,18"
+                                   AutomationProperties.AutomationId="FirstRunText" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Button Content="⤓ Abrir el catálogo" Command="{Binding OpenModelCatalogCommand}"
+                                    Style="{StaticResource ActionButtonStyle}" Padding="16,8" Margin="4,0"
+                                    AutomationProperties.AutomationId="FirstRunCatalogButton"
+                                    Visibility="{Binding IsModelDownloadAvailable, Converter={StaticResource BoolToVis}}" />
+                            <Button Content="Usar el perfil General" Command="{Binding UseGeneralProfileCommand}"
+                                    Style="{StaticResource ActionButtonStyle}" Padding="16,8" Margin="4,0"
+                                    AutomationProperties.AutomationId="FirstRunGeneralButton"
+                                    Visibility="{Binding CanSwitchToGeneralForDownload, Converter={StaticResource BoolToVis}}" />
+                            <Button Content="📁 Abrir la carpeta de modelos" Command="{Binding OpenModelsFolderCommand}"
+                                    Style="{StaticResource SecondaryButtonStyle}" Padding="16,8" Margin="4,0"
+                                    AutomationProperties.AutomationId="FirstRunFolderButton" />
+                        </StackPanel>
+                    </StackPanel>
+
                     <!-- Estado 2: Servidor listo -->
                     <TextBlock Foreground="#64748b" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center">
                         <TextBlock.Style>
@@ -292,6 +326,10 @@
                                     <!-- Fallback en caso de ServerStatus == Stopped sin error -->
                                     <DataTrigger Binding="{Binding ServerStatus}" Value="Stopped">
                                         <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                    <!-- Sin modelo no está «listo»: manda el Estado 0. Va último para ganar -->
+                                    <DataTrigger Binding="{Binding HasAvailableModel}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed" />
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -932,7 +970,7 @@
                         <Button Command="{Binding GoBackCommand}" Style="{StaticResource TransparentHoverButton}" HorizontalAlignment="Left" Padding="8,4" Margin="-8,0,0,8">
                             <TextBlock Text="← Volver al inicio" Foreground="#AAAAAA" FontSize="12"/>
                         </Button>
-                        <TextBlock Text="{Binding GpuInfo}" Foreground="#777777" FontFamily="{StaticResource MonoFont}" FontSize="10" VerticalAlignment="Bottom" />
+                        <TextBlock Text="{Binding GpuInfo}" Foreground="#777777" FontFamily="{StaticResource MonoFont}" FontSize="10" VerticalAlignment="Bottom" TextWrapping="Wrap" />
                     </StackPanel>
                 </Grid>
             </Border>

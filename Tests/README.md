@@ -42,6 +42,10 @@ dotnet run -p:EdicionApp=Debug      :: 72 aserciones (necesita los modelos local
 dotnet run -p:EdicionApp=Forense    :: igual: la recomendación no es código de red
 dotnet run -- --con-red             :: además, el catálogo contra un repositorio real, con humo
 
+cd ..\PrimerArranque
+dotnet run -p:EdicionApp=Debug      :: 18 aserciones + 4 de humo
+dotnet run -p:EdicionApp=Forense    :: 14: sin catálogo, la guía manda a copiar el archivo
+
 cd ..\GeneracionDeImagenes
 dotnet run                          :: 286 aserciones + 61 de humo (necesita el motor)
 dotnet run -- --con-red             :: además, la descarga real del VAE (0,31 GB)
@@ -98,6 +102,15 @@ Que la aplicación recomiende cuantización y parámetros según la PC. Tres par
   migración de un `settings.json` anterior— y, con `--con-red`, el catálogo contra
   `unsloth/Qwen3.5-9B-GGUF`. El humo dibuja la ventana y deja
   `%TEMP%\catalogo-recomendacion.png`.
+
+### `PrimerArranque` — lo que ve quien lo baja
+
+PR-AIA se publica sin modelos. Esto vigila lo que encontró la prueba a mano del 20 de
+octubre de 2026: el perfil de entrada era Forense y no dejaba bajar nada, el chat decía
+«listo» sin modelo y la pantalla de inicio hablaba de un modelo ilegible. Cubre el perfil
+de entrada por edición, la guía con y sin catálogo, el paso a General cuando el perfil no
+habilita descargas —y que en Investigación no se ofrezca—, y que la guía desaparezca al
+haber un modelo. El humo dibuja el chat y deja `%TEMP%\primer-arranque.png`.
 
 ### `BorradoDeModelos` — backlog 9.4
 

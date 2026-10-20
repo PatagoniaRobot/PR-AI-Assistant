@@ -88,6 +88,17 @@ public static class AutoExecutionProfile
         return rec;
     }
 
+    /// <summary>
+    /// El texto bajo los botones de perfil cuando todavía no hay ningún modelo: antes decía
+    /// «no se pudo leer el modelo», que hacía pensar en un archivo roto.
+    /// </summary>
+    public const string NoModelText =
+#if MODEL_DOWNLOAD
+        "todavía no hay modelos: entrá y bajá uno desde el catálogo";
+#else
+        "todavía no hay modelos: copiá un archivo .gguf en la carpeta Models";
+#endif
+
     /// <summary>El texto bajo los botones de perfil.</summary>
     public static string Describe(RunRecommendation? rec) => rec == null
         ? "automático: no se pudo leer el modelo, se usan 8k y todo a la placa"

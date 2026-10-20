@@ -129,7 +129,9 @@ public class ModeSelectionViewModel : ObservableObject
         {
             if (_selectedExecutionProfile == null) return "";
             if (AutoExecutionProfile.IsAuto(_selectedExecutionProfile.Profile))
-                return AutoExecutionProfile.Describe(_autoRecommendation);
+                return _selectedModelItem?.IsAvailable == true
+                    ? AutoExecutionProfile.Describe(_autoRecommendation)
+                    : AutoExecutionProfile.NoModelText;
             var p = _selectedExecutionProfile.Profile;
             return $"ctx: {p.CtxSize} · capas GPU: {p.GpuLayers}";
         }

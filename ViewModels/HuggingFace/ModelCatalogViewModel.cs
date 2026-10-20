@@ -454,8 +454,8 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
 
         int notModels = Quantizations.Count(q => !q.Verdict.IsModel);
         string counts = notModels == 0
-            ? $"{Quantizations.Count} cuantizaciones."
-            : $"{Quantizations.Count - notModels} cuantizaciones y {notModels} archivo{(notModels == 1 ? "" : "s")} " +
+            ? $"{Cuantizaciones(Quantizations.Count)}."
+            : $"{Cuantizaciones(Quantizations.Count - notModels)} y {notModels} archivo{(notModels == 1 ? "" : "s")} " +
               "que no carga" + (notModels == 1 ? "" : "n") + " solo" + (notModels == 1 ? "" : "s") +
               " (seleccioná uno para ver qué es).";
         var best = recommended >= 0 ? Quantizations[recommended] : null;
@@ -477,6 +477,8 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
 
         IsBusy = false;
     }
+
+    private static string Cuantizaciones(int n) => n == 1 ? "1 cuantización" : $"{n} cuantizaciones";
 
     /// <summary>
     /// Lee la cabecera de una de las cuantizaciones —la más chica, da igual cuál: la

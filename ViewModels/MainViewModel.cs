@@ -161,7 +161,9 @@ public class MainViewModel : ObservableObject
         {
             if (_selectedExecutionProfile == null) return "";
             if (AutoExecutionProfile.IsAuto(_selectedExecutionProfile.Profile))
-                return AutoExecutionProfile.Describe(_autoRecommendation);
+                return _selectedModelItem?.IsAvailable == true
+                    ? AutoExecutionProfile.Describe(_autoRecommendation)
+                    : AutoExecutionProfile.NoModelText;
             var p = _selectedExecutionProfile.Profile;
             return $"ctx: {p.CtxSize} · capas GPU: {p.GpuLayers}";
         }
@@ -464,6 +466,8 @@ public class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(ProfileName));
         OnPropertyChanged(nameof(IsWebSearchAvailable));
         OnPropertyChanged(nameof(IsModelDownloadAvailable));
+        NotifyFirstRun();
+        ((RelayCommand)UseGeneralProfileCommand).RaiseCanExecuteChanged();
         OnPropertyChanged(nameof(IsImageGenAvailable));
         OnPropertyChanged(nameof(IsFileUploadAvailable));
         OnPropertyChanged(nameof(FileUploadIsForensic));
@@ -494,6 +498,78 @@ public class MainViewModel : ObservableObject
 
     /// <summary>Descarga de modelos efectivamente disponible (perfil + modo). Consumido por E3.</summary>
     public bool IsModelDownloadAvailable => _effectiveProfile?.ModelDownloadEnabled ?? false;
+
+    // === Primer arranque: sin ningún modelo ===
+    //
+    // PR-AIA se publica sin modelos (DISTRIBUCION.md). Antes, quien lo abría por primera
+    // vez veía «PR-AI Assistant listo» con el botón de enviar apagado y el de iniciar
+    // también, sin una palabra de por qué. Ahora la pantalla dice qué falta y ofrece el
+    // paso siguiente, según lo que esta edición y este perfil permitan.
+
+    /// <summary>True si hay al menos un modelo en disco para elegir.</summary>
+    public bool HasAvailableModel => AvailableModelItems.Any(m => m.IsAvailable);
+
+    /// <summary>
+    /// True si el catálogo está compilado pero el perfil activo no lo habilita: el caso en
+    /// que la salida es cambiar de perfil, no bajar nada.
+    /// </summary>
+    public bool CanSwitchToGeneralForDownload =>
+        IsModelCatalogCompiledIn && !IsModelDownloadAvailable && CurrentMode != OperationMode.Investigation;
+
+    /// <summary>Qué hacer para tener un modelo, en palabras del usuario.</summary>
+    public string FirstRunText
+    {
+        get
+        {
+            string carpeta = ResolveDownloadDirectory() ?? ResolveModelsDirectory();
+            string archivo = $"un archivo de modelo (.gguf) en {carpeta}";
+            if (IsModelDownloadAvailable)
+                return "Bajá uno desde el catálogo: lee tu PC, marca la versión que conviene y, " +
+                       $"cuando termina la descarga, queda elegido. También podés copiar {archivo} " +
+                       "y tocar ↻ en el menú.";
+            if (CanSwitchToGeneralForDownload)
+                return $"El perfil «{_selectedUsageProfile?.Name}» no permite bajar modelos. Pasá al perfil " +
+                       $"General para usar el catálogo, o copiá {archivo} y tocá ↻ en el menú.";
+            return $"Para usar el asistente, copiá {archivo} y tocá ↻ en el menú.";
+        }
+    }
+
+    /// <summary>Pasa al perfil General, que es el que habilita el catálogo.</summary>
+    public ICommand UseGeneralProfileCommand { get; private set; } = null!;
+
+    /// <summary>Abre en el Explorador la carpeta donde van los modelos.</summary>
+    public ICommand OpenModelsFolderCommand { get; private set; } = null!;
+
+    private void NotifyFirstRun()
+    {
+        OnPropertyChanged(nameof(HasAvailableModel));
+        OnPropertyChanged(nameof(CanSwitchToGeneralForDownload));
+        OnPropertyChanged(nameof(FirstRunText));
+    }
+
+    private void ExecuteUseGeneralProfile()
+    {
+        var general = AvailableUsageProfiles.FirstOrDefault(p => p.Id == UsageProfileService.GeneralProfileId);
+        if (general != null) SelectedUsageProfile = general;
+    }
+
+    private void ExecuteOpenModelsFolder()
+    {
+        string carpeta = ResolveDownloadDirectory() ?? ResolveModelsDirectory();
+        try
+        {
+            Directory.CreateDirectory(carpeta);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = carpeta,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"No se pudo abrir {carpeta}: {ex.Message}");
+        }
+    }
 
     /// <summary>
     /// Generación de imágenes efectivamente disponible (perfil + modo + edición).
@@ -783,6 +859,11 @@ public class MainViewModel : ObservableObject
         _ingestionService = new ContextIngestionService();
         _settings = _configManager.Load();
 
+        // El pie de la barra lateral decía «GPU: Detección Automática» hasta arrancar el
+        // servidor. La PC se conoce desde antes (E5); al arrancar, el motor lo reemplaza
+        // por el dispositivo que efectivamente usa.
+        _gpuInfo = "Tu PC: " + AutoExecutionProfile.Hardware(AutoExecutionProfile.ServerDirectory(_settings)).Summary;
+
         // Inicializar gestor de ventana de contexto con valores de configuración
         _contextWindowManager = new ContextWindowManager
         {
@@ -817,6 +898,8 @@ public class MainViewModel : ObservableObject
         ToggleSidebarCommand = new RelayCommand(() => IsSidebarOpen = !IsSidebarOpen);
         ManageProfilesCommand = new RelayCommand(ExecuteManageProfiles);
         OpenModelCatalogCommand = new RelayCommand(ExecuteOpenModelCatalog, () => IsModelDownloadAvailable);
+        UseGeneralProfileCommand = new RelayCommand(ExecuteUseGeneralProfile, () => CanSwitchToGeneralForDownload);
+        OpenModelsFolderCommand = new RelayCommand(ExecuteOpenModelsFolder);
         OpenImageGenerationCommand = new RelayCommand(ExecuteOpenImageGeneration, () => IsImageGenAvailable);
         OpenImagePackagesCommand = new RelayCommand(ExecuteOpenImagePackages, () => IsImageGenAvailable);
         OpenFolderSettingsCommand = new RelayCommand(ExecuteOpenFolderSettings, () => AreFoldersConfigurable);
@@ -1816,6 +1899,8 @@ public class MainViewModel : ObservableObject
             ?? AvailableExecutionProfiles.FirstOrDefault();
         if (defaultProfile != null)
             SelectedExecutionProfile = defaultProfile;
+
+        NotifyFirstRun();
     }
 
     private void ExecuteRefreshModels()
