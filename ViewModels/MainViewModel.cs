@@ -82,6 +82,8 @@ public class MainViewModel : ObservableObject
                 // que no viven en Models/. Para los del catálogo es el nombre a secas.
                 _settings.SelectedModel = value.Model.SelectionKey;
                 _settings.MmprojFileName = value.Model.MmprojFileName;
+                if (AutoExecutionProfile.IsAuto(_selectedExecutionProfile?.Profile))
+                    _autoRecommendation = AutoExecutionProfile.Apply(_settings, value.Model);
                 _configManager.Save(_settings);
 
                 OnPropertyChanged(nameof(SelectedModelHardwareTag));
@@ -103,10 +105,20 @@ public class MainViewModel : ObservableObject
         {
             if (SetProperty(ref _selectedExecutionProfile, value) && value != null)
             {
-                _settings.GpuLayers = value.Profile.GpuLayers;
-                _settings.CtxSize = value.Profile.CtxSize;
-                if (value.Profile.Threads > 0)
-                    _settings.Threads = value.Profile.Threads;
+                _settings.ExecutionProfileId = value.Profile.Id;
+                if (AutoExecutionProfile.IsAuto(value.Profile))
+                {
+                    _autoRecommendation = _selectedModelItem != null
+                        ? AutoExecutionProfile.Apply(_settings, _selectedModelItem.Model)
+                        : null;
+                }
+                else
+                {
+                    _settings.GpuLayers = value.Profile.GpuLayers;
+                    _settings.CtxSize = value.Profile.CtxSize;
+                    if (value.Profile.Threads > 0)
+                        _settings.Threads = value.Profile.Threads;
+                }
                 _configManager.Save(_settings);
 
                 // Marcar el perfil activo y desmarcar los demás
@@ -139,12 +151,16 @@ public class MainViewModel : ObservableObject
         }
     }
 
+    private RunRecommendation? _autoRecommendation;
+
     /// <summary>Texto con info de contexto/GPU del perfil de ejecución activo.</summary>
     public string SelectedModelContextInfo
     {
         get
         {
             if (_selectedExecutionProfile == null) return "";
+            if (AutoExecutionProfile.IsAuto(_selectedExecutionProfile.Profile))
+                return AutoExecutionProfile.Describe(_autoRecommendation);
             var p = _selectedExecutionProfile.Profile;
             return $"ctx: {p.CtxSize} · capas GPU: {p.GpuLayers}";
         }
@@ -1788,8 +1804,12 @@ public class MainViewModel : ObservableObject
                 SelectedModelItem = firstAvailable;
         }
 
-        // Seleccionar perfil de ejecución "balanced" por defecto
-        var defaultProfile = AvailableExecutionProfiles.FirstOrDefault(p => p.Profile.Id == "balanced")
+        // El perfil guardado; si no hay ninguno —o el guardado ya no existe—, el automático.
+        // Antes caía siempre en «balanced», que manda todo a la placa con 32k: en una
+        // placa chica, el modelo no arrancaba.
+        var defaultProfile = AvailableExecutionProfiles.FirstOrDefault(p =>
+                string.Equals(p.Profile.Id, _settings.ExecutionProfileId, StringComparison.OrdinalIgnoreCase))
+            ?? AvailableExecutionProfiles.FirstOrDefault(p => AutoExecutionProfile.IsAuto(p.Profile))
             ?? AvailableExecutionProfiles.FirstOrDefault();
         if (defaultProfile != null)
             SelectedExecutionProfile = defaultProfile;

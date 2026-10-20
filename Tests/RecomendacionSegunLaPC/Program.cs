@@ -25,7 +25,7 @@ partial class Banco
     {
         Console.WriteLine("Banco de recomendación según la PC\n");
 
-        var casos = new List<Action> { CasoEstaMaquina, CasoPlacaUtilizable, CasoBackend, CasoMemoriaMedida, CasoRecomendacion, CasoCuantizacion };
+        var casos = new List<Action> { CasoEstaMaquina, CasoPlacaUtilizable, CasoBackend, CasoMemoriaMedida, CasoRecomendacion, CasoCuantizacion, CasoPerfilAutomatico };
 
         foreach (var caso in casos)
         {

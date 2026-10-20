@@ -781,7 +781,7 @@
                                     <Run Text="{Binding SelectedModelHardwareTag, Mode=OneWay}"/>
                                 </TextBlock>
                                 <TextBlock Text="{Binding SelectedModelCapabilitiesText}" Foreground="#3B82F6" FontSize="9" Margin="0,2,0,0" />
-                                <TextBlock Text="{Binding SelectedModelContextInfo}" Foreground="#777777" FontFamily="{StaticResource MonoFont}" FontSize="9" Margin="0,2,0,0" />
+                                <TextBlock Text="{Binding SelectedModelContextInfo}" Foreground="#777777" FontFamily="{StaticResource MonoFont}" FontSize="9" Margin="0,2,0,0" TextWrapping="Wrap" />
 
                                 <!-- Generación de imágenes (E4): dos barreras.
                                      La sección entera desaparece si el binario no la

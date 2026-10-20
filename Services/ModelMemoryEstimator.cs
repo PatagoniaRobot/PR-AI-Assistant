@@ -95,13 +95,15 @@ public static class ModelMemoryEstimator
     /// del mismo modelo: el catálogo lee una sola por repositorio. La arquitectura es la
     /// misma; los pesos se escalan por tamaño.
     /// </param>
-    public static ModelMemory? Estimate(GgufHeader header, long fileBytes, int contextTokens, long probedFileBytes = 0)
+    /// <param name="extraGpuBytes">Pesos que van a la placa además del modelo: el proyector de visión.</param>
+    public static ModelMemory? Estimate(GgufHeader header, long fileBytes, int contextTokens, long probedFileBytes = 0,
+                                        long extraGpuBytes = 0)
     {
         if (header.BlockCount is not { } blocks || blocks == 0) return null;
         int n = (int)blocks;
 
         double scale = probedFileBytes > 0 ? (double)fileBytes / probedFileBytes : 1.0;
-        long weightsGpu = header.Tensors is { } t ? (long)(t.GpuBytes * scale) : fileBytes;
+        long weightsGpu = (header.Tensors is { } t ? (long)(t.GpuBytes * scale) : fileBytes) + extraGpuBytes;
         long weightsCpu = header.Tensors is { } t2 ? (long)(t2.CpuResidentBytes * scale) : 0;
 
         return new ModelMemory

@@ -19,6 +19,12 @@ namespace PRImager.AIAssistant.Services.Models
         public int GpuLayers { get; set; } = 99;
         public int Threads { get; set; } = 4;
 
+        /// <summary>
+        /// Perfil de ejecución elegido. «auto» calcula contexto, capas e hilos para el
+        /// modelo y la PC (E5); un settings.json anterior a este campo cae en «auto».
+        /// </summary>
+        public string ExecutionProfileId { get; set; } = "auto";
+
         // Inferencia
         public float Temperature { get; set; } = 0.7f;
         public int MaxTokens { get; set; } = 8192;

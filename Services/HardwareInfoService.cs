@@ -115,21 +115,43 @@ public class HardwareInfoService
     {
         if (_cached != null && !forceRefresh) return _cached;
 
-        var gpus = ReadGpus();
-        var backend = DetectBackend(_serverDirectory);
-        var (usable, reason) = PickUsableGpu(gpus, backend);
+        var basic = ReadBasic(_serverDirectory);
 
         int? free = null;
-        if (usable?.VendorId == VendorNvidia)
+        if (basic.UsableGpu?.VendorId == VendorNvidia)
         {
             var smi = await _nvidia.GetVramAsync(forceRefresh, ct).ConfigureAwait(false);
             if (smi.Available) free = smi.FreeMb;
         }
 
+        _cached = new HardwareInfo
+        {
+            TotalRamMb = basic.TotalRamMb,
+            AvailableRamMb = basic.AvailableRamMb,
+            PhysicalCores = basic.PhysicalCores,
+            LogicalCores = basic.LogicalCores,
+            CpuName = basic.CpuName,
+            Gpus = basic.Gpus,
+            Backend = basic.Backend,
+            UsableGpu = basic.UsableGpu,
+            FreeVramMb = free,
+            GpuNotUsableReason = basic.GpuNotUsableReason
+        };
+        return _cached;
+    }
+
+    /// <summary>
+    /// La PC sin preguntarle a nvidia-smi: lo único que se pierde es la VRAM libre del
+    /// momento, que la recomendación no usa. Es sincrónico y tarda milisegundos.
+    /// </summary>
+    public static HardwareInfo ReadBasic(string serverDirectory)
+    {
+        var gpus = ReadGpus();
+        var backend = DetectBackend(serverDirectory);
+        var (usable, reason) = PickUsableGpu(gpus, backend);
         var (total, available) = ReadRam();
         var (physical, logical) = ReadCores();
-
-        _cached = new HardwareInfo
+        return new HardwareInfo
         {
             TotalRamMb = total,
             AvailableRamMb = available,
@@ -139,10 +161,8 @@ public class HardwareInfoService
             Gpus = gpus,
             Backend = backend,
             UsableGpu = usable,
-            FreeVramMb = free,
             GpuNotUsableReason = reason
         };
-        return _cached;
     }
 
     /// <summary>

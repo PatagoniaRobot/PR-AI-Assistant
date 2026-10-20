@@ -144,11 +144,14 @@ public class ModelProfileService
     }
 
     /// <summary>
-    /// Retorna los perfiles de ejecución definidos en el catálogo.
+    /// Retorna los perfiles de ejecución: «Automático» primero, y después los fijos del
+    /// catálogo. El automático no vive en el JSON porque sus valores no son fijos.
     /// </summary>
     public List<ExecutionProfile> GetExecutionProfiles()
     {
-        return _catalog.ExecutionProfiles;
+        var result = new List<ExecutionProfile> { AutoExecutionProfile.Create() };
+        result.AddRange(_catalog.ExecutionProfiles.Where(p => !AutoExecutionProfile.IsAuto(p)));
+        return result;
     }
 
     /// <summary>

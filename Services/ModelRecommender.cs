@@ -78,15 +78,16 @@ public static class ModelRecommender
         hw.PhysicalCores > 0 ? hw.PhysicalCores : Math.Max(1, hw.LogicalCores / 2);
 
     /// <summary>Cómo correr este archivo en esta PC.</summary>
+    /// <param name="extraGpuBytes">Lo que va a la placa además del modelo: el proyector de visión.</param>
     public static RunRecommendation RecommendRun(GgufHeader header, long fileBytes, HardwareInfo hw,
-                                                 long probedFileBytes = 0)
+                                                 long probedFileBytes = 0, long extraGpuBytes = 0)
     {
         long vram = VramBudget(hw);
         long ram = RamBudget(hw);
         int threads = Threads(hw);
         long trained = header.ArchScalar("context_length") ?? MaxRecommendedContext;
 
-        ModelMemory? At(int ctx) => ModelMemoryEstimator.Estimate(header, fileBytes, ctx, probedFileBytes);
+        ModelMemory? At(int ctx) => ModelMemoryEstimator.Estimate(header, fileBytes, ctx, probedFileBytes, extraGpuBytes);
 
         // 1. Todo en la placa, con el contexto más grande que entre
         if (vram > 0)

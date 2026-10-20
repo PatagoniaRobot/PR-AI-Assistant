@@ -218,7 +218,8 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
                 <TextBlock Text="{Binding SelectedModelContextInfo}"
-                           Foreground="#64748b" FontFamily="{StaticResource MonoFont}" FontSize="12" Margin="0,8,0,0" />
+                           Foreground="#64748b" FontFamily="{StaticResource MonoFont}" FontSize="12" Margin="0,8,0,0"
+                           TextWrapping="Wrap" TextAlignment="Center" />
             </StackPanel>
 
             <!-- Separador -->
