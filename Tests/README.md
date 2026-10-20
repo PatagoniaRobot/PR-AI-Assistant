@@ -37,6 +37,11 @@ dotnet run -p:EdicionApp=Debug      :: 55 aserciones + 5 de humo
 dotnet run -p:EdicionApp=Forense    :: 32: la cabecera y el selector; el catálogo no existe
 dotnet run -- --con-red             :: además, cinco cabeceras reales de HuggingFace
 
+cd ..\RecomendacionSegunLaPC
+dotnet run -p:EdicionApp=Debug      :: 72 aserciones (necesita los modelos locales, si no los omite)
+dotnet run -p:EdicionApp=Forense    :: igual: la recomendación no es código de red
+dotnet run -- --con-red             :: además, el catálogo contra un repositorio real, con humo
+
 cd ..\GeneracionDeImagenes
 dotnet run                          :: 286 aserciones + 61 de humo (necesita el motor)
 dotnet run -- --con-red             :: además, la descarga real del VAE (0,31 GB)
@@ -76,6 +81,23 @@ cabeceras reales, entre ellas la del archivo de 4.22 del maestro.
 
 El humo dibuja la ventana con `RenderTargetBitmap` y deja la captura en
 `%TEMP%\catalogo-no-modelos.png`.
+
+### `RecomendacionSegunLaPC` — etapa E5
+
+Que la aplicación recomiende cuantización y parámetros según la PC. Tres partes:
+
+- **La PC**, detectada de verdad contra esta máquina (DXGI, RAM, núcleos físicos, el
+  backend de las `.dll` de `Tools\`), y la regla de qué placa sirve con PCs descritas a
+  mano: una AMD con el motor CUDA, una integrada, ninguna.
+- **La memoria**, contra lo que midió `llama-server` el 20 de octubre de 2026 en
+  Gemma 4 E2B, E4B y Qwen3.5-9B a 8k y 32k: pesos en placa y en RAM, caché y estado
+  recurrente, al MiB. Usa los `.gguf` de `Models\` y de `ModelosDescargados\`; si no
+  están, esos casos se omiten y lo dicen.
+- **La recomendación**: qué cuantización y qué parámetros para placas de 16, 8, 6 y 4 GB
+  y sin placa, el perfil «Automático» en la pantalla de selección real —incluida la
+  migración de un `settings.json` anterior— y, con `--con-red`, el catálogo contra
+  `unsloth/Qwen3.5-9B-GGUF`. El humo dibuja la ventana y deja
+  `%TEMP%\catalogo-recomendacion.png`.
 
 ### `BorradoDeModelos` — backlog 9.4
 

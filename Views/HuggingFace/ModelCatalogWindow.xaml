@@ -172,12 +172,15 @@
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="CUANTIZACIONES DISPONIBLES" Style="{StaticResource SectionLabel}" Margin="10,8,10,6" />
                     <DataGrid ItemsSource="{Binding Quantizations}" SelectedItem="{Binding SelectedQuantization}"
+                              SelectionChanged="QuantGrid_SelectionChanged"
                               AutomationProperties.AutomationId="QuantGrid">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Archivo" Binding="{Binding FileName}" Width="*" />
                             <DataGridTextColumn Header="Cuant." Binding="{Binding Quantization}" Width="Auto" />
                             <DataGridTextColumn Header="Tamaño" Binding="{Binding SizeText}" Width="Auto" />
-                            <DataGridTemplateColumn Header="VRAM" Width="Auto">
+                            <!-- Ancho fijo: con Auto se mide contra las filas visibles al cargar, y la
+                                 recomendada, que suele estar más abajo, quedaba cortada -->
+                            <DataGridTemplateColumn Header="En tu PC" Width="200">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal" ToolTip="{Binding VramExplanation}">

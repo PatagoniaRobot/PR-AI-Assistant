@@ -975,7 +975,9 @@ public class MainViewModel : ObservableObject
                 _orchestrator.Logger.LogCustom("MODEL_DELETED",
                     $"file=\"{record.FileName}\" bytes={record.SizeBytes}");
                 ExecuteRefreshModels();
-            });
+            },
+            // El motor de chat que se va a usar decide si la placa sirve: CUDA no usa una AMD
+            hardware: new Services.HardwareInfoService(AutoExecutionProfile.ServerDirectory(_settings)));
 
         var window = new Views.HuggingFace.ModelCatalogWindow
         {

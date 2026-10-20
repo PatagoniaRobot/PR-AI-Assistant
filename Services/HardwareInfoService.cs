@@ -103,6 +103,7 @@ public class HardwareInfoService
     private readonly string _serverDirectory;
     private readonly GpuInfoService _nvidia;
     private HardwareInfo? _cached;
+    private bool _fixed;
 
     /// <param name="serverDirectory">Carpeta de llama-server.exe: de sus .dll sale el backend.</param>
     public HardwareInfoService(string serverDirectory, GpuInfoService? nvidia = null)
@@ -111,9 +112,15 @@ public class HardwareInfoService
         _nvidia = nvidia ?? new GpuInfoService();
     }
 
+    /// <summary>
+    /// Un servicio que siempre responde la PC dada. Sirve para ejercer la recomendación
+    /// contra PCs que no se tienen a mano: una placa de 6 GB, una AMD, ninguna.
+    /// </summary>
+    public static HardwareInfoService Fixed(HardwareInfo hw) => new("", null) { _cached = hw, _fixed = true };
+
     public async Task<HardwareInfo> GetAsync(bool forceRefresh = false, CancellationToken ct = default)
     {
-        if (_cached != null && !forceRefresh) return _cached;
+        if (_cached != null && (!forceRefresh || _fixed)) return _cached;
 
         var basic = ReadBasic(_serverDirectory);
 

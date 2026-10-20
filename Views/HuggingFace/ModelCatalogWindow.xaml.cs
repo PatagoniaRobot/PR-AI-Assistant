@@ -14,6 +14,16 @@ public partial class ModelCatalogWindow : Window
         InitializeComponent();
     }
 
+    /// <summary>
+    /// La fila elegida, a la vista: la recomendada se elige sola al cargar el repositorio
+    /// y puede quedar más abajo de lo que muestra la tabla.
+    /// </summary>
+    private void QuantGrid_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.DataGrid grid && grid.SelectedItem != null)
+            grid.ScrollIntoView(grid.SelectedItem);
+    }
+
     /// <summary>Enter en el buscador dispara la búsqueda.</summary>
     private void SearchBox_KeyDown(object sender, KeyEventArgs e)
     {

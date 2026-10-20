@@ -28,16 +28,45 @@ public class QuantizationItem : ObservableObject
     public string Quantization => string.IsNullOrEmpty(File.Quantization) ? "—" : File.Quantization;
     public string SizeText => File.SizeText;
 
+    /// <summary>
+    /// Cómo correría en esta PC, calculado con la cabecera del modelo (E5). Null si no se
+    /// pudo leer: entonces manda el semáforo por tamaño de <see cref="Vram"/>.
+    /// </summary>
+    public RunRecommendation? Run { get; }
+
+    /// <summary>La cuantización que se recomienda para esta PC entre las del repositorio.</summary>
+    public bool IsRecommended { get; }
+
     public string VramLabel => Verdict.Kind switch
     {
+        GgufKind.Model when Run != null => (IsRecommended ? "★ Recomendada · " : "") + RunLabel(Run),
         GgufKind.Model => Vram.Label,
         GgufKind.Projector => "Proyector de visión",
         GgufKind.SplitPart => "Parte de un modelo",
         _ => "No es un modelo"
     };
 
-    public string VramColor => Verdict.IsModel ? Vram.Color : NotModelColor;
-    public string VramExplanation => Verdict.IsModel ? Vram.Explanation : Verdict.Reason;
+    public string VramColor => !Verdict.IsModel ? NotModelColor
+        : Run == null ? Vram.Color
+        : !Run.Fits ? "#EF4444"
+        : Run.FullyOnGpu ? "#10B981"
+        : Run.CpuOnly ? "#F97316"
+        : "#F59E0B";
+
+    public string VramExplanation => !Verdict.IsModel ? Verdict.Reason
+        : Run == null ? Vram.Explanation
+        : Run.Explanation +
+          (Run.Fits ? $" Parámetros: contexto {ModelRecommender.K(Run.ContextTokens)}, {GpuText(Run)}, {Run.Threads} hilos." : "") +
+          (ModelRecommender.IsLowQuality(File.Quantization) ? " Ojo: 2 bits o menos, la calidad se nota." : "");
+
+    /// <summary>True si no entra en la PC ni repartiendo: la descarga se confirma antes.</summary>
+    public bool DoesNotFit => Run != null ? !Run.Fits : Vram.Fit == VramFit.Red;
+
+    private static string RunLabel(RunRecommendation r) =>
+        !r.Fits ? "No entra" : r.FullyOnGpu ? "Entra entera" : r.CpuOnly ? "Solo CPU" : "Repartida";
+
+    private static string GpuText(RunRecommendation r) =>
+        r.FullyOnGpu ? "todas las capas en la placa" : r.CpuOnly ? "sin placa" : $"{r.GpuLayers} capas en la placa";
 
     /// <summary>
     /// Se puede bajar un modelo o un proyector, que la aplicación usa junto al modelo.
@@ -52,11 +81,13 @@ public class QuantizationItem : ObservableObject
         set => SetProperty(ref _isDownloading, value);
     }
 
-    public QuantizationItem(HfFile file, VramEstimate vram)
+    public QuantizationItem(HfFile file, VramEstimate vram, RunRecommendation? run = null, bool isRecommended = false)
     {
         File = file;
         Vram = vram;
         Verdict = GgufInspector.FromFileName(file.FileName);
+        Run = Verdict.IsModel ? run : null;
+        IsRecommended = isRecommended && Run != null;
     }
 
     /// <summary>Las filas del DataGrid se anuncian con esto en accesibilidad.</summary>
@@ -72,6 +103,8 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
     private readonly HuggingFaceClient _client;
     private readonly ModelDownloader _downloader;
     private readonly GpuInfoService _gpuInfo;
+    private readonly HardwareInfoService _hardware;
+    private HardwareInfo? _hw;
     private readonly ModelDownloadLog _downloadLog;
     private readonly DownloadedModelStore? _store;
     private readonly string _destinationDirectory;
@@ -270,7 +303,8 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
         GpuInfoService? gpuInfo = null,
         DownloadedModelStore? store = null,
         Action<ModelDeletionRecord>? onModelDeleted = null,
-        Func<DownloadedModelInfo, bool>? confirmDeletion = null)
+        Func<DownloadedModelInfo, bool>? confirmDeletion = null,
+        HardwareInfoService? hardware = null)
     {
         _destinationDirectory = destinationDirectory;
         _contextTokens = contextTokens;
@@ -283,6 +317,9 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
         _client = client ?? new HuggingFaceClient(tokenProvider: tokenProvider);
         _downloader = downloader ?? new ModelDownloader(tokenProvider: tokenProvider);
         _gpuInfo = gpuInfo ?? new GpuInfoService();
+        // Sin carpeta del motor de chat, la de la instalación: Tools\ junto al ejecutable
+        _hardware = hardware ?? new HardwareInfoService(
+            System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools"), _gpuInfo);
 
         _downloader.ProgressChanged += OnDownloadProgress;
 
@@ -329,12 +366,15 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
         DownloadedSummary = $"{models.Count} modelo{(models.Count == 1 ? "" : "s")} · {total} en {_store.DirectoryText}";
     }
 
+    /// <summary>
+    /// La PC, de cualquier marca (E5). Antes la línea salía de nvidia-smi y en una PC sin
+    /// NVIDIA decía «VRAM no detectada» y nada más.
+    /// </summary>
     private async Task InitializeGpuAsync()
     {
+        _hw = await _hardware.GetAsync();
         _vram = await _gpuInfo.GetVramAsync();
-        GpuText = _vram.Available
-            ? $"{_vram.Name} · {_vram.TotalMb / 1024.0:F0} GB VRAM · contexto {_contextTokens} tokens"
-            : _vram.UnavailableReason ?? "VRAM no detectada";
+        GpuText = $"Tu PC: {_hw.Summary}";
     }
 
     private async Task ExecuteSearchAsync()
@@ -384,21 +424,50 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
         }
 
         _vram ??= await _gpuInfo.GetVramAsync();
+        _hw ??= await _hardware.GetAsync();
 
-        foreach (var f in detail.Value!.GgufFiles)
+        var files = detail.Value!.GgufFiles;
+        var (shape, probedBytes) = await ProbeShapeAsync(repo.Id, files);
+
+        // Con la cabecera de una de las cuantizaciones se calculan todas: la arquitectura
+        // es la misma, cambia el tamaño de los pesos
+        var runs = new RunRecommendation?[files.Count];
+        int recommended = -1;
+        if (shape != null)
         {
-            var estimate = VramEstimator.Estimate(f.SizeBytes, _contextTokens, _vram);
-            Quantizations.Add(new QuantizationItem(f, estimate));
+            var models = files.Select((f, i) => (f, i))
+                              .Where(x => GgufInspector.FromFileName(x.f.FileName).IsModel && x.f.SizeBytes > 0)
+                              .ToList();
+            foreach (var (f, i) in models)
+                runs[i] = ModelRecommender.RecommendRun(shape, f.SizeBytes, _hw, probedBytes);
+
+            int pick = ModelRecommender.PickQuantization(
+                models.Select(x => (x.f.Quantization, x.f.SizeBytes)).ToList(), shape, probedBytes, _hw);
+            if (pick >= 0) recommended = models[pick].i;
+        }
+
+        for (int i = 0; i < files.Count; i++)
+        {
+            var estimate = VramEstimator.Estimate(files[i].SizeBytes, _contextTokens, _vram);
+            Quantizations.Add(new QuantizationItem(files[i], estimate, runs[i], i == recommended));
         }
 
         int notModels = Quantizations.Count(q => !q.Verdict.IsModel);
+        string counts = notModels == 0
+            ? $"{Quantizations.Count} cuantizaciones."
+            : $"{Quantizations.Count - notModels} cuantizaciones y {notModels} archivo{(notModels == 1 ? "" : "s")} " +
+              "que no carga" + (notModels == 1 ? "" : "n") + " solo" + (notModels == 1 ? "" : "s") +
+              " (seleccioná uno para ver qué es).";
+        var best = recommended >= 0 ? Quantizations[recommended] : null;
+        // La recomendada queda elegida: su explicación a la vista y el botón listo
+        if (best != null) SelectedQuantization = best;
         Status = Quantizations.Count == 0
             ? "El repositorio no expone archivos .gguf."
-            : notModels == 0
-                ? $"{Quantizations.Count} cuantizaciones. El semáforo compara contra la VRAM detectada."
-                : $"{Quantizations.Count - notModels} cuantizaciones y {notModels} archivo{(notModels == 1 ? "" : "s")} " +
-                  "que no carga" + (notModels == 1 ? "" : "n") + " solo" + (notModels == 1 ? "" : "s") +
-                  " (seleccioná uno para ver qué es). El semáforo compara contra la VRAM detectada.";
+            : best != null
+                ? $"Recomendada para tu PC: {best.Quantization} — {best.Run!.Summary}. {counts}"
+                : shape != null
+                    ? $"Ninguna cuantización de este modelo entra en tu PC. {counts}"
+                    : $"{counts} No se pudo leer la cabecera del modelo: el semáforo estima por tamaño.";
 
         if (detail.Value.Repo.IsGated)
         {
@@ -407,6 +476,25 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
         }
 
         IsBusy = false;
+    }
+
+    /// <summary>
+    /// Lee la cabecera de una de las cuantizaciones —la más chica, da igual cuál: la
+    /// arquitectura es la misma— para calcular la memoria de todas. Son 64 KB: alcanza para
+    /// la arquitectura, no para la tabla de tensores, así que los pesos se toman enteros
+    /// como de placa, que es pasarse a propósito (ver ModelMemoryEstimator).
+    /// </summary>
+    private async Task<(GgufHeader? shape, long probedBytes)> ProbeShapeAsync(string repoId, System.Collections.Generic.IList<HfFile> files)
+    {
+        var probe = files.Where(f => f.SizeBytes > 0 && GgufInspector.FromFileName(f.FileName).IsModel)
+                         .OrderBy(f => f.SizeBytes)
+                         .FirstOrDefault();
+        if (probe == null) return (null, 0);
+
+        var r = await _client.ProbeGgufAsync(repoId, probe.FileName);
+        if (!r.Success || r.Value!.BlockCount is null || !GgufInspector.FromHeader(r.Value).IsModel)
+            return (null, 0);
+        return (r.Value, probe.SizeBytes);
     }
 
     private async Task ExecuteDownloadAsync()
@@ -441,7 +529,7 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
             Status = "";
         }
 
-        if (item.Verdict.IsModel && item.Vram.Fit == VramFit.Red)
+        if (item.Verdict.IsModel && item.DoesNotFit)
         {
             var confirm = System.Windows.MessageBox.Show(
                 $"{item.VramExplanation}\n\n¿Descargar igual?",
