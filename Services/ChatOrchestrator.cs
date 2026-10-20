@@ -168,7 +168,8 @@ public class ChatOrchestrator : IDisposable
             Port = _currentSettings.Port,
             CtxSize = _currentSettings.CtxSize,
             Threads = _currentSettings.Threads,
-            GpuLayers = _currentSettings.GpuLayers
+            GpuLayers = _currentSettings.GpuLayers,
+            KvCacheType = _currentSettings.KvCacheType
         };
 
         try

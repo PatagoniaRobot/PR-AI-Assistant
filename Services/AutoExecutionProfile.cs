@@ -84,6 +84,7 @@ public static class AutoExecutionProfile
         settings.CtxSize = rec?.ContextTokens ?? ModelRecommender.MinComfortContext;
         settings.GpuLayers = rec?.GpuLayers ?? RunRecommendation.AllLayers;
         settings.Threads = rec?.Threads ?? ModelRecommender.Threads(hw);
+        settings.KvCacheType = ModelMemoryEstimator.ToArgument(rec?.KvCache ?? KvCacheType.F16);
         return rec;
     }
 

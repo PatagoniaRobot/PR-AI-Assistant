@@ -25,6 +25,12 @@ namespace PRImager.AIAssistant.Services.Models
         /// </summary>
         public string ExecutionProfileId { get; set; } = "auto";
 
+        /// <summary>
+        /// Formato de la caché de la conversación: «f16» o «q8_0». Lo fija el perfil
+        /// Automático cuando comprimirla gana contexto o capas en la placa (E5).
+        /// </summary>
+        public string KvCacheType { get; set; } = "f16";
+
         // Inferencia
         public float Temperature { get; set; } = 0.7f;
         public int MaxTokens { get; set; } = 8192;

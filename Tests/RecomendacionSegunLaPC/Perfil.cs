@@ -61,11 +61,19 @@ partial class Banco
         Check("con 32k", s.CtxSize == 32768, s.CtxSize.ToString());
         Check("y un hilo por núcleo físico", s.Threads == hw.PhysicalCores, $"{s.Threads} contra {hw.PhysicalCores}");
         Check("se guarda que es automático", s.ExecutionProfileId == AutoExecutionProfile.Id, s.ExecutionProfileId);
+        Check("con caché normal: en 16 GB sobra", s.KvCacheType == "f16", s.KvCacheType);
 
         // Elegir uno fijo se respeta y se recuerda
         vm.SelectedExecutionProfile = vm.AvailableExecutionProfiles.First(p => p.Profile.Id == "performance");
         s = cfg.Load();
-        Check("Rendimiento pone sus valores", s.GpuLayers == 0 && s.CtxSize == 8192, $"{s.GpuLayers}/{s.CtxSize}");
+        Check("Rendimiento pone sus valores", s.GpuLayers == 0 && s.CtxSize == 8192 && s.KvCacheType == "f16",
+              $"{s.GpuLayers}/{s.CtxSize}/{s.KvCacheType}");
+
+        // Lo que llega a llama-server
+        var q8 = new LlamaServerConfig { ServerExecutablePath = "llama-server.exe", ModelPath = "m.gguf", KvCacheType = "q8_0" }.ToCommandLineArgs();
+        var f16 = new LlamaServerConfig { ServerExecutablePath = "llama-server.exe", ModelPath = "m.gguf" }.ToCommandLineArgs();
+        Check("comprimida: llama-server recibe -ctk q8_0 -ctv q8_0", q8.Contains("-ctk q8_0 -ctv q8_0"), q8);
+        Check("normal: no se pasa nada, queda la de llama.cpp", !f16.Contains("-ctk"), f16);
         var vm2 = new ModeSelectionViewModel(cfg, svc);
         Check("y al volver a abrir sigue elegido", vm2.SelectedExecutionProfile?.Profile.Id == "performance",
               vm2.SelectedExecutionProfile?.Profile.Id ?? "ninguno");

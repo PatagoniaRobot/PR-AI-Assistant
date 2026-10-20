@@ -14,6 +14,9 @@ public sealed class RunRecommendation
 
     public int Threads { get; init; }
 
+    /// <summary>Formato de la caché de la conversación: comprimida cuando eso gana contexto o capas.</summary>
+    public KvCacheType KvCache { get; init; } = KvCacheType.F16;
+
     /// <summary>False si ni repartiendo entre placa y RAM entra.</summary>
     public bool Fits { get; init; }
 
@@ -49,6 +52,8 @@ public sealed class RunRecommendation
 ///      un informe largo entero.
 ///   4. Si no entra nada entero: repartir, con Q4_K_M o la más cercana, que es el punto
 ///      donde la calidad todavía no se resiente. Sin placa: CPU, con la misma regla.
+///   5. **La caché de la conversación, comprimida (q8_0) solo si eso gana**: más contexto
+///      entero en la placa, o más capas en la placa al repartir.
 ///
 /// Las reservas son de margen y no se miden: 1 GB de VRAM para el escritorio y lo que
 /// esté abierto, y 4 GB de RAM para Windows y la aplicación.
@@ -87,66 +92,78 @@ public static class ModelRecommender
         int threads = Threads(hw);
         long trained = header.ArchScalar("context_length") ?? MaxRecommendedContext;
 
-        ModelMemory? At(int ctx) => ModelMemoryEstimator.Estimate(header, fileBytes, ctx, probedFileBytes, extraGpuBytes);
+        ModelMemory? At(int ctx, KvCacheType kv) =>
+            ModelMemoryEstimator.Estimate(header, fileBytes, ctx, probedFileBytes, extraGpuBytes, kv);
 
-        // 1. Todo en la placa, con el contexto más grande que entre
+        // 1. Todo en la placa, con el contexto más grande que entre. A igual contexto, caché
+        //    normal antes que comprimida; pero 32k comprimida le gana a 16k normal: la
+        //    compresión no se nota en la respuesta (ModelMemoryEstimator) y el contexto sí.
         if (vram > 0)
         {
             foreach (int ctx in Contexts.Where(c => c <= trained))
             {
-                var m = At(ctx);
-                if (m == null) break;
-                if (m.FullGpuBytes <= vram && m.WeightsCpuBytes <= ram)
+                foreach (var kv in KvOptions)
                 {
-                    return new RunRecommendation
+                    var m = At(ctx, kv);
+                    if (m == null) return NoData();
+                    if (m.FullGpuBytes <= vram && m.WeightsCpuBytes <= ram)
                     {
-                        ContextTokens = ctx,
-                        GpuLayers = RunRecommendation.AllLayers,
-                        Threads = threads,
-                        Fits = true,
-                        FullyOnGpu = true,
-                        GpuBytes = m.FullGpuBytes,
-                        RamBytes = m.WeightsCpuBytes,
-                        Summary = $"todo en la placa · contexto {K(ctx)}",
-                        Explanation = $"Entra entero en la placa con {K(ctx)} de contexto: ocupa " +
-                                      $"{Gb(m.FullGpuBytes)} de los {Gb(vram)} disponibles. Es la forma más rápida."
-                    };
+                        string cache = kv == KvCacheType.Q8_0 ? " · caché comprimida" : "";
+                        return new RunRecommendation
+                        {
+                            ContextTokens = ctx,
+                            GpuLayers = RunRecommendation.AllLayers,
+                            Threads = threads,
+                            KvCache = kv,
+                            Fits = true,
+                            FullyOnGpu = true,
+                            GpuBytes = m.FullGpuBytes,
+                            RamBytes = m.WeightsCpuBytes,
+                            Summary = $"todo en la placa · contexto {K(ctx)}{cache}",
+                            Explanation = $"Entra entero en la placa con {K(ctx)} de contexto" +
+                                          (kv == KvCacheType.Q8_0 ? ", guardando la caché de la conversación comprimida (q8_0, la mitad de memoria)" : "") +
+                                          $": ocupa {Gb(m.FullGpuBytes)} de los {Gb(vram)} disponibles. Es la forma más rápida."
+                        };
+                    }
                 }
             }
         }
 
         int baseCtx = (int)Math.Min(MinComfortContext, trained);
-        var mem = At(baseCtx);
-        if (mem == null)
-            return new RunRecommendation { Fits = false, Summary = "sin datos", Explanation = "La cabecera no trae las capas del modelo." };
+        var mem = At(baseCtx, KvCacheType.F16);
+        if (mem == null) return NoData();
 
-        // 2. Repartido: las capas que entren en la placa, el resto en RAM
+        // 2. Repartido: las capas que entren en la placa, el resto en RAM. Con la caché
+        //    comprimida entran más capas, y cada capa en la placa es velocidad.
         if (vram > 0)
         {
-            int layers = 0;
-            for (int ngl = mem.Layers - 1; ngl >= 1; ngl--)
+            var best = KvOptions
+                .Select(kv => (kv, m: At(baseCtx, kv)!))
+                .Select(x => (x.kv, x.m, layers: LayersThatFit(x.m, vram)))
+                .Where(x => x.layers > 0 && x.m.CpuBytesFor(x.layers) <= ram)
+                .OrderByDescending(x => x.layers)   // estable: a igual capas, la normal
+                .FirstOrDefault();
+            if (best.m != null)
             {
-                if (mem.GpuBytesFor(ngl) <= vram) { layers = ngl; break; }
-            }
-            if (layers > 0 && mem.CpuBytesFor(layers) <= ram)
-            {
-                int pct = layers * 100 / mem.Layers;
+                int pct = best.layers * 100 / best.m.Layers;
+                string cache = best.kv == KvCacheType.Q8_0 ? " · caché comprimida" : "";
                 return new RunRecommendation
                 {
                     ContextTokens = baseCtx,
-                    GpuLayers = layers,
+                    GpuLayers = best.layers,
                     Threads = threads,
+                    KvCache = best.kv,
                     Fits = true,
-                    GpuBytes = mem.GpuBytesFor(layers),
-                    RamBytes = mem.CpuBytesFor(layers),
-                    Summary = $"{layers} de {mem.Layers} capas en la placa · contexto {K(baseCtx)}",
-                    Explanation = $"No entra entero en la placa: van {layers} de {mem.Layers} capas ({pct} %) " +
+                    GpuBytes = best.m.GpuBytesFor(best.layers),
+                    RamBytes = best.m.CpuBytesFor(best.layers),
+                    Summary = $"{best.layers} de {best.m.Layers} capas en la placa · contexto {K(baseCtx)}{cache}",
+                    Explanation = $"No entra entero en la placa: van {best.layers} de {best.m.Layers} capas ({pct} %) " +
                                   $"y el resto a la RAM. Anda, pero más lento que entero en la placa."
                 };
             }
         }
 
-        // 3. Solo CPU
+        // 3. Solo CPU. La RAM sobra más que la placa: caché normal
         long cpu = mem.CpuBytesFor(0);
         if (cpu <= ram)
         {
@@ -174,6 +191,18 @@ public static class ModelRecommender
             Explanation = $"Necesita ~{Gb(cpu)} entre placa y RAM y la PC tiene {Gb(vram)} de placa y " +
                           $"{Gb(ram)} de RAM disponibles. Elegí una cuantización más chica."
         };
+    }
+
+    private static readonly KvCacheType[] KvOptions = { KvCacheType.F16, KvCacheType.Q8_0 };
+
+    private static RunRecommendation NoData() =>
+        new() { Fits = false, Summary = "sin datos", Explanation = "La cabecera no trae las capas del modelo." };
+
+    private static int LayersThatFit(ModelMemory m, long vram)
+    {
+        for (int ngl = m.Layers - 1; ngl >= 1; ngl--)
+            if (m.GpuBytesFor(ngl) <= vram) return ngl;
+        return 0;
     }
 
     /// <summary>

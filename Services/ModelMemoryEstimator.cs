@@ -3,6 +3,17 @@ using System;
 namespace PRImager.AIAssistant.Services;
 
 /// <summary>
+/// En qué formato guarda llama.cpp la caché de atención. q8_0 ocupa 34 bytes cada 32
+/// valores contra 64 de f16: medido el 20 de octubre de 2026 con Qwen3.5-9B a 32k, 544 MiB
+/// contra 1.024, con 1 % menos de velocidad y la misma respuesta, en CUDA y en Vulkan.
+/// </summary>
+public enum KvCacheType
+{
+    F16,
+    Q8_0
+}
+
+/// <summary>
 /// Cuánta memoria pide un modelo, en bytes, separada como la reparte llama.cpp.
 /// </summary>
 public sealed class ModelMemory
@@ -76,7 +87,10 @@ public static class ModelMemoryEstimator
 {
     private const int Parallel = 4;
     private const int Ubatch = 512;
-    private const int KvBytesPerValue = 2;      // f16
+    public static double KvBytesPerValue(KvCacheType t) => t == KvCacheType.Q8_0 ? 34.0 / 32 : 2.0;
+
+    /// <summary>Lo que se le pasa a llama-server (<c>-ctk</c>/<c>-ctv</c>).</summary>
+    public static string ToArgument(KvCacheType t) => t == KvCacheType.Q8_0 ? "q8_0" : "f16";
     private const int StateBytesPerValue = 4;   // f32
 
     /// <summary>
@@ -97,7 +111,7 @@ public static class ModelMemoryEstimator
     /// </param>
     /// <param name="extraGpuBytes">Pesos que van a la placa además del modelo: el proyector de visión.</param>
     public static ModelMemory? Estimate(GgufHeader header, long fileBytes, int contextTokens, long probedFileBytes = 0,
-                                        long extraGpuBytes = 0)
+                                        long extraGpuBytes = 0, KvCacheType kvCache = KvCacheType.F16)
     {
         if (header.BlockCount is not { } blocks || blocks == 0) return null;
         int n = (int)blocks;
@@ -110,7 +124,7 @@ public static class ModelMemoryEstimator
         {
             WeightsGpuBytes = weightsGpu,
             WeightsCpuBytes = weightsCpu,
-            KvCacheBytes = KvCacheBytes(header, contextTokens),
+            KvCacheBytes = KvCacheBytes(header, contextTokens, kvCache),
             RecurrentStateBytes = RecurrentStateBytes(header),
             OverheadBytes = OverheadBytes,
             Layers = n,
@@ -119,7 +133,7 @@ public static class ModelMemoryEstimator
     }
 
     /// <summary>Bytes de caché K+V para el contexto dado.</summary>
-    public static long KvCacheBytes(GgufHeader h, int contextTokens)
+    public static long KvCacheBytes(GgufHeader h, int contextTokens, KvCacheType kvCache = KvCacheType.F16)
     {
         if (h.BlockCount is not { } blocks || blocks == 0) return 0;
         int n = (int)blocks;
@@ -146,7 +160,8 @@ public static class ModelMemoryEstimator
         long interval = h.ArchScalar("full_attention_interval") ?? 0;
 
         long swaCells = Math.Min(contextTokens, (long)Parallel * window + Ubatch);
-        long total = 0;
+        double bytesPerValue = KvBytesPerValue(kvCache);
+        double total = 0;
         for (int i = 0; i < kvLayers; i++)
         {
             if (interval > 1 && (i + 1) % interval != 0) continue;
@@ -157,9 +172,9 @@ public static class ModelMemoryEstimator
             bool swa = window > 0 && IsSlidingLayer(pattern, i);
             long cells = swa ? swaCells : contextTokens;
             long dims = swa ? keyLenSwa + valLenSwa : keyLen + valLen;
-            total += cells * hkv * dims * KvBytesPerValue;
+            total += cells * hkv * dims * bytesPerValue;
         }
-        return total;
+        return (long)total;
     }
 
     /// <summary>

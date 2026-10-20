@@ -12,13 +12,14 @@ partial class Banco
     // flags que -c: lo que imprime en llama_kv_cache, llama_memory_recurrent y
     // load_tensors. Son los números contra los que se calibró la fórmula.
     sealed record Medicion(string Archivo, double GpuMib, double CpuMib,
-                           double Kv8k, double Kv32k, double Estado);
+                           double Kv8k, double Kv32k, double Estado, double Kv32kQ8 = 0);
 
+    // La última columna, con -ctk q8_0 -ctv q8_0 (no se midió en E2B)
     static readonly Medicion[] Medidos =
     {
         new(@"Models\gemma-4-E2B-it-Q4_K_M.gguf", 1407.73, 1756.00, 48 + 30, 192 + 30, 0),
-        new(@"Models\gemma-4-E4B-it-Q4_K_M.gguf", 2883.51, 2208.00, 128 + 100, 512 + 100, 0),
-        new(@"bin\Debug\net8.0-windows\ModelosDescargados\Qwen3.5-9B-Q5_K_S.gguf", 5389.13, 666.88, 256, 1024, 201),
+        new(@"Models\gemma-4-E4B-it-Q4_K_M.gguf", 2883.51, 2208.00, 128 + 100, 512 + 100, 0, 272 + 53.12),
+        new(@"bin\Debug\net8.0-windows\ModelosDescargados\Qwen3.5-9B-Q5_K_S.gguf", 5389.13, 666.88, 256, 1024, 201, 544),
     };
 
     static void CasoMemoriaMedida()
@@ -43,6 +44,9 @@ partial class Banco
             CercaMib($"{nombre}: caché a 8k", a8.KvCacheBytes, m.Kv8k, 0.5);
             CercaMib($"{nombre}: caché a 32k", a32.KvCacheBytes, m.Kv32k, 0.5);
             CercaMib($"{nombre}: estado recurrente", a8.RecurrentStateBytes, m.Estado, 0.5);
+            if (m.Kv32kQ8 > 0)
+                CercaMib($"{nombre}: caché comprimida (q8_0) a 32k",
+                         ModelMemoryEstimator.KvCacheBytes(h, 32768, KvCacheType.Q8_0), m.Kv32kQ8, 0.5);
             Check($"{nombre}: el desglose es exacto", a8.IsExact);
         }
     }
@@ -84,11 +88,23 @@ partial class Banco
         Check("16 GB de placa: entero y con 32k", r16.FullyOnGpu && r16.ContextTokens == 32768, r16.Summary);
         Console.WriteLine($"  · {r16.Explanation}");
 
+        Check("16 GB: la caché va normal, sobra lugar", r16.KvCache == KvCacheType.F16);
+
+        // 5.389 de pesos + 201 de estado + 900 = 6.490 MiB de 7.164: a 32k la caché normal
+        // (1.024) no entra y la comprimida (544) sí; la normal llegaría solo a 16k
         var r8 = ModelRecommender.RecommendRun(h, bytes, Pc(Placa("RTX 4060", HardwareInfoService.VendorNvidia, 8188), 16));
-        Check("8 GB de placa: entero, con menos contexto", r8.FullyOnGpu && r8.ContextTokens is >= 8192 and < 32768, r8.Summary);
+        Check("8 GB de placa: entero y con 32k, comprimiendo la caché",
+              r8.FullyOnGpu && r8.ContextTokens == 32768 && r8.KvCache == KvCacheType.Q8_0, r8.Summary);
+        Check("y el texto lo dice", r8.Summary.Contains("caché comprimida"), r8.Summary);
+        Console.WriteLine($"  · {r8.Explanation}");
 
         var r6 = ModelRecommender.RecommendRun(h, bytes, Pc(Placa("RTX 2060", HardwareInfoService.VendorNvidia, 6144), 16));
         Check("6 GB de placa: repartido", r6.Fits && !r6.FullyOnGpu && r6.GpuLayers is > 0 and < 32, r6.Summary);
+        var normal = ModelMemoryEstimator.Estimate(h, bytes, 8192)!;
+        long presupuesto6 = ModelRecommender.VramBudget(Pc(Placa("x", 0, 6144), 16));
+        int capasNormal = Enumerable.Range(1, 31).LastOrDefault(n => normal.GpuBytesFor(n) <= presupuesto6);
+        Check("con la caché comprimida van al menos tantas capas como sin ella", r6.GpuLayers >= capasNormal,
+              $"{r6.GpuLayers} contra {capasNormal}");
         Check("y lo repartido entra en la placa", r6.GpuBytes <= ModelRecommender.VramBudget(Pc(Placa("x", 0, 6144), 16)));
         Console.WriteLine($"  · {r6.Explanation}");
 

@@ -116,6 +116,7 @@ public class MainViewModel : ObservableObject
                 {
                     _settings.GpuLayers = value.Profile.GpuLayers;
                     _settings.CtxSize = value.Profile.CtxSize;
+                    _settings.KvCacheType = "f16";
                     if (value.Profile.Threads > 0)
                         _settings.Threads = value.Profile.Threads;
                 }

@@ -32,6 +32,12 @@ public record LlamaServerConfig
     public int Threads { get; init; } = Environment.ProcessorCount / 2;
 
     /// <summary>
+    /// Formato de la caché de atención: «f16» (el de llama.cpp, no se pasa nada) o «q8_0»,
+    /// que ocupa la mitad (E5). Se aplica a K y a V.
+    /// </summary>
+    public string KvCacheType { get; init; } = "f16";
+
+    /// <summary>
     /// Construye la lista de argumentos de línea de comandos para llama-server.
     /// </summary>
     public string ToCommandLineArgs()
@@ -40,6 +46,11 @@ public record LlamaServerConfig
 
         if (!string.IsNullOrEmpty(MmprojPath) && File.Exists(MmprojPath))
             args += $" --mmproj \"{MmprojPath}\"";
+
+        // Comprimir V exige flash attention; llama-server la deja en «auto» y en CUDA y
+        // Vulkan la activa. Medido el 20 de octubre de 2026 en los dos.
+        if (KvCacheType is "q8_0")
+            args += " -ctk q8_0 -ctv q8_0";
 
         return args;
     }
