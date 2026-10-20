@@ -158,14 +158,22 @@ public sealed class HuggingFaceClient : IDisposable
     /// Es un pedido de 64 KB con <c>Range</c>; HuggingFace lo respeta también después
     /// de redirigir al CDN.
     /// </summary>
+    /// <param name="fileLength">
+    /// Tamaño del archivo. Con él se pide además la tabla de tensores (E5): se sigue
+    /// leyendo hasta llegar a ella —~11 MB en Qwen3.5, ~16 en Gemma 4, por el vocabulario
+    /// que va antes— y se corta ahí, sin pasar de <see cref="GgufInspector.FullReadLimit"/>.
+    /// Sin él, alcanza con los primeros 64 KB.
+    /// </param>
     public async Task<HfResult<GgufHeader>> ProbeGgufAsync(
-        string repoId, string fileName, CancellationToken ct = default)
+        string repoId, string fileName, CancellationToken ct = default, long fileLength = 0)
     {
         try
         {
+            bool full = fileLength > 0;
+            int limit = full ? GgufInspector.FullReadLimit : GgufInspector.ProbeBytes;
             using var request = new HttpRequestMessage(HttpMethod.Get, BuildDownloadUrl(repoId, fileName));
             ApplyAuth(request);
-            request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(0, GgufInspector.ProbeBytes - 1);
+            request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(0, limit - 1);
 
             using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!response.IsSuccessStatusCode)
@@ -177,16 +185,25 @@ public sealed class HuggingFaceClient : IDisposable
             // Si el servidor ignorara el Range mandaría el archivo entero: se lee solo
             // lo necesario y se corta.
             await using var stream = await response.Content.ReadAsStreamAsync(ct);
-            var buffer = new byte[GgufInspector.ProbeBytes];
-            int read = 0;
+            var buffer = new byte[limit];
+            int read = 0, nextTry = GgufInspector.ProbeBytes;
+            GgufHeader? header = null;
             while (read < buffer.Length)
             {
                 int n = await stream.ReadAsync(buffer.AsMemory(read), ct);
                 if (n == 0) break;
                 read += n;
+
+                // Cada 2 MB se mira si ya está la tabla, para no bajar de más
+                if (full && read >= nextTry)
+                {
+                    header = GgufInspector.TryParse(buffer.AsSpan(0, read), fileLength);
+                    if (header?.Tensors != null || header == null) break;
+                    nextTry = read + 2 * 1024 * 1024;
+                }
             }
 
-            var header = GgufInspector.TryParse(buffer.AsSpan(0, read));
+            header = GgufInspector.TryParse(buffer.AsSpan(0, read), fileLength);
             return header == null
                 ? HfResult<GgufHeader>.Fail("El archivo no tiene una cabecera GGUF legible.")
                 : HfResult<GgufHeader>.Ok(header);

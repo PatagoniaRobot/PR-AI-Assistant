@@ -16,6 +16,22 @@ partial class Banco
         Console.WriteLine("\nel catálogo recomienda una cuantización de unsloth/Qwen3.5-9B-GGUF");
         var nvidia = (int mb) => Placa("NVIDIA", HardwareInfoService.VendorNvidia, mb);
 
+        // La lectura de la cabecera llega hasta la tabla de tensores y corta ahí
+        using (var client = new HuggingFaceClient())
+        {
+            // El tamaño tiene que ser el real: la última entrada de la tabla se mide contra él
+            var detalle = client.GetRepoDetailAsync("unsloth/Qwen3.5-9B-GGUF").GetAwaiter().GetResult();
+            long tamaño = detalle.Value?.GgufFiles.FirstOrDefault(f => f.FileName == "Qwen3.5-9B-Q4_K_M.gguf")?.SizeBytes ?? 0;
+            var cron = System.Diagnostics.Stopwatch.StartNew();
+            var r = client.ProbeGgufAsync("unsloth/Qwen3.5-9B-GGUF", "Qwen3.5-9B-Q4_K_M.gguf",
+                                          fileLength: tamaño).GetAwaiter().GetResult();
+            cron.Stop();
+            Check("la lectura remota llega a la tabla de tensores", r.Success && r.Value!.Tensors != null, r.ErrorMessage ?? "");
+            if (r.Success && r.Value!.Tensors is { } t)
+                Console.WriteLine($"  · {cron.Elapsed.TotalSeconds:F1} s; en la RAM quedan " +
+                                  $"{t.CpuResidentBytes / 1048576.0:F0} MiB de {t.TotalBytes / 1048576.0:F0}");
+        }
+
         var (q16, fila16, estado16) = Recomendada(Pc(nvidia(16050), 32));
         Console.WriteLine($"  · 16 GB: {estado16}");
         // UD-Q8_K_XL es el Q8 de unsloth con algunas capas sin cuantizar: sigue siendo 8 bits,

@@ -480,18 +480,24 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Lee la cabecera de una de las cuantizaciones —la más chica, da igual cuál: la
-    /// arquitectura es la misma— para calcular la memoria de todas. Son 64 KB: alcanza para
-    /// la arquitectura, no para la tabla de tensores, así que los pesos se toman enteros
-    /// como de placa, que es pasarse a propósito (ver ModelMemoryEstimator).
+    /// arquitectura es la misma— para calcular la memoria de todas. Lee hasta la tabla de
+    /// tensores, que dice qué parte de los pesos queda en la RAM: sin ella, en Gemma 4 se
+    /// suponía ~1,8 GB de más en la placa. Las demás cuantizaciones se escalan por tamaño.
     /// </summary>
     private async Task<(GgufHeader? shape, long probedBytes)> ProbeShapeAsync(string repoId, System.Collections.Generic.IList<HfFile> files)
     {
-        var probe = files.Where(f => f.SizeBytes > 0 && GgufInspector.FromFileName(f.FileName).IsModel)
-                         .OrderBy(f => f.SizeBytes)
-                         .FirstOrDefault();
+        // La Q4_K_M, o la del medio: el escalado por tamaño es más fiel cerca de la que se
+        // mide, y las recomendaciones caen casi siempre por ahí. Pesa lo mismo leer
+        // cualquiera: lo que se baja es la metadata, no los pesos.
+        var models = files.Where(f => f.SizeBytes > 0 && GgufInspector.FromFileName(f.FileName).IsModel)
+                          .OrderBy(f => f.SizeBytes)
+                          .ToList();
+        var probe = models.FirstOrDefault(f => f.Quantization.EndsWith("Q4_K_M", StringComparison.OrdinalIgnoreCase))
+                    ?? (models.Count > 0 ? models[models.Count / 2] : null);
         if (probe == null) return (null, 0);
 
-        var r = await _client.ProbeGgufAsync(repoId, probe.FileName);
+        Status = $"Analizando la arquitectura de {repoId}…";
+        var r = await _client.ProbeGgufAsync(repoId, probe.FileName, fileLength: probe.SizeBytes);
         if (!r.Success || r.Value!.BlockCount is null || !GgufInspector.FromHeader(r.Value).IsModel)
             return (null, 0);
         return (r.Value, probe.SizeBytes);
