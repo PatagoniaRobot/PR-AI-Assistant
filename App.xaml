@@ -1,8 +1,9 @@
 <Application x:Class="PRImager.AIAssistant.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:PRImager.AIAssistant"
-             StartupUri="Views/MainWindow.xaml">
+             xmlns:local="clr-namespace:PRImager.AIAssistant">
+    <!-- Sin StartupUri: la ventana la crea OnStartup, después de comprobar que no haya
+         otra copia abierta (App.xaml.cs). -->
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
