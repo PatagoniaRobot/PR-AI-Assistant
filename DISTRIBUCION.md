@@ -11,8 +11,10 @@ tienen sus propias licencias, todas listadas en [THIRD-PARTY-NOTICES.txt](THIRD-
 
 PR-AI Assistant se publica **sin modelos**. Cada usuario baja los que le sirven según su
 equipo y lo que necesita hacer, desde la propia aplicación: el catálogo busca en
-HuggingFace, muestra cada cuantización con un semáforo que la compara contra la memoria de
-video detectada, y descarga, verifica y registra el archivo elegido.
+HuggingFace, lee la PC —placa de cualquier marca, RAM y procesador—, dice cómo correría cada
+cuantización en ella y marca la recomendada, y descarga, verifica y registra el archivo
+elegido. Al usarlo, el perfil de ejecución **Automático** fija contexto, capas en la placa e
+hilos para ese modelo y esa PC.
 
 Las razones:
 
@@ -81,8 +83,9 @@ de imagen.
 
 - **Sin NVIDIA no se generan imágenes.** El motor existe para Vulkan, que cubre AMD e
   Intel, pero no está probado ni integrado.
-- **El semáforo de memoria de video lee la placa con `nvidia-smi`.** En equipos sin
-  NVIDIA muestra «VRAM desconocida» y no recomienda.
+- **El motor de chat incluido es el de CUDA.** Una placa AMD o Intel se detecta, pero ese
+  motor no la usa: la aplicación lo dice y recomienda correr en CPU. Con la variante
+  Vulkan de llama.cpp en `Tools\` la usaría, pero esa combinación no está probada.
 - **Algunos repositorios de HuggingFace exigen aceptar la licencia y un token** de lectura
   para descargar. La aplicación lo avisa con un mensaje explícito.
 
