@@ -123,7 +123,8 @@ public class ChatOrchestrator : IDisposable
 
         string promptsPath = ResolvePath(baseDir, _currentSettings.PromptsPath);
         string modelsPath = ResolvePath(baseDir, _currentSettings.ModelPath);
-        string serverExePath = ResolvePath(baseDir, _currentSettings.LlamaServerExecutable);
+        // CUDA o Vulkan según la placa, salvo que la configuración fije otra ruta
+        string serverExePath = ChatEngineSelector.Resolve(_currentSettings);
 
         // Cargar prompt base desde archivo solo si no se asignó uno programáticamente
         if (string.IsNullOrEmpty(_baseSystemPrompt))

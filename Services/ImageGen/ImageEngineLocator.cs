@@ -15,6 +15,9 @@ namespace PRImager.AIAssistant.Services.ImageGen;
 ///   2. <c>&lt;carpeta de la aplicación&gt;\Tools\sd\bin\sd-server.exe</c>, que es donde
 ///      quedaría en una instalación.
 ///
+/// En cada lugar puede haber además una variante Vulkan en <c>bin-vulkan\</c>, para las
+/// placas que no son NVIDIA; cuál se usa lo decide la placa (E5).
+///
 /// **No hay una ruta configurable por el usuario todavía**, y es deliberado: agregar un
 /// campo a settings.json o a image_models.json en esta fase mezclaría la vista de
 /// generación con la configuración del motor. Corresponde a E4.5, junto con la entrada
@@ -37,21 +40,38 @@ public static class ImageEngineLocator
     /// situación normal en una instalación nueva y se informa como dato, no como
     /// excepción, con el mismo criterio que el resto de E4.
     /// </summary>
-    public static string ResolveExecutablePath()
+    public static string ResolveExecutablePath() => ResolveExecutablePath(ChatEngineSelector.DetectedGpus);
+
+    /// <summary>
+    /// Como el de chat, el motor puede venir en dos variantes de la misma release: CUDA en
+    /// <c>bin\</c> y Vulkan en <c>bin-vulkan\</c>. Se elige la que pueda usar la placa
+    /// (<see cref="ChatEngineSelector.Choose"/>). Medido el 20 de octubre de 2026 en la
+    /// RTX 5060 Ti con Z-Image 1024×1024: 19,8 s con CUDA y 20,0 con Vulkan, en caliente,
+    /// con la misma imagen a la vista; en frío, 35 contra 45 s.
+    /// </summary>
+    public static string ResolveExecutablePath(IReadOnlyList<GpuAdapterInfo> gpus)
     {
         var raizDeEntorno = Environment.GetEnvironmentVariable(RootEnvironmentVariable);
         if (!string.IsNullOrWhiteSpace(raizDeEntorno))
         {
-            var candidata = Path.Combine(raizDeEntorno, "bin", ExecutableName);
-            if (File.Exists(candidata)) return candidata;
+            var principal = Path.Combine(raizDeEntorno, "bin", ExecutableName);
+            var vulkan = Path.Combine(raizDeEntorno, VulkanFolder, ExecutableName);
+            if (File.Exists(principal) || File.Exists(vulkan))
+                return ChatEngineSelector.Choose(principal, vulkan, gpus);
         }
 
-        return InstalledPath;
+        return ChatEngineSelector.Choose(InstalledPath, InstalledVulkanPath, gpus);
     }
+
+    /// <summary>Carpeta de la variante Vulkan, al lado de <c>bin\</c>.</summary>
+    public const string VulkanFolder = "bin-vulkan";
 
     /// <summary>Dónde va el motor en una instalación, al lado de Tools\ de llama.cpp.</summary>
     public static string InstalledPath => Path.Combine(
         AppDomain.CurrentDomain.BaseDirectory, "Tools", "sd", "bin", ExecutableName);
+
+    public static string InstalledVulkanPath => Path.Combine(
+        AppDomain.CurrentDomain.BaseDirectory, "Tools", "sd", VulkanFolder, ExecutableName);
 
     public static bool IsInstalled => File.Exists(ResolveExecutablePath());
 }

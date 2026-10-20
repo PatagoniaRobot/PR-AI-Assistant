@@ -25,8 +25,9 @@ partial class Banco
     {
         Console.WriteLine("Banco de recomendación según la PC\n");
 
-        var casos = new List<Action> { CasoEstaMaquina, CasoPlacaUtilizable, CasoBackend, CasoMemoriaMedida, CasoRecomendacion, CasoCuantizacion, CasoPerfilAutomatico };
+        var casos = new List<Action> { CasoEstaMaquina, CasoPlacaUtilizable, CasoBackend, CasoMemoriaMedida, CasoRecomendacion, CasoCuantizacion, CasoPerfilAutomatico, CasoMotor };
 #if CATALOGO
+        casos.Add(CasoMotorImagenes);
         if (args.Contains("--con-red")) { casos.Add(CasoCatalogoReal); casos.Add(CasoVentanaReal); }
 #endif
 

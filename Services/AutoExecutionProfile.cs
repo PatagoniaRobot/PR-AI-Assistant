@@ -94,13 +94,9 @@ public static class AutoExecutionProfile
 
     // --- rutas, con el mismo criterio que ChatOrchestrator al lanzar el servidor ---
 
-    public static string ServerDirectory(AppSettings settings)
-    {
-        string exe = Path.IsPathRooted(settings.LlamaServerExecutable)
-            ? settings.LlamaServerExecutable
-            : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, settings.LlamaServerExecutable);
-        return Path.GetDirectoryName(exe) ?? AppDomain.CurrentDomain.BaseDirectory;
-    }
+    /// <summary>La carpeta del llama-server que se va a usar: de sus .dll sale el backend.</summary>
+    public static string ServerDirectory(AppSettings settings) =>
+        Path.GetDirectoryName(ChatEngineSelector.Resolve(settings)) ?? AppDomain.CurrentDomain.BaseDirectory;
 
     public static string ModelPath(AppSettings settings, ModelInfo model) =>
         Path.Combine(model.IsDiscovered ? model.DirectoryOverride : ModelDirectoryResolver.ResolveModelsDirectory(settings),

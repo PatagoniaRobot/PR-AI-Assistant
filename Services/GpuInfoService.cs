@@ -78,9 +78,14 @@ public class GpuInfoService
         }
         catch (System.ComponentModel.Win32Exception)
         {
-            // nvidia-smi no está instalado: GPU no NVIDIA, o sin drivers
-            return GpuVramInfo.Unavailable(
-                "No se encontró nvidia-smi. El semáforo de VRAM requiere una GPU NVIDIA con drivers instalados.");
+            // nvidia-smi no está instalado: GPU no NVIDIA, o sin drivers. La placa se nombra
+            // igual, por DXGI (E5); lo que no se puede saber es cuánta memoria tiene libre,
+            // y el semáforo queda en «desconocido», que no impide generar.
+            var placa = HardwareInfoService.ReadGpus()
+                .Where(g => g.IsDiscrete).OrderByDescending(g => g.DedicatedVramMb).FirstOrDefault();
+            return GpuVramInfo.Unavailable(placa != null
+                ? $"{placa.Name}, {placa.DedicatedVramMb / 1024.0:F0} GB: la memoria libre solo se mide en placas NVIDIA."
+                : "No se encontró nvidia-smi. El semáforo de VRAM requiere una GPU NVIDIA con drivers instalados.");
         }
         catch (OperationCanceledException)
         {

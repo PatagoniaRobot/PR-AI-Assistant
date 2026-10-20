@@ -48,7 +48,8 @@ echo llama-server.exe. Los otros 20 se sacaron (77,5 MB) junto con ggml-rpc.dll.
 echo No volver a copiar la carpeta entera de una release nueva: llevar solo
 echo llama-server.exe y las .dll, y NO ggml-rpc.dll ni rpc-server.exe, que dan
 echo capacidad de inferencia distribuida por red y contradicen el aislamiento
-echo que promete la edicion institucional.
+echo que promete la edicion institucional. Lo mismo vale para Tools\vulkan\,
+echo la variante Vulkan del mismo motor: misma release, mismas exclusiones.
 echo.
 echo LICENCIAS: LICENSE y THIRD-PARTY-NOTICES.txt se copian solos desde el .csproj.
 echo Verificar que esten en %OUTDIR%\ antes de entregar: incluirlos es una

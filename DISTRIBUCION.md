@@ -55,11 +55,27 @@ PR-AI-Assistant/
 ├── Prompts/                 Prompts de sistema por modo
 ├── Help/                    Ayuda en HTML
 ├── Models/                  Vacía: acá van los modelos que baje o copie el usuario
-└── Tools/                   llama-server.exe y sus .dll (motor de chat, MIT)
-    └── sd/bin/              Opcional: sd-server.exe, el motor de imágenes (MIT)
+└── Tools/                   llama-server.exe y sus .dll: motor de chat CUDA, para NVIDIA (MIT)
+    ├── vulkan/              El mismo motor en Vulkan: AMD, Intel y también NVIDIA (MIT)
+    └── sd/
+        ├── bin/             Opcional: sd-server.exe, motor de imágenes CUDA (MIT)
+        └── bin-vulkan/      Opcional: el mismo en Vulkan
 ```
 
-`Tools\` lleva **solo** `llama-server.exe` y sus `.dll`. La release de llama.cpp trae 21
+**Cuál motor se usa lo elige la aplicación según la placa**: CUDA si es NVIDIA, Vulkan si
+es AMD o Intel, y CPU si no hay placa. Si una de las dos variantes falta, usa la que haya.
+Eso permite dos paquetes:
+
+| paquete | chat | imágenes | para quién |
+|---|---|---|---|
+| completo | CUDA + Vulkan | CUDA + Vulkan | cualquiera; NVIDIA un poco más rápido |
+| liviano | solo Vulkan (~90 MB) | solo Vulkan (~28 MB) | cualquiera; ahorra ~1,5 GB de CUDA |
+
+Medido en una RTX 5060 Ti: el chat escribe igual por los dos (59,9 contra 59,3 tok/s) y
+lee un texto largo un 17 % más lento por Vulkan; una imagen 1024×1024 tarda lo mismo en
+caliente (19,8 contra 20,0 s) y algo más la primera (35 contra 45 s).
+
+`Tools\` y `Tools\vulkan\` llevan **solo** `llama-server.exe` y sus `.dll`. La release de llama.cpp trae 21
 ejecutables y además `ggml-rpc.dll` / `rpc-server.exe`, que habilitan inferencia
 distribuida por red: no se incluyen, porque contradicen el aislamiento de la edición
 Forense.
@@ -81,11 +97,12 @@ de imagen.
 
 **Limitaciones conocidas, a la vista y no escondidas:**
 
-- **Sin NVIDIA no se generan imágenes.** El motor existe para Vulkan, que cubre AMD e
-  Intel, pero no está probado ni integrado.
-- **El motor de chat incluido es el de CUDA.** Una placa AMD o Intel se detecta, pero ese
-  motor no la usa: la aplicación lo dice y recomienda correr en CPU. Con la variante
-  Vulkan de llama.cpp en `Tools\` la usaría, pero esa combinación no está probada.
+- **Vulkan no se probó todavía en una placa AMD ni Intel.** Se probó en NVIDIA, donde
+  anda; la elección de motor y la recomendación están ejercidas con placas descritas.
+- **En AMD e Intel no se mide la memoria libre de la placa**: se conoce la total y el
+  semáforo de imágenes queda en «desconocido», que no impide generar.
+- **Las placas integradas se tratan como sin placa** (menos de 1 GB propio): Vulkan podría
+  usarlas con memoria compartida, pero no conviene cargarles un modelo.
 - **Algunos repositorios de HuggingFace exigen aceptar la licencia y un token** de lectura
   para descargar. La aplicación lo avisa con un mensaje explícito.
 
@@ -120,7 +137,9 @@ las licencias MIT, Apache 2.0 y del EULA de NVIDIA.
 ## Antes de publicar una versión
 
 - [ ] `Models\` sale vacía.
-- [ ] `Tools\` sin `ggml-rpc.dll` ni `rpc-server.exe`.
+- [ ] `Tools\` y `Tools\vulkan\` sin `ggml-rpc.dll` ni `rpc-server.exe`.
+- [ ] Las variantes CUDA y Vulkan de cada motor son de **la misma release** (hoy llama.cpp
+      `b8671`, stable-diffusion.cpp `master-975-95b3090`).
 - [ ] `LICENSE` y `THIRD-PARTY-NOTICES.txt` presentes.
 - [ ] Los bancos de `Tests\` pasan contra la compilación que se publica (ver `Tests\README.md`).
 - [ ] En la edición Forense, `Tests\GeneracionDeImagenes\verificar-barrera.ps1` da cero fallas.
