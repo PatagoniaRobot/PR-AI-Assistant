@@ -153,6 +153,59 @@ public sealed class HuggingFaceClient : IDisposable
     }
 
     /// <summary>
+    /// Baja solo el comienzo de un .gguf y lee su cabecera, para saber antes de bajar
+    /// varios GB si es un modelo o un archivo que no carga solo (pendiente 6.5).
+    /// Es un pedido de 64 KB con <c>Range</c>; HuggingFace lo respeta también después
+    /// de redirigir al CDN.
+    /// </summary>
+    public async Task<HfResult<GgufHeader>> ProbeGgufAsync(
+        string repoId, string fileName, CancellationToken ct = default)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, BuildDownloadUrl(repoId, fileName));
+            ApplyAuth(request);
+            request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(0, GgufInspector.ProbeBytes - 1);
+
+            using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                var (message, gated) = DescribeFailure(response);
+                return HfResult<GgufHeader>.Fail(message, gated);
+            }
+
+            // Si el servidor ignorara el Range mandaría el archivo entero: se lee solo
+            // lo necesario y se corta.
+            await using var stream = await response.Content.ReadAsStreamAsync(ct);
+            var buffer = new byte[GgufInspector.ProbeBytes];
+            int read = 0;
+            while (read < buffer.Length)
+            {
+                int n = await stream.ReadAsync(buffer.AsMemory(read), ct);
+                if (n == 0) break;
+                read += n;
+            }
+
+            var header = GgufInspector.TryParse(buffer.AsSpan(0, read));
+            return header == null
+                ? HfResult<GgufHeader>.Fail("El archivo no tiene una cabecera GGUF legible.")
+                : HfResult<GgufHeader>.Ok(header);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            return HfResult<GgufHeader>.Fail("Operación cancelada.");
+        }
+        catch (TaskCanceledException)
+        {
+            return HfResult<GgufHeader>.Fail("HuggingFace no respondió a tiempo.");
+        }
+        catch (HttpRequestException ex)
+        {
+            return HfResult<GgufHeader>.Fail($"No se pudo contactar a HuggingFace: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Completa los tamaños desde /tree/main. Un fallo acá no invalida el detalle:
     /// los archivos quedan con tamaño desconocido y el semáforo lo refleja.
     /// </summary>

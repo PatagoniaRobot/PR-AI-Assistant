@@ -12,18 +12,38 @@ namespace PRImager.AIAssistant.ViewModels.HuggingFace;
 
 /// <summary>
 /// Item de la tabla de cuantizaciones: el archivo más su semáforo de VRAM.
+/// Un archivo que no es un modelo no lleva semáforo: lleva qué es.
 /// </summary>
 public class QuantizationItem : ObservableObject
 {
+    private const string NotModelColor = "#64748B";
+
     public HfFile File { get; }
     public VramEstimate Vram { get; }
+
+    /// <summary>Qué es el archivo según su nombre. La cabecera se mira al pedir la descarga.</summary>
+    public GgufVerdict Verdict { get; }
 
     public string FileName => File.FileName;
     public string Quantization => string.IsNullOrEmpty(File.Quantization) ? "—" : File.Quantization;
     public string SizeText => File.SizeText;
-    public string VramLabel => Vram.Label;
-    public string VramColor => Vram.Color;
-    public string VramExplanation => Vram.Explanation;
+
+    public string VramLabel => Verdict.Kind switch
+    {
+        GgufKind.Model => Vram.Label,
+        GgufKind.Projector => "Proyector de visión",
+        GgufKind.SplitPart => "Parte de un modelo",
+        _ => "No es un modelo"
+    };
+
+    public string VramColor => Verdict.IsModel ? Vram.Color : NotModelColor;
+    public string VramExplanation => Verdict.IsModel ? Vram.Explanation : Verdict.Reason;
+
+    /// <summary>
+    /// Se puede bajar un modelo o un proyector, que la aplicación usa junto al modelo.
+    /// Lo demás no carga y bajarlo es tirar la descarga.
+    /// </summary>
+    public bool CanDownload => Verdict.Kind is GgufKind.Model or GgufKind.Projector;
 
     private bool _isDownloading;
     public bool IsDownloading
@@ -36,6 +56,7 @@ public class QuantizationItem : ObservableObject
     {
         File = file;
         Vram = vram;
+        Verdict = GgufInspector.FromFileName(file.FileName);
     }
 
     /// <summary>Las filas del DataGrid se anuncian con esto en accesibilidad.</summary>
@@ -268,7 +289,7 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
         SearchCommand = new AsyncRelayCommand(ExecuteSearchAsync,
             () => !IsBusy && !IsDownloading && !string.IsNullOrWhiteSpace(Query));
         DownloadCommand = new AsyncRelayCommand(ExecuteDownloadAsync,
-            () => !IsDownloading && _selectedQuantization != null);
+            () => !IsBusy && !IsDownloading && _selectedQuantization is { CanDownload: true });
         CancelDownloadCommand = new RelayCommand(ExecuteCancelDownload, () => IsDownloading);
         DeleteDownloadedCommand = new RelayCommand(ExecuteDeleteDownloaded,
             () => !IsDownloading && _selectedDownloaded != null && _selectedDownloaded.CanDelete);
@@ -370,9 +391,14 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
             Quantizations.Add(new QuantizationItem(f, estimate));
         }
 
+        int notModels = Quantizations.Count(q => !q.Verdict.IsModel);
         Status = Quantizations.Count == 0
             ? "El repositorio no expone archivos .gguf."
-            : $"{Quantizations.Count} cuantizaciones. El semáforo compara contra la VRAM detectada.";
+            : notModels == 0
+                ? $"{Quantizations.Count} cuantizaciones. El semáforo compara contra la VRAM detectada."
+                : $"{Quantizations.Count - notModels} cuantizaciones y {notModels} archivo{(notModels == 1 ? "" : "s")} " +
+                  "que no carga" + (notModels == 1 ? "" : "n") + " solo" + (notModels == 1 ? "" : "s") +
+                  " (seleccioná uno para ver qué es). El semáforo compara contra la VRAM detectada.";
 
         if (detail.Value.Repo.IsGated)
         {
@@ -388,8 +414,34 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
         if (_selectedQuantization == null || _selectedRepo == null) return;
 
         var item = _selectedQuantization;
+        if (!item.CanDownload) return;
 
-        if (item.Vram.Fit == VramFit.Red)
+        // El nombre no alcanza: nada obliga a que una cabeza de borrador diga «draft».
+        // La cabecera son 64 KB y dice qué es el archivo antes de bajar varios GB.
+        // Si no se puede leer, se sigue: ante la duda no se bloquea, y si el archivo no
+        // carga, el error de carga ya dice por qué (4.21).
+        if (item.Verdict.IsModel)
+        {
+            IsBusy = true;
+            IsError = false;
+            Status = $"Verificando que {item.FileName} sea un modelo completo…";
+            var probe = await _client.ProbeGgufAsync(_selectedRepo.Id, item.FileName);
+            IsBusy = false;
+
+            if (probe.Success)
+            {
+                var verdict = GgufInspector.FromHeader(probe.Value!);
+                if (!verdict.IsModel)
+                {
+                    IsError = true;
+                    Status = $"No se descarga {item.FileName}. {verdict.Reason}";
+                    return;
+                }
+            }
+            Status = "";
+        }
+
+        if (item.Verdict.IsModel && item.Vram.Fit == VramFit.Red)
         {
             var confirm = System.Windows.MessageBox.Show(
                 $"{item.VramExplanation}\n\n¿Descargar igual?",

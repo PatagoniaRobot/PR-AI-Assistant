@@ -84,9 +84,9 @@ public class ModelProfileService
     /// Arma un <see cref="ModelInfo"/> por cada .gguf de la carpeta que no esté ya
     /// en el catálogo.
     ///
-    /// Se excluyen los proyectores multimodales: un mmproj no es un modelo que se
-    /// pueda cargar solo, y ofrecerlo en el selector solo produce un fallo al iniciar
-    /// el servidor.
+    /// Se excluye lo que no es un modelo que se pueda cargar solo —proyectores, cabezas
+    /// de borrador, adaptadores, partes de un modelo partido—: ofrecerlo en el selector
+    /// solo produce un fallo al iniciar el servidor.
     /// </summary>
     private static IEnumerable<ModelInfo> DiscoverModels(
         string? directory, IEnumerable<ModelInfo> catalogModels)
@@ -115,7 +115,7 @@ public class ModelProfileService
             string fileName = Path.GetFileName(file);
 
             if (known.Contains(fileName)) continue;
-            if (fileName.Contains("mmproj", StringComparison.OrdinalIgnoreCase)) continue;
+            if (!IsLoadableModel(file)) continue;
 
             yield return new ModelInfo
             {
@@ -128,6 +128,19 @@ public class ModelProfileService
                 Capabilities = new List<string>()
             };
         }
+    }
+
+    /// <summary>
+    /// Lo que el selector puede ofrecer. Manda la cabecera: es lo que el archivo dice de
+    /// sí mismo, y desenmascara a la cabeza de borrador de 4.22, que el selector listaba
+    /// como un modelo más. Sin cabecera legible decide el nombre, y ante la duda se lista:
+    /// si no carga, el error de carga dice por qué.
+    /// </summary>
+    private static bool IsLoadableModel(string path)
+    {
+        if (!GgufInspector.FromFileName(path).IsModel) return false;
+        var header = GgufInspector.TryReadFile(path);
+        return header == null || GgufInspector.FromHeader(header).IsModel;
     }
 
     /// <summary>

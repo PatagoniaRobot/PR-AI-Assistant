@@ -32,6 +32,11 @@ dotnet run -p:EdicionApp=Debug      :: 93 aserciones (incluye humo y cableado)
 dotnet run -p:EdicionApp=Forense    :: 55: verifica que NO haya carpetas configurables
 dotnet run -- --sin-humo            :: saltea la ventana dibujada
 
+cd ..\ArchivosQueNoSonModelos
+dotnet run -p:EdicionApp=Debug      :: 55 aserciones + 5 de humo
+dotnet run -p:EdicionApp=Forense    :: 32: la cabecera y el selector; el catálogo no existe
+dotnet run -- --con-red             :: además, cinco cabeceras reales de HuggingFace
+
 cd ..\GeneracionDeImagenes
 dotnet run                          :: 286 aserciones + 61 de humo (necesita el motor)
 dotnet run -- --con-red             :: además, la descarga real del VAE (0,31 GB)
@@ -51,8 +56,26 @@ binario que todavía no existe. Se corren a mano, después de compilar la aplica
 
 Instancia `ModeSelectionViewModel` y ejerce el ciclo completo del usuario: elegir un
 modelo, guardarlo, reabrir la pantalla. Cubre el descubrimiento de la carpeta de
-descargas, la persistencia por `SelectionKey`, la exclusión de `mmproj`, la carpeta
+descargas, la persistencia por `SelectionKey`, la exclusión de `mmproj` (el resto de lo
+que no es modelo está en `ArchivosQueNoSonModelos`), la carpeta
 ausente, la paridad con el selector del chat y el borde Forense.
+
+### `ArchivosQueNoSonModelos` — pendiente 6.5
+
+Que ni el catálogo ni el selector ofrezcan como modelo un `.gguf` que no carga solo:
+proyector, cabeza de borrador, adaptador LoRA, solo vocabulario, parte de un modelo
+partido. Arma las cabeceras byte a byte con el formato GGUF real, en lugar de bajar
+archivos de varios GB, e incluye el peor caso: una cabeza de borrador con nombre de
+modelo, que solo la cabecera desenmascara.
+
+El catálogo se ejerce con el `ModelCatalogViewModel` real contra un HuggingFace falso
+que responde lo que se midió del verdadero, incluido `Range` sobre `/resolve/`. Verifica
+que el disfrazado se frene pidiendo **solo** la cabecera, que lo legítimo se siga bajando
+y que, si la cabecera no se puede leer, no se bloquee. Con `--con-red` lee cinco
+cabeceras reales, entre ellas la del archivo de 4.22 del maestro.
+
+El humo dibuja la ventana con `RenderTargetBitmap` y deja la captura en
+`%TEMP%\catalogo-no-modelos.png`.
 
 ### `BorradoDeModelos` — backlog 9.4
 
