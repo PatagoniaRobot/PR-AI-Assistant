@@ -1,6 +1,8 @@
 using System;
 using System.Buffers.Binary;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -46,6 +48,51 @@ public sealed class GgufHeader
     public ulong? BlockCount { get; set; }
     public ulong? SplitCount { get; set; }
     public ulong? SplitNo { get; set; }
+
+    /// <summary>
+    /// Los valores numéricos de la metadata —escalares y arreglos chicos—, por clave
+    /// completa. Un escalar es un arreglo de uno; un booleano, 0 o 1. Son los que hacen
+    /// falta para calcular la memoria: cabezas, largos de clave, ventana deslizante.
+    /// </summary>
+    public Dictionary<string, long[]> Numbers { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>True si se llegó a leer toda la metadata, no solo el comienzo.</summary>
+    public bool MetadataComplete { get; set; }
+
+    /// <summary>La tabla de tensores, si el bloque leído llegó hasta ella. Si no, null.</summary>
+    public GgufTensorSummary? Tensors { get; set; }
+
+    /// <summary>Un valor de la sección de la arquitectura: <c>Arch("block_count")</c> lee <c>llama.block_count</c>.</summary>
+    public long[]? Arch(string suffix) =>
+        Architecture != null && Numbers.TryGetValue($"{Architecture}.{suffix}", out var v) ? v : null;
+
+    public long? ArchScalar(string suffix) => Arch(suffix) is { Length: > 0 } v ? v[0] : null;
+}
+
+/// <summary>
+/// Cuánto pesa cada parte del modelo, de la tabla de tensores. Hace falta porque no todo el
+/// archivo va a la placa: llama.cpp deja la tabla de embeddings de entrada en la RAM.
+/// Medido el 20 de octubre de 2026 en los tres modelos de la máquina de desarrollo: la parte
+/// que queda en CPU coincide al megabyte con <c>token_embd</c> más
+/// <c>per_layer_token_embd</c> (Gemma 4 E4B: 2.208 MiB de 4.731).
+/// </summary>
+public sealed class GgufTensorSummary
+{
+    public long TotalBytes { get; init; }
+
+    /// <summary>Lo que llama.cpp deja en la RAM aunque el modelo vaya entero a la placa.</summary>
+    public long CpuResidentBytes { get; init; }
+
+    public long TokenEmbeddingBytes { get; init; }
+
+    /// <summary>
+    /// Sin <c>output.weight</c>, la salida reusa los embeddings de entrada y llama.cpp sube
+    /// una copia a la placa: por eso Gemma 4 E2B ocupa 216 MiB más de lo que da la resta.
+    /// </summary>
+    public bool HasOutputTensor { get; init; }
+
+    /// <summary>Lo que va a la placa con todas las capas en GPU.</summary>
+    public long GpuBytes => TotalBytes - CpuResidentBytes + (HasOutputTensor ? 0 : TokenEmbeddingBytes);
 }
 
 /// <summary>
@@ -137,12 +184,24 @@ public static class GgufInspector
     /// Lee la cabecera de un archivo local. Null si no es un GGUF legible: en ese caso no
     /// hay veredicto, y quien llama decide con lo que tenga.
     /// </summary>
-    public static GgufHeader? TryReadFile(string path)
+    public static GgufHeader? TryReadFile(string path) => TryReadFile(path, ProbeBytes);
+
+    /// <summary>
+    /// Lee la metadata completa y la tabla de tensores de un archivo local. El vocabulario
+    /// va antes de la tabla y en un modelo con 262 mil tokens ocupa ~16 MB, así que se lee
+    /// lo que haga falta, hasta <see cref="FullReadLimit"/>.
+    /// </summary>
+    public static GgufHeader? TryReadFileFull(string path) => TryReadFile(path, FullReadLimit);
+
+    /// <summary>Tope de lectura para llegar a la tabla de tensores. Medido: 15,8 MB en Gemma 4.</summary>
+    public const int FullReadLimit = 48 * 1024 * 1024;
+
+    private static GgufHeader? TryReadFile(string path, int limit)
     {
         try
         {
             using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            var buffer = new byte[(int)Math.Min(ProbeBytes, fs.Length)];
+            var buffer = new byte[(int)Math.Min(limit, fs.Length)];
             int read = 0;
             while (read < buffer.Length)
             {
@@ -150,7 +209,7 @@ public static class GgufInspector
                 if (n == 0) break;
                 read += n;
             }
-            return TryParse(buffer.AsSpan(0, read));
+            return TryParse(buffer.AsSpan(0, read), fs.Length);
         }
         catch (Exception)
         {
@@ -160,10 +219,11 @@ public static class GgufInspector
 
     /// <summary>
     /// Parsea el comienzo de un GGUF. Tolera que el bloque termine a mitad de la metadata:
-    /// devuelve lo que alcanzó a leer, que es lo de arriba, lo único que importa acá.
-    /// Null si ni siquiera es un GGUF.
+    /// devuelve lo que alcanzó a leer, que es lo de arriba y alcanza para el veredicto.
+    /// Si el bloque llega hasta la tabla de tensores y se conoce el largo del archivo,
+    /// la resume también. Null si ni siquiera es un GGUF.
     /// </summary>
-    public static GgufHeader? TryParse(ReadOnlySpan<byte> data)
+    public static GgufHeader? TryParse(ReadOnlySpan<byte> data, long fileLength = 0)
     {
         if (data.Length < 24 || data[0] != 'G' || data[1] != 'G' || data[2] != 'U' || data[3] != 'F')
             return null;
@@ -178,23 +238,13 @@ public static class GgufInspector
             TensorCount = BinaryPrimitives.ReadUInt64LittleEndian(data.Slice(8))
         };
         ulong kvCount = BinaryPrimitives.ReadUInt64LittleEndian(data.Slice(16));
+        ulong alignment = 32;
 
         var r = new Reader(data, 24);
-        for (ulong i = 0; i < kvCount; i++)
+        ulong done = 0;
+        for (; done < kvCount; done++)
         {
             if (!r.TryString(out string key) || !r.TryU32(out uint type)) break;
-
-            // block_count es lo único que se necesita de la sección de la arquitectura,
-            // y su nombre lleva la arquitectura adelante: llama.block_count, qwen35.block_count
-            bool wanted = key is "general.architecture" or "general.type" or "general.name"
-                       or "general.size_label" or "split.count" or "split.no"
-                       || key.EndsWith(".block_count", StringComparison.Ordinal) && !key.StartsWith("clip.", StringComparison.Ordinal);
-
-            if (!wanted)
-            {
-                if (!r.TrySkip(type)) break;
-                continue;
-            }
 
             if (type == StringType)
             {
@@ -206,17 +256,85 @@ public static class GgufInspector
                     case "general.name": header.Name = s; break;
                     case "general.size_label": header.SizeLabel = s; break;
                 }
+                continue;
             }
-            else
+
+            // El vocabulario es lo único grande y no se necesita: se saltea sin guardarlo
+            if (key.StartsWith("tokenizer.", StringComparison.Ordinal))
             {
-                if (!r.TryInteger(type, out ulong n)) break;
-                if (key == "split.count") header.SplitCount = n;
-                else if (key == "split.no") header.SplitNo = n;
-                else header.BlockCount ??= n;
+                if (!r.TrySkip(type)) break;
+                continue;
             }
+
+            if (!r.TryNumbers(type, out long[]? values)) break;
+            if (values == null) continue; // arreglo de texto o demasiado largo: no interesa
+
+            header.Numbers[key] = values;
+            if (key == "split.count") header.SplitCount = (ulong)values[0];
+            else if (key == "split.no") header.SplitNo = (ulong)values[0];
+            else if (key == "general.alignment" && values[0] > 0) alignment = (ulong)values[0];
         }
 
+        // block_count lleva la arquitectura adelante: llama.block_count, qwen35.block_count.
+        // Se toma el de la arquitectura, no el de un codificador de visión que venga adentro.
+        header.BlockCount = header.ArchScalar("block_count") is { } b ? (ulong)b
+            : header.Numbers.FirstOrDefault(kv => kv.Key.EndsWith(".block_count", StringComparison.Ordinal)
+                                                  && !kv.Key.StartsWith("clip.", StringComparison.Ordinal)).Value
+                is { Length: > 0 } any ? (ulong)any[0] : null;
+
+        header.MetadataComplete = done == kvCount;
+        if (header.MetadataComplete && fileLength > 0)
+            header.Tensors = ReadTensorTable(ref r, header.TensorCount, alignment, fileLength);
+
         return header;
+    }
+
+    /// <summary>
+    /// Resume la tabla de tensores. El tamaño de cada uno sale de la distancia entre
+    /// offsets, sin necesitar la tabla de tipos de ggml, que cambia con cada cuantización
+    /// nueva. Null si el bloque se corta antes del final de la tabla.
+    /// </summary>
+    private static GgufTensorSummary? ReadTensorTable(ref Reader r, ulong count, ulong alignment, long fileLength)
+    {
+        if (count == 0 || count > 1_000_000) return null;
+
+        var entries = new List<(ulong offset, string name)>((int)count);
+        for (ulong i = 0; i < count; i++)
+        {
+            if (!r.TryString(out string name) || !r.TryU32(out uint dims)) return null;
+            for (uint d = 0; d < dims; d++)
+                if (!r.TrySkip(10)) return null;            // cada dimensión es un u64
+            if (!r.TryU32(out _) || !r.TryU64Public(out ulong offset)) return null;
+            entries.Add((offset, name));
+        }
+
+        ulong dataStart = ((ulong)r.Position + alignment - 1) / alignment * alignment;
+        long dataLength = fileLength - (long)dataStart;
+        if (dataLength <= 0) return null;
+
+        entries.Sort((a, b) => a.offset.CompareTo(b.offset));
+        long total = 0, cpu = 0, embd = 0;
+        bool hasOutput = false;
+        for (int i = 0; i < entries.Count; i++)
+        {
+            long next = i + 1 < entries.Count ? (long)entries[i + 1].offset : dataLength;
+            long size = next - (long)entries[i].offset;
+            if (size < 0) return null;
+            total += size;
+
+            string n = entries[i].name;
+            if (n == "token_embd.weight") { embd = size; cpu += size; }
+            else if (n == "per_layer_token_embd.weight") cpu += size;
+            else if (n == "output.weight") hasOutput = true;
+        }
+
+        return new GgufTensorSummary
+        {
+            TotalBytes = total,
+            CpuResidentBytes = cpu,
+            TokenEmbeddingBytes = embd,
+            HasOutputTensor = hasOutput
+        };
     }
 
     // --- veredictos: el texto lo lee el usuario ---
@@ -275,6 +393,66 @@ public static class GgufInspector
 
         private bool Has(ulong n) => (ulong)(_data.Length - _pos) >= n;
 
+        public int Position => _pos;
+
+        public bool TryU64Public(out ulong value) => TryU64(out value);
+
+        /// <summary>
+        /// Lee un valor numérico, escalar o arreglo, como enteros. Los flotantes se truncan:
+        /// acá solo interesan conteos y largos. Un arreglo de texto o de más de
+        /// <see cref="MaxArray"/> elementos se saltea y devuelve null con true.
+        /// </summary>
+        public bool TryNumbers(uint type, out long[]? values)
+        {
+            values = null;
+            if (type == ArrayType)
+            {
+                int start = _pos;
+                if (!TryU32(out uint itemType) || !TryU64(out ulong count)) return false;
+                if (itemType == StringType || itemType == ArrayType || count > MaxArray)
+                {
+                    _pos = start;
+                    return TrySkip(type);
+                }
+                var list = new long[count];
+                for (ulong i = 0; i < count; i++)
+                    if (!TryScalar(itemType, out list[i])) return false;
+                values = list;
+                return true;
+            }
+
+            if (!TryScalar(type, out long v)) return false;
+            values = new[] { v };
+            return true;
+        }
+
+        private bool TryScalar(uint type, out long value)
+        {
+            value = 0;
+            int size = ScalarSize(type);
+            if (size == 0 || !Has((ulong)size)) return false;
+            var s = _data.Slice(_pos, size);
+            value = type switch
+            {
+                0 => s[0],
+                1 => (sbyte)s[0],
+                2 => BinaryPrimitives.ReadUInt16LittleEndian(s),
+                3 => BinaryPrimitives.ReadInt16LittleEndian(s),
+                4 => BinaryPrimitives.ReadUInt32LittleEndian(s),
+                5 => BinaryPrimitives.ReadInt32LittleEndian(s),
+                6 => (long)BinaryPrimitives.ReadSingleLittleEndian(s),
+                7 => s[0] != 0 ? 1 : 0,
+                10 => (long)BinaryPrimitives.ReadUInt64LittleEndian(s),
+                11 => BinaryPrimitives.ReadInt64LittleEndian(s),
+                12 => (long)BinaryPrimitives.ReadDoubleLittleEndian(s),
+                _ => 0
+            };
+            _pos += size;
+            return true;
+        }
+
+        private const ulong MaxArray = 4096;
+
         public bool TryU32(out uint value)
         {
             value = 0;
@@ -299,24 +477,6 @@ public static class GgufInspector
             if (!TryU64(out ulong len) || !Has(len)) return false;
             value = Encoding.UTF8.GetString(_data.Slice(_pos, (int)len));
             _pos += (int)len;
-            return true;
-        }
-
-        /// <summary>Lee un entero sin signo de cualquier ancho; los conteos vienen en u32 o u64 según quién convirtió.</summary>
-        public bool TryInteger(uint type, out ulong value)
-        {
-            value = 0;
-            int size = ScalarSize(type);
-            if (size == 0 || type is 6 or 7 or 12 || !Has((ulong)size)) return false;
-            var s = _data.Slice(_pos, size);
-            value = size switch
-            {
-                1 => s[0],
-                2 => BinaryPrimitives.ReadUInt16LittleEndian(s),
-                4 => BinaryPrimitives.ReadUInt32LittleEndian(s),
-                _ => BinaryPrimitives.ReadUInt64LittleEndian(s)
-            };
-            _pos += size;
             return true;
         }
 
