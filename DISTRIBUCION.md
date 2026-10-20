@@ -1,49 +1,123 @@
-# PR-AI Assistant — Guía de Distribución Standalone
+# PR-AI Assistant — Guía de distribución
 
 **Versión:** 1.0.0
 **Autor:** Claudio Andino — Patagonia Robot
-**Licencia:** Propietaria (motor llama.cpp: MIT, modelo Gemma 4: Apache 2.0)
+**Licencia:** [Apache 2.0](LICENSE), software libre y abierto. Los componentes de terceros
+tienen sus propias licencias, todas listadas en [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt).
 
 ---
 
-## Estructura de distribución
+## Qué se distribuye y qué no
+
+PR-AI Assistant se publica **sin modelos**. Cada usuario baja los que le sirven según su
+equipo y lo que necesita hacer, desde la propia aplicación: el catálogo busca en
+HuggingFace, muestra cada cuantización con un semáforo que la compara contra la memoria de
+video detectada, y descarga, verifica y registra el archivo elegido.
+
+Las razones:
+
+- **Un solo modelo no le sirve a todos.** El que anda bien en una placa de 16 GB no arranca
+  en una de 4, y el que entra en una de 4 desaprovecha una de 16.
+- **El paquete pesa megas, no gigas.**
+- **Cada usuario acepta la licencia del modelo que elige**, que no siempre es la misma que
+  la de la aplicación. La aplicación muestra la licencia declarada antes de bajar.
+
+## Ediciones
+
+Se compilan dos, desde el mismo código:
+
+| | Estándar | Forense (institucional) |
+|---|---|---|
+| Compilar | `publish.bat` | `publish.bat forense` |
+| Salida | `Publish\` | `Publish-Forense\` |
+| Chat local con modelos GGUF | sí | sí |
+| Modo Investigación (cadena de custodia) | sí | sí |
+| Búsqueda web (SearXNG) | sí | **no se compila** |
+| Catálogo y descarga de modelos | sí | **no se compila** |
+| Generación de imágenes | sí | **no se compila** |
+
+En la edición Forense esas capacidades **no están desactivadas: no existen en el binario**.
+Por eso esa edición no puede bajar modelos: los `.gguf` se copian a mano en la carpeta de
+modelos, o los provee la institución que la instala.
+
+## Estructura de la carpeta publicada
+
+```
 PR-AI-Assistant/
-├── PR-AI-Assistant.exe    ← Ejecutable principal (self-contained, .NET 8)
+├── PR-AI-Assistant.exe      Ejecutable (self-contained, .NET 8: no requiere instalar .NET)
+├── LICENSE                  Apache 2.0
+├── THIRD-PARTY-NOTICES.txt  Avisos de terceros: obligatorio incluirlo
 ├── Config/
-│   ├── model_catalog.json ← Catálogo de perfiles de modelo
-│   └── settings.json      ← Configuración (se crea automáticamente si no existe)
-├── Models/
-│   ├── *.gguf             ← Archivos de modelo (Gemma 4)
-│   └── mmproj           ← Proyector multimodal (opcional, para visión)
-├── Prompts/
-│   └── system_forense.txt ← Prompt base forense (fallback)
-└── Tools/
-    └── llama-server.exe   ← Motor de inferencia (MIT License)
+│   ├── model_catalog.json   Perfiles de ejecución y modelos sugeridos
+│   └── settings.json        Valores por defecto; la configuración del usuario vive en %APPDATA%
+├── Prompts/                 Prompts de sistema por modo
+├── Help/                    Ayuda en HTML
+├── Models/                  Vacía: acá van los modelos que baje o copie el usuario
+└── Tools/                   llama-server.exe y sus .dll (motor de chat, MIT)
+    └── sd/bin/              Opcional: sd-server.exe, el motor de imágenes (MIT)
+```
 
-## Requisitos del sistema
+`Tools\` lleva **solo** `llama-server.exe` y sus `.dll`. La release de llama.cpp trae 21
+ejecutables y además `ggml-rpc.dll` / `rpc-server.exe`, que habilitan inferencia
+distribuida por red: no se incluyen, porque contradicen el aislamiento de la edición
+Forense.
 
-- **OS:** Windows 10/11 (x64)
-- **RAM mínima:** 8 GB (perfil Rendimiento/CPU)
-- **RAM recomendada:** 16 GB (perfil Equilibrado/GPU)
-- **GPU (opcional):** NVIDIA con CUDA o AMD con Vulkan para aceleración
-- **Disco:** ~5 GB (ejecutable + modelo + dependencias)
-- **No requiere:** .NET Runtime instalado (self-contained), conexión a internet, API keys
+El motor de imágenes (`Tools\sd\bin\`) no va dentro del paquete por tamaño (~1 GB en su
+build CUDA). El usuario lo descomprime ahí o lo elige a mano desde la ventana de modelos
+de imagen.
+
+## Requisitos
+
+| | Mínimo | Recomendado |
+|---|---|---|
+| Sistema | Windows 10/11 x64 | |
+| RAM | 8 GB, con modelos chicos y en CPU | 16 GB o más |
+| GPU para el chat | no hace falta: corre en CPU, más lento | NVIDIA con 8 GB o más de VRAM |
+| GPU para imágenes | **NVIDIA con CUDA, hoy obligatoria** | NVIDIA con 12 GB o más |
+| Disco | ~0,5 GB la aplicación, más los modelos que se bajen | |
+| Red | solo para bajar modelos y para la búsqueda web | |
+
+**Limitaciones conocidas, a la vista y no escondidas:**
+
+- **Sin NVIDIA no se generan imágenes.** El motor existe para Vulkan, que cubre AMD e
+  Intel, pero no está probado ni integrado.
+- **El semáforo de memoria de video lee la placa con `nvidia-smi`.** En equipos sin
+  NVIDIA muestra «VRAM desconocida» y no recomienda.
+- **Algunos repositorios de HuggingFace exigen aceptar la licencia y un token** de lectura
+  para descargar. La aplicación lo avisa con un mensaje explícito.
+
+## Privacidad
+
+- **La inferencia es 100 % local.** Las conversaciones, los documentos y las imágenes no
+  salen de la máquina.
+- **Hay red en tres casos, y solo si el usuario los usa:** buscar o bajar modelos en
+  HuggingFace, la búsqueda web a través de una instancia de SearXNG que el usuario
+  configura, y bajar el paquete de modelos de imagen. La edición Forense no tiene
+  ninguno de los tres.
+- **Las sesiones del Modo Investigación quedan registradas** en
+  `%APPDATA%\PRImager\AIAssistant\Logs\` para la cadena de custodia.
 
 ## Cómo compilar
 
 ```bat
-publish.bat
+publish.bat              :: edición estándar → Publish\
+publish.bat forense      :: edición Forense  → Publish-Forense\
 ```
 
-O manualmente:
+O a mano:
 
 ```bat
 dotnet publish PR-AI-Assistant.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o Publish
 ```
 
-## Notas importantes
+`LICENSE` y `THIRD-PARTY-NOTICES.txt` se copian solos desde el `.csproj`. **Antes de
+publicar, verificar que estén en la carpeta de salida**: incluirlos es una obligación de
+las licencias MIT, Apache 2.0 y del EULA de NVIDIA.
 
-- **100% offline** — Ningún dato sale de la máquina del perito.
-- **Cadena de custodia** — Todas las sesiones se loguean en `%APPDATA%/PRImager/AIAssistant/Logs/`.
-- **Modelo comercializable** — Gemma 4 usa licencia Apache 2.0, compatible con uso comercial.
-- **Settings** — Si el archivo `settings.json` no existe en Config/, se crea con valores por defecto en `%APPDATA%/PRImager/AIAssistant/`.
+## Antes de publicar una versión
+
+- [ ] `Models\` sale vacía.
+- [ ] `Tools\` sin `ggml-rpc.dll` ni `rpc-server.exe`.
+- [ ] `LICENSE` y `THIRD-PARTY-NOTICES.txt` presentes.
+- [ ] Los bancos de `Tests\` pasan contra la compilación que se publica (ver `Tests\README.md`).
+- [ ] En la edición Forense, `Tests\GeneracionDeImagenes\verificar-barrera.ps1` da cero fallas.

@@ -33,11 +33,12 @@ echo  Build exitoso.
 echo  Salida: %OUTDIR%\PR-AI-Assistant.exe
 echo ============================================
 if /I "%~1"=="forense" (
-    echo  Build institucional: sin busqueda web ni AngleSharp.
+    echo  Build institucional: sin busqueda web, sin descarga de modelos, sin imagenes.
 )
 echo.
 echo IMPORTANTE: Para distribuir, copiar junto al .exe:
-echo   - Carpeta Models\ (con archivos .gguf)
+echo   - Carpeta Models\ VACIA: la aplicacion se publica sin modelos, cada
+echo     usuario baja los suyos (ver DISTRIBUCION.md)
 echo   - Carpeta Prompts\ (con system_forense.txt)
 echo   - Carpeta Config\ (con model_catalog.json, settings.json)
 echo   - Carpeta Tools\ (con llama-server.exe y dependencias)
