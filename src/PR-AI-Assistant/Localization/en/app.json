@@ -48,7 +48,7 @@
   "web.freshness.month": "Last month",
   "web.freshness.any": "No filter",
   "web.config.ok": "Instance configured. Queries go out to {0}.",
-  "web.config.missing": "No instance. Enter the address of a SearXNG, for example http://127.0.0.1:8080. See the help to run your own.",
+  "web.config.missing": "No instance. Enter the address of a SearXNG, for example http://127.0.0.1:8080. Once entered, the globe button appears next to the text field. See the help to run your own.",
   "web.config.invalid": "The address is not valid. It must be an http or https URL, for example http://127.0.0.1:8080.",
   "web.message.failed": "Web search: {0} Answering without web sources.",
   "web.message.partial": "{0} of {1} sources were read. The ones that failed are listed in the sources panel.",

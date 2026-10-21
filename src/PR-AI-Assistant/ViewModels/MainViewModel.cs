@@ -724,6 +724,10 @@ public class MainViewModel : ObservableObject
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsWebSearchConfigured));
                 OnPropertyChanged(nameof(WebSearchConfigStatus));
+                OnPropertyChanged(nameof(ShowWebSearchToggle));
+
+                // Sin instancia el botón desaparece: que no quede encendido escondido.
+                if (!IsWebSearchConfigured) IsWebSearchOn = false;
             }
         }
     }
@@ -739,6 +743,14 @@ public class MainViewModel : ObservableObject
 #else
         false;
 #endif
+
+    /// <summary>
+    /// El botón del globo se dibuja solo cuando hay un buscador configurado. Quien no
+    /// montó su SearXNG —casi cualquiera que baje la aplicación— no ve un botón que no le
+    /// funciona; la sección del panel lateral sigue a la vista para cargar la dirección.
+    /// Decidido por el usuario el 21 de octubre de 2026.
+    /// </summary>
+    public bool ShowWebSearchToggle => IsWebSearchCompiledIn && IsWebSearchConfigured;
 
     /// <summary>Estado de configuración de la búsqueda web, para el panel lateral.</summary>
     public string WebSearchConfigStatus

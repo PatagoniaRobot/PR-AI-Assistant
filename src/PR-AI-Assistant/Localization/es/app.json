@@ -48,7 +48,7 @@
   "web.freshness.month": "Último mes",
   "web.freshness.any": "Sin filtro",
   "web.config.ok": "Instancia configurada. Las consultas salen hacia {0}.",
-  "web.config.missing": "Sin instancia. Indicá la dirección de un SearXNG, por ejemplo http://127.0.0.1:8080. Ver la ayuda para levantar uno propio.",
+  "web.config.missing": "Sin instancia. Indicá la dirección de un SearXNG, por ejemplo http://127.0.0.1:8080. Al cargarla aparece el botón del globo junto al campo de texto. Ver la ayuda para levantar uno propio.",
   "web.config.invalid": "La dirección no es válida. Debe ser una URL http o https, por ejemplo http://127.0.0.1:8080.",
   "web.message.failed": "Búsqueda web: {0} Se responde sin fuentes web.",
   "web.message.partial": "Se leyeron {0} de {1} fuentes. Las que fallaron figuran en el panel de fuentes.",

@@ -670,7 +670,7 @@
                                   IsChecked="{Binding IsWebSearchOn}"
                                   IsEnabled="{Binding IsWebSearchAvailable}"
                                   ToolTip="{Binding WebSearchToggleTooltip}"
-                                  Visibility="{Binding IsWebSearchCompiledIn, Converter={StaticResource BoolToVis}}"
+                                  Visibility="{Binding ShowWebSearchToggle, Converter={StaticResource BoolToVis}}"
                                   Width="40" Height="40" Margin="0,0,10,0" Cursor="Hand">
                         <ToggleButton.Style>
                             <Style TargetType="ToggleButton">
