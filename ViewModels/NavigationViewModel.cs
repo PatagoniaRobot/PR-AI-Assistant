@@ -100,6 +100,16 @@ public class NavigationViewModel : ObservableObject
         _currentSession = null;
         UpdateWindowTitle(null);
 
+#if IMAGE_GEN
+        // Volver al inicio cierra la ventana de imágenes, y con ella su motor. Cada entrada
+        // al chat crea su propio MainViewModel: una ventana que sobreviviera quedaría suelta,
+        // sin que «Detener» ni «Apagar» la vieran, y «Generar imágenes» abriría una segunda
+        // (visto el 21 de octubre de 2026).
+        foreach (var w in System.Windows.Application.Current.Windows
+                     .OfType<Views.ImageGen.ImageGenerationWindow>().ToList())
+            w.Close();
+#endif
+
         var vm = new ModeSelectionViewModel(_configManager, _profileService);
         vm.ModeSelected += OnModeSelected;
 

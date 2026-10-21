@@ -127,16 +127,6 @@ public class ModeSelectionViewModel : ObservableObject
 #if IMAGE_GEN
             if (value == _imageModels.GenerationEnabled) return;
             _imageModels.GenerationEnabled = value;
-
-            // Una ventana de imágenes que quedó abierta de antes de volver al inicio se
-            // cierra, y con ella el motor: apagado tiene que querer decir apagado.
-            if (!value)
-            {
-                foreach (var w in System.Windows.Application.Current.Windows
-                             .OfType<Views.ImageGen.ImageGenerationWindow>().ToList())
-                    w.Close();
-            }
-
             OnPropertyChanged();
             OnPropertyChanged(nameof(ImageGenSwitchText));
 #endif
