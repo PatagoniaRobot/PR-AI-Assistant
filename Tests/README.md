@@ -326,7 +326,7 @@ en la barra lateral.
   se muestra sin lanzar pero **no arma su árbol visual**: todo se busca y no se encuentra.
   Por eso existe `EntornoWpf.Preparar()`, que lo fija una sola vez; hacerlo tarde lanza.
 
-Necesita el motor instalado. Por defecto lo busca en `D:\PROYECTOS\PR-Tools\sd`; se
+Necesita el motor instalado. Por defecto lo busca en una carpeta `sd` al lado del repositorio; se
 cambia con la variable de entorno `SD_RAIZ`. Sin motor, informa cuántas pruebas omitió
 en lugar de pasar en silencio.
 
@@ -352,7 +352,8 @@ false)`. Si `sd-server` sobrevive a eso, es que no está dentro de ningún `JobO
 Un banco que pasa entero a la primera todavía no probó nada. Las dos formas de
 comprobar que muerde, las dos usadas al escribir estos:
 
-**Contra el código anterior.** `-p:RaizApp=` apunta el banco a otro árbol, así que se
+**Contra el código anterior.** `-p:RaizApp=` apunta el banco a la carpeta de la
+aplicación de otro árbol (por defecto, `src\PR-AI-Assistant` de este repo), así que se
 lo corre contra un worktree en el commit previo al arreglo:
 
 ```bat
@@ -361,8 +362,11 @@ cd ..\praia-baseline
 dotnet build -c Debug
 
 cd <repo>\Tests\SeleccionDeModelos
-dotnet run -p:EdicionApp=Debug -p:RaizApp=<ruta-absoluta>\praia-baseline
+dotnet run -p:EdicionApp=Debug -p:RaizApp=<ruta-absoluta>\praia-baseline\src\PR-AI-Assistant
 ```
+
+Los commits anteriores al 21 de octubre de 2026 tienen la aplicación en la raíz: para
+esos, `RaizApp` es la raíz del worktree.
 
 **`RaizApp` tiene que ser una ruta absoluta.** MSBuild resuelve las relativas contra
 la carpeta del banco, no contra el directorio actual, y un `HintPath` que no existe

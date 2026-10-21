@@ -2,10 +2,8 @@
 [Bb]in/
 [Oo]bj/
 
-# Models and sessions (Forensic)
-Models/*.gguf
-Sessions/
-Logs/
+# Modelos de lenguaje: no se distribuyen, los baja cada usuario
+**/Models/*.gguf
 
 # Salidas de publicación y descargas locales (varios GB, no versionables)
 Publish/
@@ -15,7 +13,7 @@ Downloads/
 # Motor y modelos de generación de imágenes (E4). El motor descomprimido son ~1,1 GB
 # y un paquete de modelo ~6,5 GB. Los globs de *.exe y *.dll ya cubren los binarios,
 # pero no los .zip de la release ni los .gguf/.safetensors de los modelos.
-Tools/sd/
+**/Tools/sd/
 ModelosImagen/
 ImagenesGeneradas/
 

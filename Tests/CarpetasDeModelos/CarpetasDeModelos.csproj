@@ -29,7 +29,7 @@
       ejecución.
     -->
     <DefineConstants Condition="'$(EdicionApp)' != 'Forense'">$(DefineConstants);APP_CON_IMAGENES</DefineConstants>
-    <RaizApp Condition="'$(RaizApp)' == ''">$(MSBuildThisFileDirectory)..\..</RaizApp>
+    <RaizApp Condition="'$(RaizApp)' == ''">$(MSBuildThisFileDirectory)..\..\src\PR-AI-Assistant</RaizApp>
     <DllDeLaApp>$(RaizApp)\bin\$(EdicionApp)\net10.0-windows\PR-AI-Assistant.dll</DllDeLaApp>
   </PropertyGroup>
 

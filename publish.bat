@@ -18,7 +18,7 @@ echo  Configuracion: %CONFIG%
 echo  Salida:        %OUTDIR%
 echo.
 
-dotnet publish PR-AI-Assistant.csproj -c %CONFIG% -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o %OUTDIR%
+dotnet publish src\PR-AI-Assistant\PR-AI-Assistant.csproj -c %CONFIG% -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o %OUTDIR%
 
 if %ERRORLEVEL% NEQ 0 (
     echo.

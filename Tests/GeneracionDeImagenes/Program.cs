@@ -34,10 +34,11 @@ class Banco
         Console.WriteLine($"  OMIT  {nombre}   ({motivo})");
     }
 
-    // Raíz de la instalación del motor, la misma que dejó E4.0. Se puede mover con
-    // la variable de entorno SD_RAIZ.
-    static string RaizMotor =>
-        Environment.GetEnvironmentVariable("SD_RAIZ") ?? @"D:\PROYECTOS\PR-Tools\sd";
+    // Raíz de la instalación del motor: la variable de entorno SD_RAIZ, o una carpeta
+    // «sd» al lado del repositorio.
+    internal static string RaizMotor =>
+        Environment.GetEnvironmentVariable("SD_RAIZ")
+        ?? Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, @"..\..\..\..\..\..\sd"));
 
     static string Exe => Path.Combine(RaizMotor, "bin", "sd-server.exe");
     static string Difusion => Path.Combine(RaizMotor, "models", "z_image_turbo-Q4_K.gguf");
@@ -105,6 +106,15 @@ class Banco
 
         Console.WriteLine("Banco del motor de generación de imágenes (E4.1)\n");
         MatarTodo();
+
+        // El interruptor de la pantalla de inicio vive en la configuración real de esta PC
+        // (MainViewModel no deja inyectar otra). Si quien corre el banco lo dejó apagado,
+        // la barra lateral sale desactivada y el humo falla por el motivo equivocado: se
+        // enciende mientras corre y se devuelve como estaba al salir.
+        var interruptor = new ImageModelService();
+        bool comoEstaba = interruptor.GenerationEnabled;
+        interruptor.GenerationEnabled = true;
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => new ImageModelService().GenerationEnabled = comoEstaba;
 
         Console.WriteLine("-- Configuración y línea de comandos --");
         CasoLineaDeComandos();

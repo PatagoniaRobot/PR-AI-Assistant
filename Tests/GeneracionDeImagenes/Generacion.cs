@@ -291,7 +291,7 @@ static class BancoGeneracion
                 == ImageEngineVersion.Unknown);
 
         var motor = Path.Combine(
-            Environment.GetEnvironmentVariable("SD_RAIZ") ?? @"D:\PROYECTOS\PR-Tools\sd",
+            Banco.RaizMotor,
             "bin", "sd-server.exe");
         if (File.Exists(motor))
         {

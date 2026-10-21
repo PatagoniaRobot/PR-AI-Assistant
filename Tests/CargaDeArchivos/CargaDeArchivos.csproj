@@ -16,7 +16,7 @@
         -p:RaizApp=<ruta ABSOLUTA>
     -->
     <EdicionApp Condition="'$(EdicionApp)' == ''">Debug</EdicionApp>
-    <RaizApp Condition="'$(RaizApp)' == ''">$(MSBuildThisFileDirectory)..\..</RaizApp>
+    <RaizApp Condition="'$(RaizApp)' == ''">$(MSBuildThisFileDirectory)..\..\src\PR-AI-Assistant</RaizApp>
     <DllDeLaApp>$(RaizApp)\bin\$(EdicionApp)\net10.0-windows\PR-AI-Assistant.dll</DllDeLaApp>
   </PropertyGroup>
 

@@ -6,7 +6,7 @@ using PRImager.AIAssistant.Services;
 
 partial class Banco
 {
-    static string Repo => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, @"..\..\..\..\.."));
+    static string Repo => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, @"..\..\..\..\..\src\PR-AI-Assistant"));
 
     // Medido el 20 de octubre de 2026 con el llama-server de Tools, -ngl 99, sin más
     // flags que -c: lo que imprime en llama_kv_cache, llama_memory_recurrent y
@@ -19,7 +19,7 @@ partial class Banco
     {
         new(@"Models\gemma-4-E2B-it-Q4_K_M.gguf", 1407.73, 1756.00, 48 + 30, 192 + 30, 0),
         new(@"Models\gemma-4-E4B-it-Q4_K_M.gguf", 2883.51, 2208.00, 128 + 100, 512 + 100, 0, 272 + 53.12),
-        new(@"bin\Debug\net10.0-windows\ModelosDescargados\Qwen3.5-9B-Q5_K_S.gguf", 5389.13, 666.88, 256, 1024, 201, 544),
+        new(@"Qwen3.5-9B-Q5_K_S.gguf", 5389.13, 666.88, 256, 1024, 201, 544),
     };
 
     static void CasoMemoriaMedida()
@@ -27,7 +27,7 @@ partial class Banco
         Console.WriteLine("\nla memoria calculada contra la que midió llama-server");
         foreach (var m in Medidos)
         {
-            string ruta = Path.Combine(Repo, m.Archivo);
+            string ruta = Ubicar(m.Archivo);
             string nombre = Path.GetFileName(ruta);
             if (!File.Exists(ruta)) { Console.WriteLine($"  --   {nombre}: no está en esta máquina, se omite"); continue; }
 
@@ -71,9 +71,23 @@ partial class Banco
         GpuNotUsableReason = motivo
     };
 
+    /// <summary>
+    /// Los del catálogo viejo viven en Models\ de la aplicación; los bajados, en la carpeta
+    /// de descargas que tenga configurada la aplicación en esta PC.
+    /// </summary>
+    static string Ubicar(string archivo)
+    {
+        string enLaApp = Path.Combine(Repo, archivo);
+        if (File.Exists(enLaApp)) return enLaApp;
+        string descargas = new ConfigManager(Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "PRImager", "AIAssistant", "settings.json")).Load().ModelDownloadPath;
+        return string.IsNullOrWhiteSpace(descargas) ? enLaApp : Path.Combine(descargas, Path.GetFileName(archivo));
+    }
+
     static GgufHeader? Cabecera(string relativo, out long bytes)
     {
-        string ruta = Path.Combine(Repo, relativo);
+        string ruta = Ubicar(relativo);
         bytes = File.Exists(ruta) ? new FileInfo(ruta).Length : 0;
         return File.Exists(ruta) ? GgufInspector.TryReadFileFull(ruta) : null;
     }

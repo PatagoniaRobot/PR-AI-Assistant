@@ -51,13 +51,15 @@ class Banco
         return _fail == 0 ? 0 : 1;
     }
 
-    /// <summary>La raíz del repositorio: donde está PR-AI-Assistant.csproj.</summary>
+    /// <summary>La carpeta de la aplicación: donde está PR-AI-Assistant.csproj, en src\.</summary>
     static string Raiz()
     {
         var d = new DirectoryInfo(AppContext.BaseDirectory);
-        while (d != null && !File.Exists(Path.Combine(d.FullName, "PR-AI-Assistant.csproj")))
+        while (d != null && !File.Exists(Path.Combine(d.FullName, "PR-AI-Assistant.sln")))
             d = d.Parent;
-        return d?.FullName ?? throw new InvalidOperationException("no se encontró la raíz del repositorio");
+        return d is null
+            ? throw new InvalidOperationException("no se encontró la raíz del repositorio")
+            : Path.Combine(d.FullName, "src", "PR-AI-Assistant");
     }
 
     static readonly Regex Marcador = new(@"\{(\d+)(?:[,:][^}]*)?\}");

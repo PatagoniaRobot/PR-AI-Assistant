@@ -384,6 +384,22 @@ static class BancoIntegracion
         Check("y el botón queda deshabilitado",
             !vm.OpenImageGenerationCommand.CanExecute(null));
 
+        // --- el interruptor de la pantalla de inicio pisa al perfil ---
+        var interruptor = new ImageModelService();
+        interruptor.GenerationEnabled = false;
+        try
+        {
+            var apagado = NuevoMainViewModel(NuevaCarpeta("interruptor"), OperationMode.Consultation, Perfil(true));
+            Check("con el interruptor apagado no hay imágenes aunque el perfil las permita",
+                !apagado.IsImageGenAvailable && !apagado.OpenImageGenerationCommand.CanExecute(null));
+            Check("y el aviso dice dónde se vuelve a encender",
+                apagado.ImageGenDisabledText.Contains("pantalla de inicio"), apagado.ImageGenDisabledText);
+        }
+        finally
+        {
+            interruptor.GenerationEnabled = true;
+        }
+
         // El log de auditoría tiene que registrar la capacidad, como las otras dos.
         var logs = Directory.GetFiles(Path.Combine(dir, "Logs"));
         var contenido = logs.Length > 0 ? LeerAunqueEsteAbierto(logs[0]) : "";
@@ -437,7 +453,7 @@ static class BancoIntegracion
     static void CasoEdicionForense(Comprobar Check)
     {
         var raiz = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+            AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "PR-AI-Assistant"));
         var forense = Path.Combine(raiz, "bin", "Forense", "net10.0-windows", "PR-AI-Assistant.dll");
 
         if (!File.Exists(forense))

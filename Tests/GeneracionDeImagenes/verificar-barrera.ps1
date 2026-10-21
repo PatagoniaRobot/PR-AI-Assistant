@@ -9,7 +9,7 @@
 # escrito "no encuentra nada" en Forense y parece una barrera sana.
 
 param(
-    [string]$Raiz = "$PSScriptRoot\..\.."
+    [string]$Raiz = "$PSScriptRoot\..\..\src\PR-AI-Assistant"
 )
 
 $forense = Join-Path $Raiz "bin\Forense\net10.0-windows\PR-AI-Assistant.dll"

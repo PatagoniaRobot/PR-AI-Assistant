@@ -45,7 +45,7 @@ partial class Banco
         return _fail == 0 ? 0 : 1;
     }
 
-    static string Tools => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, @"..\..\..\..\..\Tools"));
+    static string Tools => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, @"..\..\..\..\..\src\PR-AI-Assistant\Tools"));
 
     // --- la detección real, contra esta máquina ---
 
