@@ -2,8 +2,8 @@
 
 **Versión:** 1.0.0
 **Autor:** Claudio Andino — Patagonia Robot
-**Licencia:** [Apache 2.0](LICENSE), software libre y abierto. Los componentes de terceros
-tienen sus propias licencias, todas listadas en [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt).
+**Licencia:** [Apache 2.0](../LICENSE), software libre y abierto. Los componentes de terceros
+tienen sus propias licencias, todas listadas en [THIRD-PARTY-NOTICES.txt](../THIRD-PARTY-NOTICES.txt).
 
 ---
 
@@ -91,7 +91,7 @@ de imagen.
 | Sistema | Windows 10/11 x64 | |
 | RAM | 8 GB, con modelos chicos y en CPU | 16 GB o más |
 | GPU para el chat | no hace falta: corre en CPU, más lento | NVIDIA con 8 GB o más de VRAM |
-| GPU para imágenes | **NVIDIA con CUDA, hoy obligatoria** | NVIDIA con 12 GB o más |
+| GPU para imágenes | una placa: NVIDIA con CUDA, AMD o Intel con Vulkan | 12 GB de VRAM o más |
 | Disco | ~0,5 GB la aplicación, más los modelos que se bajen | |
 | Red | solo para bajar modelos y para la búsqueda web | |
 
