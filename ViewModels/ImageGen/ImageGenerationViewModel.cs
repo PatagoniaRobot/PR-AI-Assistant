@@ -727,6 +727,35 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
             StatusMessage = Loc.F("imagegen.status.generating", Width, Height, semilla);
 
             var resultado = await _client.GenerateAsync(request, destino, ct).ConfigureAwait(true);
+
+            // Si el motor se murió en pleno trabajo, se lo levanta y se reintenta UNA vez.
+            // Pasa con el chat cargado y poca memoria comprometible: la primera imagen
+            // aborta al no conseguir memoria fijada y la segunda sale (6.9 del maestro,
+            // tres de tres el 21/10/2026). Antes el usuario leía «se perdió el contacto».
+            if (!resultado.Success && !resultado.WasCancelled &&
+                await _manager.DiedDuringJobAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(true))
+            {
+                bool sinMemoria = _manager.JobRanOutOfMemory;
+                _auditLog?.Invoke("IMAGE_ENGINE_CRASHED", $"sin_memoria={sinMemoria} intento=1");
+
+                if (!await AsegurarMotorAsync(config, ct).ConfigureAwait(true))
+                    return;
+
+                StatusMessage = Loc.T(sinMemoria ? "imagegen.status.retryOom" : "imagegen.status.retryCrash");
+                ProgressPercent = 0;
+                ProgressText = "";
+                cron.Restart();
+                resultado = await _client.GenerateAsync(request, destino, ct).ConfigureAwait(true);
+
+                if (!resultado.Success && !resultado.WasCancelled &&
+                    await _manager.DiedDuringJobAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(true))
+                {
+                    sinMemoria = _manager.JobRanOutOfMemory;
+                    _auditLog?.Invoke("IMAGE_ENGINE_CRASHED", $"sin_memoria={sinMemoria} intento=2");
+                    StatusMessage = Loc.T(sinMemoria ? "imagegen.status.crashedOom" : "imagegen.status.crashed");
+                    return;
+                }
+            }
             cron.Stop();
 
             if (resultado.WasCancelled)

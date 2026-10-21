@@ -338,6 +338,7 @@ public sealed class ImageServerManager : IDisposable
     private void HandleOutput(string? line)
     {
         if (line is null) return;
+        if (line.Contains("out of memory", StringComparison.OrdinalIgnoreCase)) _jobOutOfMemory = true;
         ParseProgress(line);
         OnLog(line);
     }
@@ -378,6 +379,38 @@ public sealed class ImageServerManager : IDisposable
     {
         _expectedSteps = expectedSteps > 0 ? expectedSteps : 0;
         _samplingFinished = false;
+        _jobOutOfMemory = false;
+    }
+
+    private volatile bool _jobOutOfMemory;
+
+    /// <summary>
+    /// True si el motor escribió «out of memory» desde el último <see cref="BeginJob"/>.
+    /// Es lo único que dice POR QUÉ se cayó: la API solo deja de contestar (6.9 del
+    /// maestro — `failed to allocate ... of pinned memory: out of memory` y enseguida
+    /// un error de CUDA que aborta el proceso).
+    /// </summary>
+    public bool JobRanOutOfMemory => _jobOutOfMemory;
+
+    /// <summary>
+    /// Espera hasta <paramref name="timeout"/> a que el proceso termine y devuelve true si
+    /// murió. Se usa después de un trabajo fallido: el poll se entera de que no hay nadie
+    /// antes de que llegue el Exited, así que mirar el estado en el acto no alcanza.
+    /// </summary>
+    public async Task<bool> DiedDuringJobAsync(TimeSpan timeout)
+    {
+        var proceso = _serverProcess;
+        if (proceso is null || _disposed) return false;
+        try
+        {
+            using var cts = new CancellationTokenSource(timeout);
+            await proceso.WaitForExitAsync(cts.Token).ConfigureAwait(false);
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;   // sigue vivo, o ya no es nuestro
+        }
     }
 
     /// <summary>Cierra el trabajo: deja de informar progreso hasta el próximo BeginJob.</summary>
