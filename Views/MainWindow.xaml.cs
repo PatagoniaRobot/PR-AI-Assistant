@@ -73,11 +73,6 @@ public class FileDialogService : IFileDialogService
 /// </summary>
 public partial class MainWindow : Window
 {
-    [DllImport("dwmapi.dll", PreserveSig = true)]
-    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
-
-    private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
-
     private readonly ConfigManager _configManager;
     private readonly ForensicLogger _logger;
     private readonly LlamaServerManager _serverManager;
@@ -117,17 +112,9 @@ public partial class MainWindow : Window
 
         DataContext = _navigationVm;
 
-        // Forzar título oscuro en Windows 10/11
-        try
-        {
-            var hwnd = new System.Windows.Interop.WindowInteropHelper(this).EnsureHandle();
-            int darkMode = 1;
-            DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref darkMode, sizeof(int));
-        }
-        catch
-        {
-            // Silenciar en sistemas que no soporten la API
-        }
+        // Forzar título oscuro en Windows 10/11. Acá antes de mostrarse, para que el marco
+        // no aparezca blanco ni un instante; las demás ventanas lo toman de App.
+        Helpers.DarkTitleBar.Apply(this);
     }
 
     /// <summary>

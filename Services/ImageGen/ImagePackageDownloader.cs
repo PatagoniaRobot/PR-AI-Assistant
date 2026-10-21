@@ -189,7 +189,7 @@ public sealed class ImagePackageDownloader : IDisposable
             Family = source.Family,
             DefaultSteps = source.DefaultSteps,
             DefaultCfgScale = source.DefaultCfgScale,
-            IsFactory = source.Id == ImageModelService.RecommendedPackageId,
+            IsFactory = ImageModelService.IsCatalogId(source.Id),
             DiffusionModelPath = RutaDe(source, destinationDirectory, "modelo de difusión"),
             TextEncoderPath = RutaDe(source, destinationDirectory, "text encoder"),
             VaePath = RutaDe(source, destinationDirectory, "VAE")

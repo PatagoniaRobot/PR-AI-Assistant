@@ -65,6 +65,16 @@ static class HumoPaquetes
             VaePath = Falso("ae.safetensors")
         });
 
+        // Uno armado a mano al que le faltan los tres: es el que tiene que decir qué falta.
+        // Los del catálogo sin bajar dicen otra cosa: «Sin descargar» y cuánto pesa.
+        svc.Save(new ImageModelPackage
+        {
+            Id = "incompleto", DisplayName = "Paquete a mano incompleto", Family = "z-image",
+            DiffusionModelPath = Path.Combine(modelos, "no-dif.gguf"),
+            TextEncoderPath = Path.Combine(modelos, "no-te.gguf"),
+            VaePath = Path.Combine(modelos, "no-ae.safetensors")
+        });
+
         var dialogos = new DialogosFalsos();
         var vm = new ImagePackageSelectorViewModel(svc, dialogos, new GpuInfoService());
         vm.InitializeAsync().GetAwaiter().GetResult();
@@ -91,7 +101,7 @@ static class HumoPaquetes
         {
             var grilla = BuscarPorId(ventana, "PkgGrid") as System.Windows.Controls.DataGrid;
             Check("la grilla de paquetes existe en el árbol visual", grilla is not null);
-            Check("muestra los dos paquetes", grilla is not null && grilla.Items.Count == 2,
+            Check("muestra los tres del catálogo y los dos a mano", grilla is not null && grilla.Items.Count == 5,
                 $"muestra {grilla?.Items.Count}");
 
             var usar = BuscarPorId(ventana, "PkgUseButton") as System.Windows.Controls.Button;
@@ -113,6 +123,14 @@ static class HumoPaquetes
             Check("la fila del paquete incompleto dice qué le falta",
                 textos.Any(t => t.Contains("falta")),
                 "ninguna celda lo dice: " + string.Join(" | ", textos.Take(20)));
+
+            Check("los del catálogo sin bajar dicen cuánto pesan",
+                textos.Count(t => t.StartsWith("Sin descargar") && t.Contains("GB")) == 3,
+                string.Join(" | ", textos.Where(t => t.StartsWith("Sin descargar"))));
+
+            Check("uno solo está marcado como recomendado para esta PC",
+                textos.Count(t => t == "Recomendado") == 1,
+                string.Join(" | ", textos.Where(t => t.StartsWith("Recom"))));
 
             Check("la fila del paquete completo dice que está listo",
                 textos.Any(t => t.Contains("Listo para usar")),
@@ -144,9 +162,23 @@ static class HumoPaquetes
                 rutaVae is not null && rutaVae.Text.EndsWith("ae.safetensors"),
                 $"{rutaDif?.Text} | {rutaTe?.Text} | {rutaVae?.Text}");
 
+            // Con el completo seleccionado no se ofrece bajar nada: el defecto del 21/10/2026.
             var descargar = BuscarPorId(ventana, "PkgDownloadButton") as System.Windows.Controls.Button;
-            Check("el botón de descarga existe y está habilitado",
+            var textoDescarga = BuscarPorId(ventana, "PkgDownloadText") as System.Windows.Controls.TextBlock;
+            Check("con un paquete bajado, el botón de descarga queda apagado",
+                descargar is not null && !descargar.IsEnabled);
+            Check("y el recuadro dice que ya está descargado",
+                textoDescarga is not null && textoDescarga.Text.Contains("ya está descargado"), textoDescarga?.Text ?? "");
+
+            vm.SelectedRow = vm.Packages.First(p => p.CanDownload);
+            ventana.UpdateLayout();
+            Check("con uno del catálogo sin bajar, el botón se habilita",
                 descargar is not null && descargar.IsEnabled);
+            Check("y el recuadro dice cuál y cuánto pesa",
+                textoDescarga is not null && textoDescarga.Text.StartsWith("Descargar Z-Image") && textoDescarga.Text.Contains("GB"),
+                textoDescarga?.Text ?? "");
+            vm.SelectedRow = vm.Packages.First(p => p.IsComplete);
+            ventana.UpdateLayout();
 
             var estadoDescarga = BuscarPorId(ventana, "PkgDownloadStatus") as System.Windows.Controls.TextBlock;
             Check("el estado de descarga está oculto mientras no se descarga",

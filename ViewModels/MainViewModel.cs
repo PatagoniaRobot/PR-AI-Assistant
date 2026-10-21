@@ -474,6 +474,7 @@ public class MainViewModel : ObservableObject
         ((RelayCommand)OpenModelCatalogCommand).RaiseCanExecuteChanged();
         ((RelayCommand)OpenImageGenerationCommand).RaiseCanExecuteChanged();
         ((RelayCommand)OpenImagePackagesCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)StopImageEngineCommand).RaiseCanExecuteChanged();
 
         UsageProfileApplied?.Invoke(this, profile);
         UpdateContextUsage();
@@ -830,6 +831,9 @@ public class MainViewModel : ObservableObject
     /// <summary>Abre el selector de paquetes de modelo de imagen (E4.3).</summary>
     public ICommand OpenImagePackagesCommand { get; }
 
+    /// <summary>Apaga solo el motor de imágenes, dejando el del chat como está.</summary>
+    public ICommand StopImageEngineCommand { get; }
+
     /// <summary>Abre la configuración de carpetas de datos.</summary>
     public ICommand OpenFolderSettingsCommand { get; }
 
@@ -888,6 +892,7 @@ public class MainViewModel : ObservableObject
         OpenModelsFolderCommand = new RelayCommand(ExecuteOpenModelsFolder);
         OpenImageGenerationCommand = new RelayCommand(ExecuteOpenImageGeneration, () => IsImageGenAvailable);
         OpenImagePackagesCommand = new RelayCommand(ExecuteOpenImagePackages, () => IsImageGenAvailable);
+        StopImageEngineCommand = new AsyncRelayCommand(ExecuteStopImageEngineAsync, () => IsImageEngineRunning);
         OpenFolderSettingsCommand = new RelayCommand(ExecuteOpenFolderSettings, () => AreFoldersConfigurable);
 
         _orchestrator.ServerStatusChanged += (s, e) =>
@@ -919,6 +924,7 @@ public class MainViewModel : ObservableObject
             ((RelayCommand)ExportSessionCommand).RaiseCanExecuteChanged();
 
         ExecuteRefreshModels();
+        RefreshImageModelChoices();
         LoadProfiles();
 
         // Inicializar el ServerStatus con el estado actual del orquestador
@@ -1132,14 +1138,14 @@ public class MainViewModel : ObservableObject
         // «Detener» tiene que habilitarse cuando arranca el motor de imágenes aunque el chat
         // esté parado. El aviso llega desde el hilo del manager.
         EventHandler alCambiarMotor = (_, _) => System.Windows.Application.Current?.Dispatcher.BeginInvoke(
-            () => ((AsyncRelayCommand)StopServerCommand).RaiseCanExecuteChanged());
+            NotifyImageEngineState);
         vm.EngineRunningChanged += alCambiarMotor;
         window.Closed += (_, _) =>
         {
             vm.EngineRunningChanged -= alCambiarMotor;
             _imageGenWindow = null;
             _imageGenViewModel = null;
-            ((AsyncRelayCommand)StopServerCommand).RaiseCanExecuteChanged();
+            NotifyImageEngineState();
         };
 
         _orchestrator.Logger.LogCustom("IMAGE_GEN_OPENED", $"perfil={_selectedUsageProfile?.Id}");
@@ -1164,6 +1170,93 @@ public class MainViewModel : ObservableObject
         // La ventana de generación lee el paquete al generar, así que un cambio acá se
         // toma solo. Los pasos y el CFG se rehacen del lado del ViewModel cuando detecta
         // que el paquete cambió, que es lo que evita generar con los valores del anterior.
+        // Lo que sí hay que rehacer es la lista de la barra lateral: pudo bajarse uno.
+        RefreshImageModelChoices();
+#endif
+    }
+
+    // ------------------------------------------------ modelo de imagen en la barra lateral
+
+    /// <summary>
+    /// Los modelos de imagen listos para usar, para elegirlos desde la barra lateral como
+    /// se elige el modelo de lenguaje. Hasta el 21 de octubre de 2026 había que abrir la
+    /// ventana de modelos de imagen para cambiarlo. En la edición Forense queda vacía.
+    /// </summary>
+    public ObservableCollection<ImageModelChoice> ImageModelChoices { get; } = new();
+
+    public bool HasImageModels => ImageModelChoices.Count > 0;
+
+    private ImageModelChoice? _selectedImageModel;
+    public ImageModelChoice? SelectedImageModel
+    {
+        get => _selectedImageModel;
+        set
+        {
+            if (value is null || value == _selectedImageModel) return;
+            _selectedImageModel = value;
+            OnPropertyChanged();
+#if IMAGE_GEN
+            if (ImageModelServiceCompartido.SelectedPackageId != value.Id)
+            {
+                ImageModelServiceCompartido.Select(value.Id);
+                _orchestrator.Logger.LogCustom("IMAGE_MODEL_SELECTED", $"modelo={value.Id}");
+            }
+            // La ventana de generación, si está abierta, muestra el modelo y sus pasos:
+            // que no se quede con los del anterior hasta la próxima imagen.
+            _imageGenViewModel?.ApplyPackageDefaults();
+#endif
+        }
+    }
+
+    private void RefreshImageModelChoices()
+    {
+#if IMAGE_GEN
+        var servicio = ImageModelServiceCompartido;
+        ImageModelChoices.Clear();
+        foreach (var p in servicio.CompletePackages)
+            ImageModelChoices.Add(new ImageModelChoice(p.Id, p.DisplayName));
+
+        // Si no hay ninguno elegido y hay uno solo bajado, ese es: no tiene sentido
+        // hacer elegir entre una opción.
+        var elegido = ImageModelChoices.FirstOrDefault(c => c.Id == servicio.SelectedPackageId);
+        if (elegido is null && ImageModelChoices.Count == 1)
+            elegido = ImageModelChoices[0];
+
+        _selectedImageModel = null;
+        if (elegido is not null) SelectedImageModel = elegido;
+        else OnPropertyChanged(nameof(SelectedImageModel));
+        OnPropertyChanged(nameof(HasImageModels));
+#endif
+    }
+
+    /// <summary>Encendido o apagado, para la línea de estado de la sección de imágenes.</summary>
+    public string ImageEngineStatusText => IsImageEngineRunning
+        ? Loc.T("sidebar.images.engineOn")
+        : Loc.T("sidebar.images.engineOff");
+
+    public string ImageEngineStatusColor => IsImageEngineRunning ? "#10B981" : "#64748B";
+
+    private void NotifyImageEngineState()
+    {
+        ((AsyncRelayCommand)StopServerCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)StopImageEngineCommand).RaiseCanExecuteChanged();
+        OnPropertyChanged(nameof(ImageEngineStatusText));
+        OnPropertyChanged(nameof(ImageEngineStatusColor));
+    }
+
+    /// <summary>
+    /// Apaga solo el motor de imágenes, para devolverle a la placa lo que ocupa cuando
+    /// solo se quiere conversar. Lo pidió el usuario el 21 de octubre de 2026: «Detener»
+    /// apaga los dos. La próxima imagen lo vuelve a encender sola.
+    /// </summary>
+    private async Task ExecuteStopImageEngineAsync()
+    {
+#if IMAGE_GEN
+        if (_imageGenViewModel is { IsEngineRunning: true } imagenes)
+            await imagenes.StopEngineAsync();
+        NotifyImageEngineState();
+#else
+        await Task.CompletedTask;
 #endif
     }
 
@@ -2088,5 +2181,11 @@ public class ExecutionProfileItem : PRImager.AIAssistant.Helpers.ObservableObjec
         Profile = profile;
     }
 
+    public override string ToString() => DisplayName;
+}
+
+/// <summary>Un modelo de imagen listo para usar, como opción del desplegable de la barra lateral.</summary>
+public sealed record ImageModelChoice(string Id, string DisplayName)
+{
     public override string ToString() => DisplayName;
 }

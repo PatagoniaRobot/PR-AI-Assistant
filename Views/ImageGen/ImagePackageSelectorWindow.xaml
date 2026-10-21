@@ -154,7 +154,16 @@
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
 
-                    <DataGridTextColumn Header="{l:T imagegen.packages.col.family}" Binding="{Binding Family}" Width="90" />
+                    <!-- El que conviene para esta placa, en el ámbar de la estrella del
+                         catálogo de modelos de lenguaje. -->
+                    <DataGridTextColumn Header="{l:T imagegen.packages.col.forYourPc}" Binding="{Binding RecommendedText}" Width="110">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="#F59E0B" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
 
                     <!-- Ancho fijo a propósito: con Width="Auto" el DataGrid mide la columna
                          contra el contenido inicial y el texto más largo queda cortado.
@@ -263,7 +272,8 @@
                        AutomationProperties.AutomationId="PkgEngineStatus" />
         </StackPanel>
 
-        <!-- Descarga del paquete recomendado -->
+        <!-- Descarga del paquete seleccionado. Si ya está bajado, lo dice y el botón queda
+             apagado: hasta el 21/10/2026 ofrecía bajar el recomendado aunque estuviera en uso. -->
         <Border Grid.Row="3" Background="#0f172a" CornerRadius="6" Padding="12" Margin="0,12,0,0">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -273,10 +283,8 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock FontSize="12">
-                        <Run Text="{l:T imagegen.packages.recommended}" />
-                        <Run Text="{Binding RecommendedSizeText, Mode=OneWay}" FontWeight="SemiBold" />
-                    </TextBlock>
+                    <TextBlock Text="{Binding DownloadText}" FontSize="12" TextWrapping="Wrap"
+                               AutomationProperties.AutomationId="PkgDownloadText" />
                     <TextBlock Text="{Binding DownloadStatus}" Foreground="#94a3b8" FontSize="11"
                                Margin="0,4,0,0"
                                AutomationProperties.AutomationId="PkgDownloadStatus"
@@ -287,7 +295,7 @@
                                  Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}" />
                 </StackPanel>
 
-                <Button Grid.Column="1" Content="{l:T catalog.download}" Command="{Binding DownloadRecommendedCommand}"
+                <Button Grid.Column="1" Content="{l:T catalog.download}" Command="{Binding DownloadCommand}"
                         Style="{StaticResource PkgButton}" Margin="12,0,0,0"
                         AutomationProperties.AutomationId="PkgDownloadButton" />
                 <Button Grid.Column="2" Content="{l:T common.cancel}" Command="{Binding CancelDownloadCommand}"

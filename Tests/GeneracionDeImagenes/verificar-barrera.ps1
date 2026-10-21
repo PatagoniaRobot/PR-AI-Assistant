@@ -58,6 +58,7 @@ $simbolos = @(
     # E4.5 — integración
     @{ n = "ImageGenerationWindow";         futuro = $false },
     @{ n = "IMAGE_GEN_OPENED";              futuro = $false },
+    @{ n = "IMAGE_MODEL_SELECTED";          futuro = $false },
 
     # Excepción declarada. Los dos comandos son propiedades de MainViewModel, que se
     # compila entero en las dos ediciones, así que sus NOMBRES llegan a los metadatos del

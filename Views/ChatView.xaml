@@ -922,6 +922,23 @@
                                 <StackPanel Margin="0,16,0,0"
                                             Visibility="{Binding IsImageGenCompiledIn, Converter={StaticResource BoolToVis}}">
                                     <TextBlock Text="{l:T sidebar.images.header}" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
+
+                                    <!-- El modelo de imagen se elige acá, como el de lenguaje.
+                                         Solo lista los que están bajados; bajar otro es la
+                                         ventana de modelos de imagen. -->
+                                    <ComboBox Style="{StaticResource ModernComboBox}"
+                                              ItemsSource="{Binding ImageModelChoices}"
+                                              SelectedItem="{Binding SelectedImageModel}"
+                                              DisplayMemberPath="DisplayName"
+                                              IsEnabled="{Binding IsImageGenAvailable}"
+                                              AutomationProperties.AutomationId="ImageModelSelector"
+                                              AutomationProperties.Name="{l:T sidebar.images.packages}"
+                                              Visibility="{Binding HasImageModels, Converter={StaticResource BoolToVis}}"
+                                              Margin="0,0,0,6" />
+                                    <TextBlock Text="{l:T sidebar.images.model.none}"
+                                               Foreground="#777777" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,6"
+                                               Visibility="{Binding HasImageModels, Converter={StaticResource InverseBoolToVis}}" />
+
                                     <Button Command="{Binding OpenImageGenerationCommand}"
                                             AutomationProperties.AutomationId="OpenImageGenButton"
                                             Style="{StaticResource SecondaryButtonStyle}" Background="#1E1E3A"
@@ -942,6 +959,31 @@
                                             <TextBlock Text="{l:T sidebar.images.packages}" FontSize="11" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
+
+                                    <!-- Encendido o apagado, y apagarlo sin tocar el chat. -->
+                                    <Grid Margin="0,8,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Ellipse Grid.Column="0" Width="10" Height="10" Margin="0,0,8,0" VerticalAlignment="Center"
+                                                 Fill="{Binding ImageEngineStatusColor, Converter={StaticResource HexToBrush}}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding ImageEngineStatusText}" FontSize="10" Foreground="#AAAAAA"
+                                                   VerticalAlignment="Center" TextWrapping="Wrap"
+                                                   AutomationProperties.AutomationId="ImageEngineStatus" />
+                                        <Button Grid.Column="2" Command="{Binding StopImageEngineCommand}"
+                                                Style="{StaticResource DangerButtonStyle}" MinHeight="24" Padding="8,2"
+                                                AutomationProperties.AutomationId="StopImageEngineButton"
+                                                AutomationProperties.Name="{l:T sidebar.images.engineStop}"
+                                                ToolTip="{l:T sidebar.images.engineStop.tooltip}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <c:Icon Kind="Stop" Size="12" Accent="#EF4444" Margin="0,0,4,0" VerticalAlignment="Center" />
+                                                <TextBlock Text="{l:T sidebar.images.engineStop}" FontSize="11" VerticalAlignment="Center"
+                                                           Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
                                     <TextBlock Text="{l:T sidebar.images.disabled}"
                                                Foreground="#F59E0B" FontSize="10" TextWrapping="Wrap" Margin="0,6,0,0"
                                                AutomationProperties.AutomationId="ImageGenDisabledNotice"

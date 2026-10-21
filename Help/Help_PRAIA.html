@@ -216,15 +216,18 @@ search:
                     <li><strong>El motor:</strong> <code>sd-server.exe</code>, de <a href="https://github.com/leejet/stable-diffusion.cpp">stable-diffusion.cpp</a>, en su build con CUDA. Se descomprime en <code>Tools\sd\bin\</code>, junto a la aplicación, o se elige a mano desde la ventana de modelos de imagen.</li>
                     <li><strong>Un paquete de modelo:</strong> y acá está la diferencia con el chat. <strong>Un modelo de imagen son tres archivos</strong>, no uno: el modelo de difusión, el <em>text encoder</em> y el VAE. Si falta cualquiera de los tres, el motor no arranca.</li>
                 </ul>
-                <p>El paquete recomendado es <strong>Z-Image Turbo Q4_K</strong> (6,2 GB en total) y se baja con un botón desde la propia aplicación, en <strong>Modelos de imagen</strong>. También se puede armar uno a mano apuntando a los tres archivos.</p>
+                <p>En <strong>Modelos de imagen</strong> hay tres variantes de <strong>Z-Image Turbo</strong> para bajar con un botón: <strong>Q4_K</strong> (6,2 GB en total), <strong>Q6_K</strong> y <strong>Q8_0</strong>. La ventana marca como <em>Recomendado</em> la que conviene a tu placa —Q4_K hasta 16 GB de VRAM, Q6_K con 20 GB o más— y solo ofrece bajar lo que todavía no está: las tres comparten text encoder y VAE, así que la segunda variante baja un solo archivo. También se puede armar un paquete a mano apuntando a los tres archivos.</p>
 
                 <h3>Cómo se usa</h3>
                 <ol>
                     <li>Abrir el menú lateral con el botón de arriba a la izquierda y bajar hasta <strong>IMÁGENES</strong>.</li>
-                    <li>La primera vez, entrar en <strong>Modelos de imagen</strong> y descargar el paquete recomendado, o apuntar a los tres archivos si ya se tienen.</li>
-                    <li>Volver y presionar <strong>Generar imágenes</strong>. Se abre una ventana aparte.</li>
+                    <li>La primera vez, entrar en <strong>Modelos de imagen</strong> y descargar el recomendado, o apuntar a los tres archivos si ya se tienen.</li>
+                    <li>Si tenés más de uno bajado, elegir cuál usar en el desplegable de <strong>IMÁGENES</strong>, como se elige el modelo de lenguaje.</li>
+                    <li>Presionar <strong>Generar imágenes</strong>. Se abre una ventana aparte.</li>
                     <li>Escribir el prompt, elegir el tamaño y presionar <strong>Generar imagen</strong>.</li>
                 </ol>
+
+                <p><strong>Apagar el motor de imágenes:</strong> debajo de los botones se ve si el motor de imágenes está encendido. <strong>Apagar</strong> lo baja sin tocar el chat, para devolverle la placa al modelo de lenguaje; se vuelve a encender solo con la próxima imagen. <strong>Detener</strong>, más arriba, apaga los dos.</p>
 
                 <div class="tip">
                     <strong>La ventana no es modal:</strong> se puede seguir conversando con el modelo de lenguaje mientras la imagen se genera. Los dos motores conviven en la misma placa porque el de imágenes carga los pesos solo mientras trabaja y los libera al terminar.
@@ -492,15 +495,18 @@ search:
                     <li><strong>The engine:</strong> <code>sd-server.exe</code>, from <a href="https://github.com/leejet/stable-diffusion.cpp">stable-diffusion.cpp</a>, CUDA build. Unpack it into <code>Tools\sd\bin\</code> next to the application, or pick it manually from the image models window.</li>
                     <li><strong>A model package:</strong> and here is the difference from chat. <strong>An image model is three files</strong>, not one: the diffusion model, the text encoder and the VAE. If any of the three is missing, the engine will not start.</li>
                 </ul>
-                <p>The recommended package is <strong>Z-Image Turbo Q4_K</strong> (6.2 GB total) and can be downloaded with one button from within the application, under <strong>Image models</strong>. You can also assemble your own by pointing at the three files.</p>
+                <p><strong>Image models</strong> offers three variants of <strong>Z-Image Turbo</strong> to download with one button: <strong>Q4_K</strong> (6.2 GB total), <strong>Q6_K</strong> and <strong>Q8_0</strong>. The window marks as <em>Recommended</em> the one that suits your card —Q4_K up to 16 GB of VRAM, Q6_K with 20 GB or more— and only offers to download what is not there yet: the three share the text encoder and VAE, so a second variant downloads a single file. You can also assemble your own package by pointing at the three files.</p>
 
                 <h3>How to use it</h3>
                 <ol>
                     <li>Open the side menu with the top-left button and scroll to <strong>IMAGES</strong>.</li>
-                    <li>The first time, open <strong>Image models</strong> and download the recommended package, or point to the three files if you already have them.</li>
-                    <li>Go back and press <strong>Generate images</strong>. A separate window opens.</li>
+                    <li>The first time, open <strong>Image models</strong> and download the recommended one, or point to the three files if you already have them.</li>
+                    <li>If you have more than one downloaded, choose which to use in the <strong>IMAGES</strong> drop-down, the same way you choose the language model.</li>
+                    <li>Press <strong>Generate images</strong>. A separate window opens.</li>
                     <li>Write the prompt, choose the size and press <strong>Generate image</strong>.</li>
                 </ol>
+
+                <p><strong>Turning off the image engine:</strong> below the buttons you can see whether the image engine is on. <strong>Turn off</strong> stops it without touching the chat, giving the card back to the language model; it turns on again by itself with the next image. <strong>Stop</strong>, further up, turns off both.</p>
 
                 <div class="tip">
                     <strong>The window is not modal:</strong> you can keep chatting with the language model while the image is being generated. Both engines share the same card because the image engine loads its weights only while working and releases them when done.

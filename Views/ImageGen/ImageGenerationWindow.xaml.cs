@@ -54,6 +54,11 @@ public partial class ImageGenerationWindow : Window
 
         _cierreConfirmado = true;
         _viewModel.Dispose();
-        Close();
+
+        // Close() va a la cola, no acá. Con el motor ya apagado, ShutdownAsync termina sin
+        // esperar nada y este método sigue adentro del Closing que lo llamó: un Close()
+        // directo lanzaba «No se puede … Close … mientras un elemento Window se está
+        // cerrando». Lo vio el usuario el 21 de octubre de 2026 al cerrar la ventana.
+        await Dispatcher.InvokeAsync(Close, System.Windows.Threading.DispatcherPriority.Background);
     }
 }

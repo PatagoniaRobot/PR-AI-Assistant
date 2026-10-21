@@ -205,48 +205,103 @@ public sealed class ImageModelService
 
     public string? SelectedPackageId => _store.SelectedPackageId;
 
-    /// <summary>
-    /// Descriptor del paquete recomendado: de dónde sale cada archivo.
-    /// Los tres repositorios son abiertos. El VAE NO está en el de black-forest-labs,
-    /// que es gated y devuelve 401 sin token, sino en el espejo de Comfy-Org; el
-    /// archivo es idéntico (335.304.388 bytes).
-    /// </summary>
-    public static readonly ImagePackageSource RecommendedSource = new()
+    // Los dos archivos que comparten todas las variantes de Z-Image. Bajar una segunda
+    // variante baja solo su archivo de difusión: el descargador saltea lo que ya está.
+    private static readonly ImagePackageComponent TextEncoderZImage = new("text encoder",
+        "unsloth/Qwen3-4B-Instruct-2507-GGUF", "Qwen3-4B-Instruct-2507-Q4_K_M.gguf", 2_497_281_120);
+
+    // El VAE NO está en el repo de black-forest-labs, que es gated y devuelve 401 sin
+    // token, sino en el espejo de Comfy-Org; el archivo es idéntico (335.304.388 bytes).
+    private static readonly ImagePackageComponent VaeZImage = new("VAE",
+        "Comfy-Org/z_image_turbo", "split_files/vae/ae.safetensors", 335_304_388);
+
+    private static ImagePackageSource ZImage(string id, string quant, long diffusionBytes) => new()
     {
-        Id = RecommendedPackageId,
-        DisplayName = "Z-Image Turbo Q4_K",
+        Id = id,
+        DisplayName = $"Z-Image Turbo {quant}",
         Family = "z-image",
         DefaultSteps = 8,
         DefaultCfgScale = 1.0,
         Components = new[]
         {
             new ImagePackageComponent("modelo de difusión", "leejet/Z-Image-Turbo-GGUF",
-                "z_image_turbo-Q4_K.gguf", 3_866_000_000),
-            new ImagePackageComponent("text encoder", "unsloth/Qwen3-4B-Instruct-2507-GGUF",
-                "Qwen3-4B-Instruct-2507-Q4_K_M.gguf", 2_497_281_120),
-            new ImagePackageComponent("VAE", "Comfy-Org/z_image_turbo",
-                "split_files/vae/ae.safetensors", 335_304_388)
+                $"z_image_turbo-{quant}.gguf", diffusionBytes),
+            TextEncoderZImage,
+            VaeZImage
         }
     };
 
     /// <summary>
-    /// Construye el paquete de fábrica apuntando a la carpeta indicada. Los archivos
+    /// Descriptor del paquete recomendado por defecto: de dónde sale cada archivo.
+    /// Los tres repositorios son abiertos.
+    /// </summary>
+    public static readonly ImagePackageSource RecommendedSource =
+        ZImage(RecommendedPackageId, "Q4_K", 3_864_250_304);
+
+    /// <summary>
+    /// Los paquetes que la aplicación sabe bajar, para elegir como se elige un modelo de
+    /// lenguaje en el catálogo. Hasta el 21 de octubre de 2026 había uno solo, y el
+    /// selector ofrecía descargarlo aunque ya estuviera bajado.
+    ///
+    /// Son las tres cuantizaciones de Z-Image medidas en 10.12 del maestro, todas con el
+    /// mismo text encoder y el mismo VAE. Las imágenes de Q6_K y Q8_0 salen prácticamente
+    /// iguales entre sí; Q8_0 está para quien tenga placa de sobra. Tamaños del árbol del
+    /// repositorio, al byte.
+    /// </summary>
+    public static readonly IReadOnlyList<ImagePackageSource> Catalog = new[]
+    {
+        RecommendedSource,
+        ZImage("z-image-turbo-q6k", "Q6_K", 5_263_239_104),
+        ZImage("z-image-turbo-q8_0", "Q8_0", 6_577_440_704)
+    };
+
+    /// <summary>True si el paquete es uno de los que la aplicación sabe bajar.</summary>
+    public static bool IsCatalogId(string? id) => Catalog.Any(c => c.Id == id);
+
+    /// <summary>De dónde se baja un paquete, o null si lo armó el usuario a mano.</summary>
+    public static ImagePackageSource? SourceFor(string? id) => Catalog.FirstOrDefault(c => c.Id == id);
+
+    /// <summary>
+    /// El paquete que conviene para la placa, medido conviviendo con el modelo de lenguaje
+    /// (10.12): en 16 GB, Q4_K deja 2,7 GB libres y Q6_K 2 GB y tarda un 30 % más, así que
+    /// por debajo de 20 GB va Q4_K. Con 20 GB o más, Q6_K deja más de 5 GB de aire. Q8_0
+    /// no se recomienda nunca: cuesta 1,3 GB más que Q6_K por la misma imagen.
+    ///
+    /// Sin datos de la placa se recomienda Q4_K, que es el que menos pide.
+    /// </summary>
+    public static string RecommendedIdFor(GpuVramInfo gpu) =>
+        gpu.Available && gpu.TotalMb >= 20 * 1024 ? "z-image-turbo-q6k" : RecommendedPackageId;
+
+    /// <summary>
+    /// Construye un paquete del catálogo apuntando a la carpeta indicada. Los archivos
     /// pueden no existir todavía: el paquete se muestra incompleto hasta que se
     /// descarguen, que es justamente lo que el selector tiene que dejar ver.
     /// </summary>
-    public static ImageModelPackage BuildRecommendedPackage(string modelsDirectory) => new()
+    public static ImageModelPackage BuildPackage(ImagePackageSource source, string modelsDirectory)
     {
-        Id = RecommendedSource.Id,
-        DisplayName = RecommendedSource.DisplayName,
-        Family = RecommendedSource.Family,
-        DefaultSteps = RecommendedSource.DefaultSteps,
-        DefaultCfgScale = RecommendedSource.DefaultCfgScale,
-        IsFactory = true,
-        DiffusionModelPath = Path.Combine(modelsDirectory, "z_image_turbo-Q4_K.gguf"),
-        TextEncoderPath = Path.Combine(modelsDirectory, "Qwen3-4B-Instruct-2507-Q4_K_M.gguf"),
         // El archivo se guarda por su nombre, sin la subcarpeta del repositorio.
-        VaePath = Path.Combine(modelsDirectory, "ae.safetensors")
-    };
+        string Ruta(string rol) => source.Components
+            .Where(c => c.Role == rol)
+            .Select(c => Path.Combine(modelsDirectory, c.LocalFileName))
+            .FirstOrDefault() ?? "";
+
+        return new ImageModelPackage
+        {
+            Id = source.Id,
+            DisplayName = source.DisplayName,
+            Family = source.Family,
+            DefaultSteps = source.DefaultSteps,
+            DefaultCfgScale = source.DefaultCfgScale,
+            IsFactory = true,
+            DiffusionModelPath = Ruta("modelo de difusión"),
+            TextEncoderPath = Ruta("text encoder"),
+            VaePath = Ruta("VAE")
+        };
+    }
+
+    /// <summary>El paquete recomendado por defecto, apuntando a la carpeta indicada.</summary>
+    public static ImageModelPackage BuildRecommendedPackage(string modelsDirectory) =>
+        BuildPackage(RecommendedSource, modelsDirectory);
 
     // --- Operaciones ---
 
@@ -259,8 +314,7 @@ public sealed class ImageModelService
         if (string.IsNullOrWhiteSpace(package.Id))
             throw new ArgumentException("El paquete necesita un identificador.", nameof(package));
 
-        bool esElDeFabrica = package.Id == RecommendedPackageId;
-        var aGuardar = package with { IsFactory = esElDeFabrica };
+        var aGuardar = package with { IsFactory = IsCatalogId(package.Id) };
 
         var lista = _store.Packages.ToList();
         int i = lista.FindIndex(p => p.Id == aGuardar.Id);
@@ -277,7 +331,7 @@ public sealed class ImageModelService
     /// </summary>
     public bool Remove(string id)
     {
-        if (id == RecommendedPackageId) return false;   // el de fábrica se regenera igual
+        if (IsCatalogId(id)) return false;   // los de fábrica se regeneran igual
 
         var lista = _store.Packages.ToList();
         int quitados = lista.RemoveAll(p => p.Id == id);
@@ -337,17 +391,28 @@ public sealed class ImageModelService
     }
 
     /// <summary>
-    /// Garantiza que el paquete recomendado exista en la lista. Si el usuario editó
-    /// sus rutas, se respetan: solo se agrega cuando no está.
+    /// Garantiza que los paquetes del catálogo existan en la lista, en el orden del
+    /// catálogo y antes que los del usuario. Si el usuario editó sus rutas, se respetan:
+    /// solo se agrega el que no está.
     /// </summary>
     private void AsegurarPaqueteDeFabrica()
     {
-        if (_store.Packages.Any(p => p.Id == RecommendedPackageId)) return;
-
         var lista = _store.Packages.ToList();
-        // La carpeta efectiva, no la de fábrica: si el usuario la cambió, el paquete
-        // recomendado tiene que nacer apuntando adonde van a caer sus descargas.
-        lista.Insert(0, BuildRecommendedPackage(ResolveModelsDirectory()));
+        int posicion = 0;
+        foreach (var fuente in Catalog)
+        {
+            int existente = lista.FindIndex(p => p.Id == fuente.Id);
+            if (existente >= 0)
+            {
+                posicion = existente + 1;
+                continue;
+            }
+
+            // La carpeta efectiva, no la de fábrica: si el usuario la cambió, el paquete
+            // tiene que nacer apuntando adonde van a caer sus descargas.
+            lista.Insert(Math.Min(posicion, lista.Count), BuildPackage(fuente, ResolveModelsDirectory()));
+            posicion++;
+        }
         _store.Packages = lista;
     }
 

@@ -18,10 +18,11 @@ namespace PRImager.AIAssistant.ViewModels.ImageGen;
 /// </summary>
 public sealed class ImagePackageRow : ObservableObject
 {
-    public ImagePackageRow(ImageModelPackage package, GpuVramInfo gpu)
+    public ImagePackageRow(ImageModelPackage package, GpuVramInfo gpu, bool isRecommended = false)
     {
         Package = package;
         Gpu = gpu;
+        IsRecommended = isRecommended;
     }
 
     public ImageModelPackage Package { get; }
@@ -33,10 +34,33 @@ public sealed class ImagePackageRow : ObservableObject
     public bool IsComplete => Package.IsComplete;
     public bool IsFactory => Package.IsFactory;
 
-    /// <summary>Lo que se dibuja en la columna de estado.</summary>
+    /// <summary>El que conviene para esta placa (<see cref="ImageModelService.RecommendedIdFor"/>).</summary>
+    public bool IsRecommended { get; }
+    public string RecommendedText => IsRecommended ? Loc.T("imagegen.packages.recommendedTag") : "";
+
+    /// <summary>De dónde se baja, o null si el usuario lo armó a mano.</summary>
+    public ImagePackageSource? Source => ImageModelService.SourceFor(Package.Id);
+
+    /// <summary>Se puede bajar: es del catálogo y le falta algo en disco.</summary>
+    public bool CanDownload => !Package.IsComplete && Source is not null;
+
+    /// <summary>
+    /// Lo que falta bajar, no el paquete entero: las variantes de Z-Image comparten text
+    /// encoder y VAE, y con una ya bajada la segunda es solo su archivo de difusión.
+    /// </summary>
+    public long PendingDownloadBytes => Source is null ? 0 : Source.Components
+        .Where(c => Package.MissingComponents.Contains(c.Role))
+        .Sum(c => c.ExpectedBytes);
+
+    /// <summary>
+    /// Lo que se dibuja en la columna de estado. Uno del catálogo sin bajar dice cuánto
+    /// pesa bajarlo; «falta el modelo de difusión» no le dice nada a quien no lo armó.
+    /// </summary>
     public string StatusText => Package.IsComplete
         ? Loc.T("imagegen.packages.ready")
-        : Package.MissingText;
+        : CanDownload
+            ? Loc.F("imagegen.packages.notDownloaded", FormatearTamano(PendingDownloadBytes))
+            : Package.MissingText;
 
     /// <summary>Gris para los incompletos, para que se lean como no utilizables.</summary>
     public string StatusColor => Package.IsComplete ? "#10B981" : "#6B7280";
@@ -120,7 +144,8 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
         BrowseTextEncoderCommand = new RelayCommand(() => Browse("text encoder"));
         BrowseVaeCommand = new RelayCommand(() => Browse("VAE"));
         UseSelectedCommand = new RelayCommand(UseSelected, () => SelectedRow?.IsComplete == true);
-        DownloadRecommendedCommand = new AsyncRelayCommand(DownloadRecommendedAsync, () => !IsDownloading);
+        DownloadCommand = new AsyncRelayCommand(DownloadSelectedAsync,
+            () => !IsDownloading && SelectedRow?.CanDownload == true);
         CancelDownloadCommand = new RelayCommand(CancelDownload, () => IsDownloading);
 
         Refresh();
@@ -142,7 +167,9 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
                 OnPropertyChanged(nameof(TextEncoderPath));
                 OnPropertyChanged(nameof(VaePath));
                 OnPropertyChanged(nameof(SelectedDetail));
+                OnPropertyChanged(nameof(DownloadText));
                 UseSelectedCommand.RaiseCanExecuteChanged();
+                DownloadCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -223,7 +250,7 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
         {
             if (SetProperty(ref _isDownloading, value))
             {
-                DownloadRecommendedCommand.RaiseCanExecuteChanged();
+                DownloadCommand.RaiseCanExecuteChanged();
                 CancelDownloadCommand.RaiseCanExecuteChanged();
             }
         }
@@ -243,9 +270,23 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
         private set => SetProperty(ref _downloadPercent, value);
     }
 
-    /// <summary>Tamaño del paquete recomendado, para que se vea antes de bajarlo.</summary>
-    public string RecommendedSizeText =>
-        $"{ImageModelService.RecommendedSource.TotalExpectedBytes / 1024.0 / 1024.0 / 1024.0:N1} GB";
+    /// <summary>
+    /// Qué pasa con el paquete seleccionado y la descarga: cuánto falta bajar, o que ya
+    /// está. Hasta el 21 de octubre de 2026 el recuadro ofrecía siempre el paquete
+    /// recomendado, aunque estuviera bajado y en uso.
+    /// </summary>
+    public string DownloadText
+    {
+        get
+        {
+            var fila = SelectedRow;
+            if (fila is null) return "";
+            if (fila.IsComplete) return Loc.F("imagegen.packages.alreadyDownloaded", fila.DisplayName);
+            if (!fila.CanDownload) return Loc.F("imagegen.packages.manual", fila.DisplayName);
+            return Loc.F("imagegen.packages.downloadThis", fila.DisplayName,
+                ImagePackageRow.FormatearTamano(fila.PendingDownloadBytes));
+        }
+    }
 
     private string _message = "";
     public string Message
@@ -261,7 +302,7 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
     public RelayCommand BrowseTextEncoderCommand { get; }
     public RelayCommand BrowseVaeCommand { get; }
     public RelayCommand UseSelectedCommand { get; }
-    public AsyncRelayCommand DownloadRecommendedCommand { get; }
+    public AsyncRelayCommand DownloadCommand { get; }
     public RelayCommand CancelDownloadCommand { get; }
 
     // --- Operaciones ---
@@ -281,11 +322,12 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
 
     public void Refresh()
     {
-        var idSeleccionado = SelectedRow?.Id ?? _service.SelectedPackageId;
+        var recomendado = ImageModelService.RecommendedIdFor(_gpu);
+        var idSeleccionado = SelectedRow?.Id ?? _service.SelectedPackageId ?? recomendado;
 
         Packages.Clear();
         foreach (var p in _service.Packages)
-            Packages.Add(new ImagePackageRow(p, _gpu));
+            Packages.Add(new ImagePackageRow(p, _gpu, p.Id == recomendado));
 
         SelectedRow = Packages.FirstOrDefault(r => r.Id == idSeleccionado) ?? Packages.FirstOrDefault();
 
@@ -341,8 +383,11 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
         OnPropertyChanged(nameof(ActivePackageId));
     }
 
-    private async Task DownloadRecommendedAsync()
+    private async Task DownloadSelectedAsync()
     {
+        var fuente = SelectedRow?.Source;
+        if (fuente is null || SelectedRow!.IsComplete) return;
+
         IsDownloading = true;
         Message = "";
         DownloadPercent = 0;
@@ -360,10 +405,9 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
         try
         {
             // La carpeta efectiva, no la de fábrica: si el usuario la cambió desde la
-            // ventana de carpetas, el paquete recomendado tiene que bajar ahí.
+            // ventana de carpetas, el paquete tiene que bajar ahí.
             var carpeta = _service.ResolveModelsDirectory();
-            var r = await descargador.DownloadAsync(
-                ImageModelService.RecommendedSource, carpeta, _downloadCts.Token);
+            var r = await descargador.DownloadAsync(fuente, carpeta, _downloadCts.Token);
 
             if (r.WasCancelled)
             {
@@ -401,6 +445,6 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
     private void CancelDownload()
     {
         _downloadCts?.Cancel();
-        DownloadStatus = "Cancelando…";
+        DownloadStatus = Loc.T("imagegen.packages.cancelling");
     }
 }

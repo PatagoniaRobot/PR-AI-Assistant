@@ -110,6 +110,29 @@ static class BancoPaquetes
             !svc.Packages.First(p => p.Id == ImageModelService.RecommendedPackageId).IsComplete);
         Check("sin selección, SelectedPackage es null", svc.SelectedPackage is null);
 
+        // El catálogo: las tres cuantizaciones de Z-Image de 10.12, antes que las del
+        // usuario y todas de fábrica. Compartir text encoder y VAE es lo que hace que la
+        // segunda variante baje un solo archivo.
+        var idsCatalogo = ImageModelService.Catalog.Select(c => c.Id).ToList();
+        Check("trae los tres paquetes del catálogo, en orden",
+            svc.Packages.Take(3).Select(p => p.Id).SequenceEqual(idsCatalogo),
+            string.Join(", ", svc.Packages.Select(p => p.Id)));
+        Check("los tres son de fábrica", svc.Packages.Take(3).All(p => p.IsFactory));
+        Check("comparten text encoder y VAE",
+            ImageModelService.Catalog.Select(c => c.Components.First(x => x.Role == "text encoder").FileName).Distinct().Count() == 1 &&
+            ImageModelService.Catalog.Select(c => c.Components.First(x => x.Role == "VAE").FileName).Distinct().Count() == 1);
+        Check("y cada uno tiene su propio archivo de difusión",
+            ImageModelService.Catalog.Select(c => c.Components.First(x => x.Role == "modelo de difusión").FileName).Distinct().Count() == 3);
+        Check("no deja borrar ninguno del catálogo", idsCatalogo.All(id => !svc.Remove(id)));
+
+        // La recomendación según la placa (10.12): Q4_K por debajo de 20 GB, Q6_K arriba.
+        GpuVramInfo Placa(int mb) => new() { Available = true, Name = "x", TotalMb = mb, FreeMb = mb };
+        Check("con 8 GB recomienda Q4_K", ImageModelService.RecommendedIdFor(Placa(8192)) == "z-image-turbo-q4k");
+        Check("con 16 GB recomienda Q4_K", ImageModelService.RecommendedIdFor(Placa(16311)) == "z-image-turbo-q4k");
+        Check("con 24 GB recomienda Q6_K", ImageModelService.RecommendedIdFor(Placa(24564)) == "z-image-turbo-q6k");
+        Check("sin datos de la placa recomienda Q4_K",
+            ImageModelService.RecommendedIdFor(GpuVramInfo.Unavailable("sin placa")) == "z-image-turbo-q4k");
+
         svc.Save(completo);
         Check("guarda un paquete de usuario", svc.Packages.Any(p => p.Id == "p1"));
         Check("un paquete de usuario no puede declararse de fábrica",
@@ -166,11 +189,17 @@ static class BancoPaquetes
         var vm = new ImagePackageSelectorViewModel(svcVm, dialogos, new GpuInfoService());
         vm.Refresh();
 
-        Check("el selector lista el paquete de fábrica", vm.Packages.Count >= 1);
+        Check("el selector lista los paquetes del catálogo", vm.Packages.Count >= 3);
         var fila = vm.Packages.First(p => p.Id == ImageModelService.RecommendedPackageId);
         Check("el incompleto se muestra en gris", fila.NameColor == "#6B7280", fila.NameColor);
-        Check("y dice qué le falta", fila.StatusText.Contains("faltan") || fila.StatusText.Contains("falta"),
+        Check("y dice que está sin descargar y cuánto pesa", fila.StatusText.Contains("Sin descargar") && fila.StatusText.Contains("GB"),
             fila.StatusText);
+        Check("se puede bajar", fila.CanDownload);
+        Check("sin nada en disco, bajarlo es el paquete entero",
+            fila.PendingDownloadBytes == ImageModelService.RecommendedSource.TotalExpectedBytes, $"{fila.PendingDownloadBytes}");
+        Check("el recuadro de descarga ofrece bajar el seleccionado",
+            vm.SelectedRow?.Id == fila.Id && vm.DownloadText.Contains("Descargar") && vm.DownloadCommand.CanExecute(null),
+            vm.DownloadText);
         Check("el incompleto no informa tamaño en disco", fila.SizeText == "—", fila.SizeText);
         Check("el incompleto no informa veredicto de VRAM", fila.VramLabel == "—", fila.VramLabel);
 
@@ -202,8 +231,28 @@ static class BancoPaquetes
         Check("«usar este paquete» lo deja como activo",
             vm.ActivePackageId == ImageModelService.RecommendedPackageId, vm.ActivePackageId ?? "null");
 
-        Check("informa el tamaño del paquete recomendado antes de bajarlo",
-            vm.RecommendedSizeText.Contains("GB"), vm.RecommendedSizeText);
+        // El defecto que vio el usuario el 21/10/2026: el recuadro ofrecía bajar el
+        // paquete aunque ya estuviera bajado y en uso.
+        Check("con el paquete completo, el recuadro dice que ya está bajado",
+            vm.DownloadText.Contains("ya está descargado"), vm.DownloadText);
+        Check("y no deja volver a bajarlo", !vm.DownloadCommand.CanExecute(null));
+
+        // Q6_K comparte text encoder y VAE: con los dos en disco, falta solo su difusión.
+        var q6 = ImageModelService.BuildPackage(ImageModelService.Catalog[1], manual);
+        svcVm.Save(q6 with { TextEncoderPath = completa.Package.TextEncoderPath, VaePath = completa.Package.VaePath });
+        vm.Refresh();
+        var filaQ6 = vm.Packages.First(p => p.Id == "z-image-turbo-q6k");
+        Check("con text encoder y VAE ya bajados, a la otra variante le falta solo la difusión",
+            filaQ6.PendingDownloadBytes == ImageModelService.Catalog[1].Components[0].ExpectedBytes,
+            $"{filaQ6.PendingDownloadBytes}");
+
+        // Un paquete armado a mano no tiene de dónde bajarse.
+        svcVm.Save(new ImageModelPackage { Id = "a-mano", DisplayName = "A mano", DiffusionModelPath = Path.Combine(manual, "no-existe.gguf") });
+        vm.Refresh();
+        vm.SelectedRow = vm.Packages.First(p => p.Id == "a-mano");
+        Check("uno armado a mano no ofrece descarga", !vm.DownloadCommand.CanExecute(null) && vm.DownloadText.Contains("a mano"),
+            vm.DownloadText);
+        Check("y su estado dice qué archivo le falta", vm.SelectedRow.StatusText.Contains("falta"), vm.SelectedRow.StatusText);
     }
 
     /// <summary>

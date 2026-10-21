@@ -33,6 +33,8 @@ public partial class App : Application
 
         base.OnStartup(e);
 
+        Helpers.DarkTitleBar.RegisterForAllWindows();
+
         // El idioma, antes de crear la primera ventana: el XAML resuelve los textos al
         // cargarse. Se lee la configuración acá —MainWindow la vuelve a leer— porque es
         // lo único que hace falta antes de que exista.
