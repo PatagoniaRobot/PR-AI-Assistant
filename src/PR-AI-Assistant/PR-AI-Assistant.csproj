@@ -143,6 +143,7 @@
          sustituye al archivo. Mismo criterio que Help\: si no está acá, no se copia. -->
     <None Include="..\..\THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\LICENSE" Link="LICENSE" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\NOTICE" Link="NOTICE" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- Models y Tools se copian manualmente por el perito (archivos >2 GB rompen SingleFile bundle) -->

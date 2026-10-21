@@ -40,10 +40,16 @@ echo Config\, Prompts\, Help\ y Tools\ salen solos al lado del .exe: los motores
 echo NO van dentro del ejecutable (por eso pesaba 944 MB y no tenia motor).
 echo Verificar que esten %OUTDIR%\Tools\llama-server.exe y Tools\vulkan\.
 echo.
-echo IMPORTANTE: Para distribuir, agregar junto al .exe:
-echo   - Carpeta Models\ VACIA: la aplicacion se publica sin modelos, cada
-echo     usuario baja los suyos (ver DISTRIBUCION.md)
-echo.
+if /I not "%~1"=="forense" (
+    echo Armando los dos paquetes en Paquetes\ ^(con Models\ vacia y su .sha256^)...
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0empaquetar.ps1"
+    if errorlevel 1 (
+        echo [ERROR] No se pudieron armar los paquetes.
+        pause
+        exit /b 1
+    )
+    echo.
+)
 echo TOOLS: la release de llama.cpp trae 21 ejecutables y la aplicacion usa UNO,
 echo llama-server.exe. Los otros 20 se sacaron (77,5 MB) junto con ggml-rpc.dll.
 echo No volver a copiar la carpeta entera de una release nueva: llevar solo

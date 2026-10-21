@@ -48,6 +48,7 @@ modelos, o los provee la institución que la instala.
 PR-AI-Assistant/
 ├── PR-AI-Assistant.exe      Ejecutable (self-contained, .NET 10: no requiere instalar .NET)
 ├── LICENSE                  Apache 2.0
+├── NOTICE                   Aviso de la licencia Apache: autoría y componentes principales
 ├── THIRD-PARTY-NOTICES.txt  Avisos de terceros: obligatorio incluirlo
 ├── Config/
 │   ├── model_catalog.json   Perfiles de ejecución y modelos sugeridos
@@ -64,12 +65,16 @@ PR-AI-Assistant/
 
 **Cuál motor se usa lo elige la aplicación según la placa**: CUDA si es NVIDIA, Vulkan si
 es AMD o Intel, y CPU si no hay placa. Si una de las dos variantes falta, usa la que haya.
-Eso permite dos paquetes:
+Por eso `publish.bat` arma dos paquetes en `Paquetes\` (lo hace `empaquetar.ps1`), cada
+uno con su `.sha256` al lado:
 
-| paquete | chat | imágenes | para quién |
+| paquete | motor de chat | comprimido | para quién |
 |---|---|---|---|
-| completo | CUDA + Vulkan | CUDA + Vulkan | cualquiera; NVIDIA un poco más rápido |
-| liviano | solo Vulkan (~90 MB) | solo Vulkan (~28 MB) | cualquiera; ahorra ~1,5 GB de CUDA |
+| `PR-AI-Assistant-<versión>.zip` | solo Vulkan | 85 MB | cualquiera; el que se recomienda |
+| `PR-AI-Assistant-<versión>-NVIDIA.zip` | CUDA + Vulkan | 604 MB | NVIDIA, un poco más rápido |
+
+Los dos se probaron descomprimidos y conversando, el 21 de octubre de 2026. Con Vulkan, la
+primera respuesta de la primera vez tarda ~13 s más: el motor prepara la placa una sola vez.
 
 Medido en una RTX 5060 Ti: el chat escribe igual por los dos (59,9 contra 59,3 tok/s) y
 lee un texto largo un 17 % más lento por Vulkan; una imagen 1024×1024 tarda lo mismo en
@@ -140,6 +145,6 @@ las licencias MIT, Apache 2.0 y del EULA de NVIDIA.
 - [ ] `Tools\` y `Tools\vulkan\` sin `ggml-rpc.dll` ni `rpc-server.exe`.
 - [ ] Las variantes CUDA y Vulkan de cada motor son de **la misma release** (hoy llama.cpp
       `b8671`, stable-diffusion.cpp `master-975-95b3090`).
-- [ ] `LICENSE` y `THIRD-PARTY-NOTICES.txt` presentes.
+- [ ] `LICENSE`, `NOTICE` y `THIRD-PARTY-NOTICES.txt` presentes (empaquetar.ps1 corta si falta uno).
 - [ ] Los bancos de `Tests\` pasan contra la compilación que se publica (ver `Tests\README.md`).
 - [ ] En la edición Forense, `Tests\GeneracionDeImagenes\verificar-barrera.ps1` da cero fallas.

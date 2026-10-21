@@ -8,6 +8,7 @@
 # Salidas de publicación y descargas locales (varios GB, no versionables)
 Publish/
 Publish-Forense/
+Paquetes/
 Downloads/
 
 # Motor y modelos de generación de imágenes (E4). El motor descomprimido son ~1,1 GB
