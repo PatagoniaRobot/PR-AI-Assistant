@@ -14,6 +14,7 @@
   "searx.http429": "La instancia {0} limitó la cantidad de consultas (429). Las instancias públicas suelen restringir el uso automatizado; una instancia propia no tiene ese límite.",
   "searx.httpOther": "La instancia de SearXNG respondió {0} ({1}).",
   "searx.notJson": "La instancia no devolvió JSON. Verificá que tenga habilitado el formato «json» en la lista «formats» de su settings.yml.",
+  "pipeline.searching": "Buscando…",
   "pipeline.searchFailed": "Falló la búsqueda.",
   "pipeline.noResults": "La búsqueda no devolvió resultados.",
   "pipeline.reading": "Leyendo {0} páginas…",

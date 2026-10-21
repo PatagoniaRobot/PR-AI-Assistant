@@ -1500,6 +1500,12 @@ public class MainViewModel : ObservableObject
                 $"proveedor={provider.Name} leidas={context.PagesRead}/{context.PagesAttempted} " +
                 $"frescura={freshness}");
 
+            if (context.TimeRangeDropped)
+            {
+                Messages.Insert(Messages.Count - 1, new ChatMessageViewModel("system",
+                    Loc.T("web.message.widened"), icon: IconKind.Info));
+            }
+
             if (context.PagesRead < context.PagesAttempted)
             {
                 Messages.Insert(Messages.Count - 1, new ChatMessageViewModel("system",

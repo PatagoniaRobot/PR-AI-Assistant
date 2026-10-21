@@ -52,6 +52,7 @@
   "web.config.invalid": "La dirección no es válida. Debe ser una URL http o https, por ejemplo http://127.0.0.1:8080.",
   "web.message.failed": "Búsqueda web: {0} Se responde sin fuentes web.",
   "web.message.partial": "Se leyeron {0} de {1} fuentes. Las que fallaron figuran en el panel de fuentes.",
+  "web.message.widened": "No había resultados del período elegido: se buscó sin límite de fecha.",
   "web.message.interrupted": "Búsqueda web interrumpida: {0}. Se responde sin fuentes web.",
 
   "session.peritoFormat": "Perito: {0} | {1}",

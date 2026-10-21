@@ -52,6 +52,7 @@
   "web.config.invalid": "The address is not valid. It must be an http or https URL, for example http://127.0.0.1:8080.",
   "web.message.failed": "Web search: {0} Answering without web sources.",
   "web.message.partial": "{0} of {1} sources were read. The ones that failed are listed in the sources panel.",
+  "web.message.widened": "There were no results for the chosen period: searched without a date limit.",
   "web.message.interrupted": "Web search interrupted: {0}. Answering without web sources.",
 
   "session.peritoFormat": "Examiner: {0} | {1}",

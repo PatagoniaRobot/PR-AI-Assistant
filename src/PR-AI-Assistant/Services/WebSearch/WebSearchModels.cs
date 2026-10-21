@@ -62,8 +62,11 @@ public sealed class WebSearchResponse
     public string? ErrorMessage { get; init; }
     public List<WebSearchResult> Results { get; init; } = new();
 
-    public static WebSearchResponse Ok(List<WebSearchResult> results) =>
-        new() { Success = true, Results = results };
+    /// <summary>El período elegido no dio nada y estos resultados son sin límite de fecha.</summary>
+    public bool TimeRangeDropped { get; init; }
+
+    public static WebSearchResponse Ok(List<WebSearchResult> results, bool timeRangeDropped = false) =>
+        new() { Success = true, Results = results, TimeRangeDropped = timeRangeDropped };
 
     public static WebSearchResponse Fail(string message) =>
         new() { Success = false, ErrorMessage = message };
@@ -88,6 +91,9 @@ public sealed class WebSearchContext
 
     /// <summary>Cuántas páginas se intentaron descargar.</summary>
     public int PagesAttempted { get; init; }
+
+    /// <summary>Se buscó sin límite de fecha porque el período elegido no dio nada.</summary>
+    public bool TimeRangeDropped { get; init; }
 
     public static WebSearchContext Fail(string message) =>
         new() { Success = false, ErrorMessage = message };

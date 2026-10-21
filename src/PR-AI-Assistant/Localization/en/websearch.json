@@ -14,6 +14,7 @@
   "searx.http429": "The instance {0} limited the number of queries (429). Public instances usually restrict automated use; your own instance has no such limit.",
   "searx.httpOther": "The SearXNG instance answered {0} ({1}).",
   "searx.notJson": "The instance did not return JSON. Check that the «json» format is enabled in the «formats» list of its settings.yml.",
+  "pipeline.searching": "Searching…",
   "pipeline.searchFailed": "The search failed.",
   "pipeline.noResults": "The search returned no results.",
   "pipeline.reading": "Reading {0} pages…",

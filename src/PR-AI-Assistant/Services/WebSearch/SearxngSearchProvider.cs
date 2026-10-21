@@ -77,23 +77,28 @@ public sealed class SearxngSearchProvider : IWebSearchProvider, IDisposable
         // "//search". Una instancia servida directo lo tolera; detrás de un proxy
         // inverso es un 404.
         string root = baseUri.GetLeftPart(UriPartial.Path).TrimEnd('/');
-        string url = $"{root}/search?q={Uri.EscapeDataString(query)}&format=json&categories=general&language={Loc.Language}";
+
+        // El idioma lo detecta SearXNG de la consulta. Hasta el 21 de octubre de 2026 se le
+        // mandaba el de la interfaz, y con la aplicación en inglés una pregunta en español
+        // filtrada al último mes daba CERO resultados (la misma, en automático, daba 20).
+        string url = $"{root}/search?q={Uri.EscapeDataString(query)}&format=json&categories=general&language=auto";
 
         string? range = freshness.ToApiValue();
-        if (range != null) url += $"&time_range={range}";
 
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.Add("Accept", "application/json");
+            var respuesta = await PedirAsync(range != null ? $"{url}&time_range={range}" : url, baseUri, count, ct);
 
-            using var response = await _http.SendAsync(request, ct);
+            // Si el filtro de fecha deja la búsqueda vacía, se busca otra vez sin él y se
+            // avisa: una respuesta con fuentes más viejas sirve más que ninguna fuente.
+            if (range != null && respuesta.Success && respuesta.Results.Count == 0)
+            {
+                var sinFecha = await PedirAsync(url, baseUri, count, ct);
+                if (sinFecha.Success && sinFecha.Results.Count > 0)
+                    return WebSearchResponse.Ok(sinFecha.Results, timeRangeDropped: true);
+            }
 
-            if (!response.IsSuccessStatusCode)
-                return WebSearchResponse.Fail(DescribeHttpFailure(response.StatusCode, baseUri));
-
-            string body = await response.Content.ReadAsStringAsync(ct);
-            return Parse(body, count);
+            return respuesta;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -111,6 +116,20 @@ public sealed class SearxngSearchProvider : IWebSearchProvider, IDisposable
         {
             return WebSearchResponse.Fail(Loc.F("searx.unexpected", ex.Message));
         }
+    }
+
+    private async Task<WebSearchResponse> PedirAsync(string url, Uri baseUri, int count, CancellationToken ct)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("Accept", "application/json");
+
+        using var response = await _http.SendAsync(request, ct);
+
+        if (!response.IsSuccessStatusCode)
+            return WebSearchResponse.Fail(DescribeHttpFailure(response.StatusCode, baseUri));
+
+        string body = await response.Content.ReadAsStringAsync(ct);
+        return Parse(body, count);
     }
 
     /// <summary>

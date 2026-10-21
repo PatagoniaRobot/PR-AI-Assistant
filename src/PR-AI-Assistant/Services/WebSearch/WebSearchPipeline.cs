@@ -88,7 +88,7 @@ public sealed class WebSearchPipeline : IDisposable
     public async Task<WebSearchContext> BuildContextAsync(
         string userQuery, SearchFreshness freshness, CancellationToken ct = default)
     {
-        ProgressChanged?.Invoke(this, "Buscando…");
+        ProgressChanged?.Invoke(this, Loc.T("pipeline.searching"));
 
         var search = await _provider.SearchAsync(userQuery, ResultCount, freshness, ct)
                                     .ConfigureAwait(false);
@@ -182,7 +182,8 @@ public sealed class WebSearchPipeline : IDisposable
             EnrichedQuery = BuildPrompt(userQuery, sources, pageTexts),
             Sources = sources,
             PagesRead = read,
-            PagesAttempted = sources.Count
+            PagesAttempted = sources.Count,
+            TimeRangeDropped = search.TimeRangeDropped
         };
     }
 
