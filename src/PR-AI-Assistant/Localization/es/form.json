@@ -8,7 +8,7 @@
   "form.case": "N° de causa / expediente *",
   "form.case.example": "Ej: CASO-2026-0142",
   "form.court": "Juzgado / Fiscalía (opcional)",
-  "form.court.example": "Ej: Fiscalía N°5 Neuquén",
+  "form.court.example": "Ej: Fiscalía N° 5",
   "form.description": "Descripción breve (opcional)",
   "form.description.example": "Ej: Análisis de dispositivo Samsung S23 Ultra",
   "form.required": "* Campos obligatorios",
