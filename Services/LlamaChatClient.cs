@@ -77,13 +77,18 @@ public class LlamaChatClient : IDisposable
             var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
             using var reader = new StreamReader(stream, Encoding.UTF8);
 
-            while (!reader.EndOfStream)
+            // El fin del stream se detecta por el null de ReadLineAsync: EndOfStream lee
+            // en forma sincrónica y bloquea el hilo mientras llama-server piensa (CA2024).
+            while (true)
             {
                 ct.ThrowIfCancellationRequested();
 
                 var line = await reader.ReadLineAsync(ct).ConfigureAwait(false);
 
-                if (string.IsNullOrEmpty(line))
+                if (line is null)
+                    break;
+
+                if (line.Length == 0)
                     continue;
 
                 // Formato SSE: "data: {json}" o "data: [DONE]"

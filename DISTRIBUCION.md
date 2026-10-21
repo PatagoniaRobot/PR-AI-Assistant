@@ -46,7 +46,7 @@ modelos, o los provee la institución que la instala.
 
 ```
 PR-AI-Assistant/
-├── PR-AI-Assistant.exe      Ejecutable (self-contained, .NET 8: no requiere instalar .NET)
+├── PR-AI-Assistant.exe      Ejecutable (self-contained, .NET 10: no requiere instalar .NET)
 ├── LICENSE                  Apache 2.0
 ├── THIRD-PARTY-NOTICES.txt  Avisos de terceros: obligatorio incluirlo
 ├── Config/

@@ -149,7 +149,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ================================================================================
 
 La aplicación se publica de forma autónoma (self-contained), de modo que
-incluye el runtime de .NET 8.
+incluye el runtime de .NET 10.
 
 Proyecto: https://github.com/dotnet/runtime
 

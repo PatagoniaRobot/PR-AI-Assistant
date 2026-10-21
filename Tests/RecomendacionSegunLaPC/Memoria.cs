@@ -19,7 +19,7 @@ partial class Banco
     {
         new(@"Models\gemma-4-E2B-it-Q4_K_M.gguf", 1407.73, 1756.00, 48 + 30, 192 + 30, 0),
         new(@"Models\gemma-4-E4B-it-Q4_K_M.gguf", 2883.51, 2208.00, 128 + 100, 512 + 100, 0, 272 + 53.12),
-        new(@"bin\Debug\net8.0-windows\ModelosDescargados\Qwen3.5-9B-Q5_K_S.gguf", 5389.13, 666.88, 256, 1024, 201, 544),
+        new(@"bin\Debug\net10.0-windows\ModelosDescargados\Qwen3.5-9B-Q5_K_S.gguf", 5389.13, 666.88, 256, 1024, 201, 544),
     };
 
     static void CasoMemoriaMedida()

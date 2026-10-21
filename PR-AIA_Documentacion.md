@@ -1,7 +1,7 @@
 # PR-AI Assistant - Documentación Técnica y Arquitectura
 
 ## 1. Visión General del Proyecto
-**PR-AI Assistant** es una aplicación de escritorio desarrollada en **.NET 8 (WPF)** diseñada específicamente para el triaje forense digital. Forma parte de la suite *PRImager Forensic Core*. Su característica principal es la ejecución **100% local** de modelos de Inteligencia Artificial (LLMs y VLMs), garantizando la privacidad de los datos, el cumplimiento estricto de la cadena de custodia y la no alteración de la evidencia digital.
+**PR-AI Assistant** es una aplicación de escritorio desarrollada en **.NET 10 (WPF)** diseñada específicamente para el triaje forense digital. Forma parte de la suite *PRImager Forensic Core*. Su característica principal es la ejecución **100% local** de modelos de Inteligencia Artificial (LLMs y VLMs), garantizando la privacidad de los datos, el cumplimiento estricto de la cadena de custodia y la no alteración de la evidencia digital.
 
 El proyecto actúa como una interfaz especializada que orquesta un motor de inferencia subyacente (`llama.cpp` a través de `llama-server.exe`), proporcionando un entorno seguro, auditable y enfocado en la usabilidad del perito forense.
 

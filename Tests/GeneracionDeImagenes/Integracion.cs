@@ -438,7 +438,7 @@ static class BancoIntegracion
     {
         var raiz = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
-        var forense = Path.Combine(raiz, "bin", "Forense", "net8.0-windows", "PR-AI-Assistant.dll");
+        var forense = Path.Combine(raiz, "bin", "Forense", "net10.0-windows", "PR-AI-Assistant.dll");
 
         if (!File.Exists(forense))
         {

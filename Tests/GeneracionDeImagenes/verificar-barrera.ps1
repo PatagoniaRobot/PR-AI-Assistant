@@ -12,8 +12,8 @@ param(
     [string]$Raiz = "$PSScriptRoot\..\.."
 )
 
-$forense = Join-Path $Raiz "bin\Forense\net8.0-windows\PR-AI-Assistant.dll"
-$debug   = Join-Path $Raiz "bin\Debug\net8.0-windows\PR-AI-Assistant.dll"
+$forense = Join-Path $Raiz "bin\Forense\net10.0-windows\PR-AI-Assistant.dll"
+$debug   = Join-Path $Raiz "bin\Debug\net10.0-windows\PR-AI-Assistant.dll"
 
 foreach ($f in @($forense, $debug)) {
     if (-not (Test-Path $f)) {

@@ -190,7 +190,7 @@ public class ModeSelectionViewModel : ObservableObject
                 "  Componentes redistribuibles para aceleración por GPU.\n\n" +
                 "• LLVM OpenMP Runtime — Apache 2.0 con excepciones LLVM\n" +
                 "  https://llvm.org\n\n" +
-                "• .NET 8 — Licencia MIT\n" +
+                "• .NET 10 — Licencia MIT\n" +
                 "  https://dotnet.microsoft.com\n" +
                 "  Framework de desarrollo de Microsoft.\n\n" +
 #if WEB_SEARCH

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <Nullable>disable</Nullable>
     <AssemblyName>ArchivosQueNoSonModelos</AssemblyName>
@@ -19,7 +19,7 @@
     -->
     <EdicionApp Condition="'$(EdicionApp)' == ''">Debug</EdicionApp>
     <RaizApp Condition="'$(RaizApp)' == ''">$(MSBuildThisFileDirectory)..\..</RaizApp>
-    <DllDeLaApp>$(RaizApp)\bin\$(EdicionApp)\net8.0-windows\PR-AI-Assistant.dll</DllDeLaApp>
+    <DllDeLaApp>$(RaizApp)\bin\$(EdicionApp)\net10.0-windows\PR-AI-Assistant.dll</DllDeLaApp>
   </PropertyGroup>
 
   <!-- La edición Forense no compila el catálogo: esos casos no existen contra ese DLL. -->
