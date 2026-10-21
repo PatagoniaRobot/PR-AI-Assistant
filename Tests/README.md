@@ -374,7 +374,7 @@ no lo hace fallar: omite la referencia y el banco explota con decenas de «no se
 encontró el tipo `PRImager`». Los `.csproj` verifican que el DLL esté y cortan con
 ese motivo, pero conviene saberlo.
 
-Contra `0a2ea1f` este banco da 7 OK y 5 fallas, y reproduce el síntoma que había
+Contra `f6c18fd` este banco da 7 OK y 5 fallas, y reproduce el síntoma que había
 reportado el usuario. Después del arreglo, 13 y 0.
 
 Terminado, se limpia el worktree:
