@@ -213,7 +213,7 @@ search:
                 <h3>Qué hace falta</h3>
                 <p>Dos cosas, ninguna incluida en la distribución por su tamaño:</p>
                 <ul>
-                    <li><strong>El motor:</strong> <code>sd-server.exe</code>, de <a href="https://github.com/leejet/stable-diffusion.cpp">stable-diffusion.cpp</a>, en su build con CUDA. Se descomprime en <code>Tools\sd\bin\</code>, junto a la aplicación, o se elige a mano desde la ventana de modelos de imagen.</li>
+                    <li><strong>El motor:</strong> <code>sd-server.exe</code>, de <a href="https://github.com/leejet/stable-diffusion.cpp">stable-diffusion.cpp</a>, en su versión CUDA para placas NVIDIA o en la Vulkan para AMD e Intel. La CUDA se descomprime en <code>Tools\sd\bin\</code> y la Vulkan en <code>Tools\sd\bin-vulkan\</code>, junto a la aplicación; si están las dos, la aplicación elige la que corresponde a la placa. También se puede elegir a mano desde la ventana de modelos de imagen.</li>
                     <li><strong>Un paquete de modelo:</strong> y acá está la diferencia con el chat. <strong>Un modelo de imagen son tres archivos</strong>, no uno: el modelo de difusión, el <em>text encoder</em> y el VAE. Si falta cualquiera de los tres, el motor no arranca.</li>
                 </ul>
                 <p>En <strong>Modelos de imagen</strong> hay tres variantes de <strong>Z-Image Turbo</strong> para bajar con un botón: <strong>Q4_K</strong> (6,2 GB en total), <strong>Q6_K</strong> y <strong>Q8_0</strong>. La ventana marca como <em>Recomendado</em> la que conviene a tu placa —Q4_K hasta 16 GB de VRAM, Q6_K con 20 GB o más— y solo ofrece bajar lo que todavía no está: las tres comparten text encoder y VAE, así que la segunda variante baja un solo archivo. También se puede armar un paquete a mano apuntando a los tres archivos.</p>
@@ -270,13 +270,13 @@ search:
                     <tr><th>Componente</th><th>Mínimo</th><th>Recomendado</th></tr>
                     <tr><td>Sistema Operativo</td><td>Windows 10 x64</td><td>Windows 11 x64</td></tr>
                     <tr><td>RAM</td><td>8 GB</td><td>16 GB</td></tr>
-                    <tr><td>GPU</td><td>No requerida (CPU)</td><td>NVIDIA GTX 1060 6GB+</td></tr>
-                    <tr><td>GPU Óptima</td><td>&mdash;</td><td>NVIDIA RTX 3060 12GB</td></tr>
+                    <tr><td>GPU para el chat</td><td>No requerida (CPU)</td><td>NVIDIA, AMD o Intel con 8 GB de VRAM o más</td></tr>
+                    <tr><td>GPU para imágenes</td><td>Una placa NVIDIA, AMD o Intel</td><td>12 GB de VRAM o más</td></tr>
                     <tr><td>Espacio en disco</td><td>5 GB</td><td>5 GB</td></tr>
-                    <tr><td>Conexión a Internet</td><td colspan="2">No requerida. La inferencia es 100% offline; solo la búsqueda web opcional usa la red</td></tr>
+                    <tr><td>Conexión a Internet</td><td colspan="2">No requerida. La inferencia es 100% offline; la red se usa solo para bajar modelos y para la búsqueda web opcional</td></tr>
                 </table>
                 <div class="note">
-                    <strong>Nota:</strong> La aplicación detecta automáticamente la GPU disponible. Si no se encuentra GPU NVIDIA con soporte CUDA, opera en modo CPU con rendimiento reducido pero funcional. Las DLLs de CUDA runtime (<code>cublas64_13.dll</code>, <code>cublasLt64_13.dll</code>) deben estar presentes en la carpeta <code>Tools/</code> para la aceleración por GPU.
+                    <strong>Nota:</strong> La aplicación detecta la placa sola y elige el motor: CUDA si es NVIDIA, Vulkan si es AMD o Intel. Sin placa dedicada opera en CPU, más lento pero funcional. En AMD e Intel todavía no se probó en una placa real, y la memoria libre de la placa no se mide: el semáforo de imágenes queda en «desconocido», que no impide generar.
                 </div>
             </div>
 
@@ -299,7 +299,8 @@ PR-AI-Assistant/
 │   ├── llama-server.exe    Motor de inferencia
 │   ├── ggml-cuda.dll       Backend CUDA
 │   ├── cublas64_13.dll     CUDA runtime
-│   └── ...                 DLLs de soporte
+│   ├── ...                 DLLs de soporte
+│   └── vulkan/             El mismo motor para AMD e Intel
 ├── Logs/                   Logs de auditoría forense
 ├── Sessions/               Sesiones exportadas
 └── Help/
@@ -494,7 +495,7 @@ search:
                 <h3>What you need</h3>
                 <p>Two things, neither shipped with the distribution because of their size:</p>
                 <ul>
-                    <li><strong>The engine:</strong> <code>sd-server.exe</code>, from <a href="https://github.com/leejet/stable-diffusion.cpp">stable-diffusion.cpp</a>, CUDA build. Unpack it into <code>Tools\sd\bin\</code> next to the application, or pick it manually from the image models window.</li>
+                    <li><strong>The engine:</strong> <code>sd-server.exe</code>, from <a href="https://github.com/leejet/stable-diffusion.cpp">stable-diffusion.cpp</a>, in its CUDA build for NVIDIA cards or its Vulkan build for AMD and Intel. The CUDA one is unpacked into <code>Tools\sd\bin\</code> and the Vulkan one into <code>Tools\sd\bin-vulkan\</code>, next to the application; if both are there, the application picks the one that suits the card. You can also pick it manually from the image models window.</li>
                     <li><strong>A model package:</strong> and here is the difference from chat. <strong>An image model is three files</strong>, not one: the diffusion model, the text encoder and the VAE. If any of the three is missing, the engine will not start.</li>
                 </ul>
                 <p><strong>Image models</strong> offers three variants of <strong>Z-Image Turbo</strong> to download with one button: <strong>Q4_K</strong> (6.2 GB total), <strong>Q6_K</strong> and <strong>Q8_0</strong>. The window marks as <em>Recommended</em> the one that suits your card —Q4_K up to 16 GB of VRAM, Q6_K with 20 GB or more— and only offers to download what is not there yet: the three share the text encoder and VAE, so a second variant downloads a single file. You can also assemble your own package by pointing at the three files.</p>
@@ -551,13 +552,13 @@ search:
                     <tr><th>Component</th><th>Minimum</th><th>Recommended</th></tr>
                     <tr><td>Operating System</td><td>Windows 10 x64</td><td>Windows 11 x64</td></tr>
                     <tr><td>RAM</td><td>8 GB</td><td>16 GB</td></tr>
-                    <tr><td>GPU</td><td>Not required (CPU)</td><td>NVIDIA GTX 1060 6GB+</td></tr>
-                    <tr><td>Optimal GPU</td><td>&mdash;</td><td>NVIDIA RTX 3060 12GB</td></tr>
+                    <tr><td>GPU for chat</td><td>Not required (CPU)</td><td>NVIDIA, AMD or Intel with 8 GB of VRAM or more</td></tr>
+                    <tr><td>GPU for images</td><td>An NVIDIA, AMD or Intel card</td><td>12 GB of VRAM or more</td></tr>
                     <tr><td>Disk space</td><td>5 GB</td><td>5 GB</td></tr>
-                    <tr><td>Internet connection</td><td colspan="2">Not required. Inference is 100% offline; only the optional web search uses the network</td></tr>
+                    <tr><td>Internet connection</td><td colspan="2">Not required. Inference is 100% offline; the network is used only to download models and for the optional web search</td></tr>
                 </table>
                 <div class="note">
-                    <strong>Note:</strong> The application automatically detects available GPU. If no NVIDIA GPU with CUDA support is found, it operates in CPU mode with reduced but functional performance. CUDA runtime DLLs (<code>cublas64_13.dll</code>, <code>cublasLt64_13.dll</code>) must be present in the <code>Tools/</code> folder for GPU acceleration.
+                    <strong>Note:</strong> The application detects the card by itself and picks the engine: CUDA for NVIDIA, Vulkan for AMD and Intel. Without a dedicated card it runs on the CPU, slower but functional. It has not yet been tested on a real AMD or Intel card, and their free video memory is not measured: the image indicator shows "unknown", which does not prevent generating.
                 </div>
             </div>
 
@@ -580,7 +581,8 @@ PR-AI-Assistant/
 │   ├── llama-server.exe    Inference engine
 │   ├── ggml-cuda.dll       CUDA backend
 │   ├── cublas64_13.dll     CUDA runtime
-│   └── ...                 Support DLLs
+│   ├── ...                 Support DLLs
+│   └── vulkan/             The same engine for AMD and Intel
 ├── Logs/                   Forensic audit logs
 ├── Sessions/               Exported sessions
 └── Help/

@@ -23,6 +23,8 @@ It ships **without models**. You pick the ones you want from a built-in catalog,
 application reads your PC (graphics card of any brand, RAM, processor) and tells you
 which version of each model will run well on it.
 
+![A question answered by a local model in PR-AI Assistant](docs/images/chat.png)
+
 ## What it does
 
 - **Chat with local models.** Any GGUF model from HuggingFace. Runs on the graphics card
@@ -39,6 +41,10 @@ which version of each model will run well on it.
   run yourself. The button only appears once you have configured one.
 - **Spanish and English.** It starts in your Windows language and can be switched from
   the start screen.
+
+| Start screen | Model catalog |
+|---|---|
+| ![Start screen with Investigation Mode and PR Academy](docs/images/start-screen.png) | ![Model catalog marking the recommended quantization for the PC](docs/images/model-catalog.png) |
 
 ## Getting started
 

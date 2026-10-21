@@ -23,6 +23,8 @@ Se publica **sin modelos**. Elegís los que quieras desde un catálogo integrado
 aplicación lee tu PC —placa de video de cualquier marca, RAM, procesador— y te dice qué
 versión de cada modelo va a andar bien en ella.
 
+![Una pregunta respondida por un modelo local en PR-AI Assistant](docs/images/chat.png)
+
 ## Qué hace
 
 - **Chat con modelos locales.** Cualquier modelo GGUF de HuggingFace. Corre en la placa de
@@ -41,6 +43,12 @@ versión de cada modelo va a andar bien en ella.
   una configurada.
 - **Español e inglés.** Arranca en el idioma de Windows y se cambia desde la pantalla de
   inicio.
+
+| Pantalla de inicio | Catálogo de modelos |
+|---|---|
+| ![Pantalla de inicio con el Modo Investigación y PR Academy](docs/images/start-screen.png) | ![Catálogo de modelos marcando la cuantización recomendada para la PC](docs/images/model-catalog.png) |
+
+Las capturas son de la aplicación en inglés; en español se ve igual, con los textos traducidos.
 
 ## Cómo empezar
 
