@@ -5,12 +5,15 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:PRImager.AIAssistant.Views"
              xmlns:vm="clr-namespace:PRImager.AIAssistant.ViewModels"
+             xmlns:l="clr-namespace:PRImager.AIAssistant.Localization"
+             xmlns:c="clr-namespace:PRImager.AIAssistant.Controls"
              mc:Ignorable="d" 
              d:DataContext="{d:DesignInstance Type=vm:ModeSelectionViewModel}"
              Background="#1a1a2e" FontFamily="{StaticResource MainFont}"
              HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
 
     <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <!-- Estilo base para los botones-tarjeta -->
         <Style x:Key="CardButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="#0f172a" />
@@ -76,12 +79,12 @@
             <Setter Property="Foreground" Value="#cbd5e1"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
-        <Style x:Key="BulletIcon" TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="{StaticResource MainFont}"/>
-            <Setter Property="FontSize" Value="13"/>
+        <Style x:Key="BulletIcon" TargetType="c:Icon">
+            <Setter Property="Kind" Value="Check"/>
+            <Setter Property="Size" Value="14"/>
             <Setter Property="Foreground" Value="#10B981"/>
-            <Setter Property="Text" Value="✓"/>
-            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="Margin" Value="0,2,8,0"/>
         </Style>
     </UserControl.Resources>
 
@@ -109,15 +112,15 @@
                         Command="{Binding SelectInvestigationCommand}"
                         Margin="0,0,20,20">
                     <StackPanel Margin="32">
-                        <TextBlock Text="🔍" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                        <TextBlock Text="Modo Investigación" Foreground="#10B981" FontWeight="SemiBold" FontSize="22" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                        <TextBlock Text="Análisis de evidencia con&#x0a;cadena de custodia" Foreground="#94a3b8" FontSize="14" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,24"/>
+                        <c:Icon Kind="Search" Size="48" Foreground="#e2e8f0" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                        <TextBlock Text="{l:T mode.investigation.title}" Foreground="#10B981" FontWeight="SemiBold" FontSize="22" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                        <TextBlock Text="{l:T mode.investigation.subtitle}" Foreground="#94a3b8" FontSize="14" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,24"/>
                         
                         <StackPanel Margin="0,16,0,0">
-                            <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource BulletIcon}"/><TextBlock Text="Formulario de identificación" Style="{StaticResource BulletText}"/></StackPanel>
-                            <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource BulletIcon}"/><TextBlock Text="Acceso al Blackboard" Style="{StaticResource BulletText}"/></StackPanel>
-                            <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource BulletIcon}"/><TextBlock Text="Logging forense completo" Style="{StaticResource BulletText}"/></StackPanel>
-                            <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource BulletIcon}"/><TextBlock Text="Exportación de sesión" Style="{StaticResource BulletText}"/></StackPanel>
+                            <StackPanel Orientation="Horizontal"><c:Icon Style="{StaticResource BulletIcon}"/><TextBlock Text="{l:T mode.investigation.bullet1}" Style="{StaticResource BulletText}"/></StackPanel>
+                            <StackPanel Orientation="Horizontal"><c:Icon Style="{StaticResource BulletIcon}"/><TextBlock Text="{l:T mode.investigation.bullet2}" Style="{StaticResource BulletText}"/></StackPanel>
+                            <StackPanel Orientation="Horizontal"><c:Icon Style="{StaticResource BulletIcon}"/><TextBlock Text="{l:T mode.investigation.bullet3}" Style="{StaticResource BulletText}"/></StackPanel>
+                            <StackPanel Orientation="Horizontal"><c:Icon Style="{StaticResource BulletIcon}"/><TextBlock Text="{l:T mode.investigation.bullet4}" Style="{StaticResource BulletText}"/></StackPanel>
                         </StackPanel>
                     </StackPanel>
                 </Button>
@@ -128,18 +131,18 @@
                         Command="{Binding SelectConsultationCommand}"
                         Margin="0,0,0,20">
                     <StackPanel Margin="32">
-                        <TextBlock Text="🎓" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                        <TextBlock Text="Academia PR" Foreground="#10B981" FontWeight="SemiBold" FontSize="22" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                        <TextBlock Text="Consultas técnicas y legales&#x0a;sin acceso a evidencia" Foreground="#94a3b8" FontSize="14" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,24"/>
+                        <c:Icon Kind="Consultation" Size="48" Foreground="#e2e8f0" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                        <TextBlock Text="{l:T mode.consultation.title}" Foreground="#10B981" FontWeight="SemiBold" FontSize="22" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                        <TextBlock Text="{l:T mode.consultation.subtitle}" Foreground="#94a3b8" FontSize="14" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,24"/>
                         
                         <StackPanel Margin="0,16,0,0">
-                            <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource BulletIcon}"/><TextBlock Text="Legislación y normativa" Style="{StaticResource BulletText}"/></StackPanel>
-                            <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource BulletIcon}"/><TextBlock Text="Conceptos de informática forense" Style="{StaticResource BulletText}"/></StackPanel>
-                            <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource BulletIcon}"/><TextBlock Text="Sandbox completamente aislado" Style="{StaticResource BulletText}"/></StackPanel>
+                            <StackPanel Orientation="Horizontal"><c:Icon Style="{StaticResource BulletIcon}"/><TextBlock Text="{l:T mode.consultation.bullet1}" Style="{StaticResource BulletText}"/></StackPanel>
+                            <StackPanel Orientation="Horizontal"><c:Icon Style="{StaticResource BulletIcon}"/><TextBlock Text="{l:T mode.consultation.bullet2}" Style="{StaticResource BulletText}"/></StackPanel>
+                            <StackPanel Orientation="Horizontal"><c:Icon Style="{StaticResource BulletIcon}"/><TextBlock Text="{l:T mode.consultation.bullet3}" Style="{StaticResource BulletText}"/></StackPanel>
                         </StackPanel>
                         
                         <Border Background="#92400e" CornerRadius="10" Padding="12,4" HorizontalAlignment="Center" Margin="0,12,0,0">
-                            <TextBlock Text="SANDBOX AISLADO" Foreground="White" FontWeight="SemiBold" FontSize="11"/>
+                            <TextBlock Text="{l:T mode.consultation.badge}" Foreground="White" FontWeight="SemiBold" FontSize="11"/>
                         </Border>
                     </StackPanel>
                 </Button>
@@ -150,7 +153,7 @@
 
             <!-- Selector de Modelo y Perfil -->
             <StackPanel Width="660" HorizontalAlignment="Center" Margin="0,0,0,32">
-                <TextBlock Text="MODELO" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
+                <TextBlock Text="{l:T sidebar.model.header}" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -167,7 +170,7 @@
                 </StackPanel>
 
                 <!-- Ejecución -->
-                <TextBlock Text="EJECUCIÓN" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,24,0,8" />
+                <TextBlock Text="{l:T sidebar.execution.header}" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,24,0,8" />
                 <ItemsControl ItemsSource="{Binding AvailableExecutionProfiles}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -227,9 +230,30 @@
 
             <!-- Pie de página con botones -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
-                <Button Content="Ayuda" Style="{StaticResource FooterButtonStyle}" Command="{Binding HelpCommand}"/>
+                <Button Content="{l:T chat.help}" Style="{StaticResource FooterButtonStyle}" Command="{Binding HelpCommand}"/>
                 <TextBlock Text=" · " Foreground="#64748b" FontSize="12" VerticalAlignment="Center" Margin="4,0"/>
-                <Button Content="Licencias" Style="{StaticResource FooterButtonStyle}" Command="{Binding LicensesCommand}"/>
+                <Button Content="{l:T mode.licenses}" Style="{StaticResource FooterButtonStyle}" Command="{Binding LicensesCommand}"/>
+                <TextBlock Text=" · " Foreground="#64748b" FontSize="12" VerticalAlignment="Center" Margin="4,0"/>
+                <!-- Idioma: sigue a Windows salvo que se elija otro. Cambiarlo vuelve a abrir
+                     la aplicación (Localization\Loc.cs). -->
+                <c:Icon Kind="Language" Size="14" Foreground="#64748b" VerticalAlignment="Center" Margin="0,0,6,0" />
+                <ComboBox Style="{StaticResource ModernComboBox}" MinWidth="150" VerticalAlignment="Center"
+                          AutomationProperties.AutomationId="LanguageSelector"
+                          AutomationProperties.Name="{l:T mode.language}" ToolTip="{l:T mode.language}"
+                          ItemsSource="{Binding LanguageOptions}"
+                          SelectedItem="{Binding SelectedLanguage}"
+                          DisplayMemberPath="Label" />
+            </StackPanel>
+
+            <!-- El idioma elegido se aplica al volver a abrir -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10"
+                        Visibility="{Binding IsRestartPending, Converter={StaticResource BoolToVis}}">
+                <TextBlock Text="{l:T language.restart.notice}" Foreground="#F59E0B" FontSize="12"
+                           VerticalAlignment="Center" Margin="0,0,10,0" />
+                <Button Content="{l:T language.restart.now}" Command="{Binding RestartCommand}"
+                        AutomationProperties.AutomationId="RestartForLanguageButton"
+                        Foreground="#0f172a" Background="#10B981" BorderThickness="0"
+                        Padding="10,4" Cursor="Hand" FontWeight="SemiBold" />
             </StackPanel>
 
             <TextBlock Text="PR-AI Assistant © 2026 Patagonia Robot" 

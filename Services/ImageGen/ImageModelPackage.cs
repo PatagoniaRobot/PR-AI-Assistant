@@ -113,10 +113,22 @@ public sealed record ImageModelPackage
             var faltan = MissingComponents;
             if (faltan.Count == 0) return "";
             return faltan.Count == 1
-                ? $"falta el {faltan[0]}"
-                : "faltan " + string.Join(", ", faltan);
+                ? Loc.F("imagegen.missing.one", RoleText(faltan[0]))
+                : Loc.F("imagegen.missing.many", string.Join(", ", faltan.Select(RoleText)));
         }
     }
+
+    /// <summary>
+    /// El nombre de un componente para mostrar. «modelo de difusión», «text encoder» y
+    /// «VAE» son también los identificadores con que el código los busca, y esos no se
+    /// traducen: se traduce solo lo que se lee.
+    /// </summary>
+    public static string RoleText(string role) => role switch
+    {
+        "modelo de difusión" => Loc.T("imagegen.role.diffusion"),
+        "text encoder" => Loc.T("imagegen.role.textEncoder"),
+        _ => role
+    };
 
     /// <summary>Convierte el paquete en la configuración de arranque del servidor.</summary>
     public ImageServerConfig ToServerConfig(string serverExecutablePath, int port = 1234) => new()

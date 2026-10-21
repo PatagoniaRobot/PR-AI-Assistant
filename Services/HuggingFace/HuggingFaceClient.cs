@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using PRImager.AIAssistant.Localization;
 
 namespace PRImager.AIAssistant.Services.HuggingFace;
 
@@ -57,7 +58,7 @@ public sealed class HuggingFaceClient : IDisposable
         string query, int limit = 20, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(query))
-            return HfResult<List<HfRepo>>.Fail("Escribí algo para buscar.");
+            return HfResult<List<HfRepo>>.Fail(Loc.T("hf.emptyQuery"));
 
         string url = $"{ApiBase}/models?search={Uri.EscapeDataString(query)}" +
                      $"&filter=gguf&sort=downloads&direction=-1&limit={limit}";
@@ -93,7 +94,7 @@ public sealed class HuggingFaceClient : IDisposable
         }
         catch (JsonException ex)
         {
-            return HfResult<List<HfRepo>>.Fail($"Respuesta ilegible de HuggingFace: {ex.Message}");
+            return HfResult<List<HfRepo>>.Fail(Loc.F("hf.unreadable", ex.Message));
         }
     }
 
@@ -148,7 +149,7 @@ public sealed class HuggingFaceClient : IDisposable
         }
         catch (JsonException ex)
         {
-            return HfResult<HfRepoDetail>.Fail($"Respuesta ilegible de HuggingFace: {ex.Message}");
+            return HfResult<HfRepoDetail>.Fail(Loc.F("hf.unreadable", ex.Message));
         }
     }
 
@@ -205,20 +206,20 @@ public sealed class HuggingFaceClient : IDisposable
 
             header = GgufInspector.TryParse(buffer.AsSpan(0, read), fileLength);
             return header == null
-                ? HfResult<GgufHeader>.Fail("El archivo no tiene una cabecera GGUF legible.")
+                ? HfResult<GgufHeader>.Fail(Loc.T("hf.noGgufHeader"))
                 : HfResult<GgufHeader>.Ok(header);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            return HfResult<GgufHeader>.Fail("Operación cancelada.");
+            return HfResult<GgufHeader>.Fail(Loc.T("hf.cancelled"));
         }
         catch (TaskCanceledException)
         {
-            return HfResult<GgufHeader>.Fail("HuggingFace no respondió a tiempo.");
+            return HfResult<GgufHeader>.Fail(Loc.T("hf.timeout"));
         }
         catch (HttpRequestException ex)
         {
-            return HfResult<GgufHeader>.Fail($"No se pudo contactar a HuggingFace: {ex.Message}");
+            return HfResult<GgufHeader>.Fail(Loc.F("hf.unreachable", ex.Message));
         }
     }
 
@@ -291,15 +292,15 @@ public sealed class HuggingFaceClient : IDisposable
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            return HfResult<string>.Fail("Operación cancelada.");
+            return HfResult<string>.Fail(Loc.T("hf.cancelled"));
         }
         catch (TaskCanceledException)
         {
-            return HfResult<string>.Fail("HuggingFace no respondió a tiempo.");
+            return HfResult<string>.Fail(Loc.T("hf.timeout"));
         }
         catch (HttpRequestException ex)
         {
-            return HfResult<string>.Fail($"No se pudo contactar a HuggingFace: {ex.Message}");
+            return HfResult<string>.Fail(Loc.F("hf.unreachable", ex.Message));
         }
     }
 
@@ -325,7 +326,7 @@ public sealed class HuggingFaceClient : IDisposable
         if (errorCode.Equals("EntryNotFound", StringComparison.OrdinalIgnoreCase) ||
             errorCode.Equals("RevisionNotFound", StringComparison.OrdinalIgnoreCase))
         {
-            return ("El archivo no existe en la rama principal del repositorio.", false);
+            return (Loc.T("hf.entryNotFound"), false);
         }
 
         return response.StatusCode switch
@@ -333,12 +334,11 @@ public sealed class HuggingFaceClient : IDisposable
             HttpStatusCode.Forbidden => (GatedMessage(), true),
             // Sin header que lo aclare, 401 es ambiguo: se dicen las dos posibilidades
             HttpStatusCode.Unauthorized => (RepoNotFoundMessage(), false),
-            HttpStatusCode.NotFound => ("El repositorio o el archivo no existe en HuggingFace (404).", false),
-            HttpStatusCode.TooManyRequests =>
-                ("HuggingFace está limitando las peticiones (429). Probá de nuevo en unos minutos.", false),
+            HttpStatusCode.NotFound => (Loc.T("hf.notFound"), false),
+            HttpStatusCode.TooManyRequests => (Loc.T("hf.rateLimited"), false),
             _ => (string.IsNullOrWhiteSpace(errorMessage)
-                    ? $"HuggingFace respondió {(int)response.StatusCode} ({response.StatusCode})."
-                    : $"HuggingFace respondió {(int)response.StatusCode}: {errorMessage}", false)
+                    ? Loc.F("hf.status", (int)response.StatusCode, response.StatusCode)
+                    : Loc.F("hf.statusMessage", (int)response.StatusCode, errorMessage), false)
         };
     }
 
@@ -349,18 +349,13 @@ public sealed class HuggingFaceClient : IDisposable
     /// <summary>
     /// Mensaje para repos gated. Explícito y accionable: el fallo no se esconde.
     /// </summary>
-    internal static string GatedMessage() =>
-        "Este modelo requiere aceptar su licencia en huggingface.co y un token de acceso. " +
-        "Entrá al repositorio con tu cuenta, aceptá los términos, y cargá un token de lectura " +
-        "en la configuración para poder descargarlo.";
+    internal static string GatedMessage() => Loc.T("hf.gated");
 
     /// <summary>
     /// Mensaje para 401 sin marca de gated. HuggingFace no distingue entre
     /// "no existe" y "es privado", así que el mensaje tampoco lo inventa.
     /// </summary>
-    internal static string RepoNotFoundMessage() =>
-        "El repositorio no existe, es privado, o requiere autenticación. " +
-        "Verificá el nombre; si es privado, cargá un token de acceso en la configuración.";
+    internal static string RepoNotFoundMessage() => Loc.T("hf.repoNotFound");
 
     // --- Utilidades de parseo ---
 
@@ -414,7 +409,7 @@ public sealed class HuggingFaceClient : IDisposable
             }
         }
 
-        return "no declarada";
+        return Loc.T("hf.licenseUndeclared");
     }
 
     private static bool IsGatedFlag(JsonElement el)

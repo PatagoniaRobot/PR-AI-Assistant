@@ -7,7 +7,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         d:DataContext="{d:DesignInstance Type=vm:ProfileManagerViewModel}"
-        Title="Perfiles de uso — PR-AI Assistant"
+        xmlns:l="clr-namespace:PRImager.AIAssistant.Localization"
+        Title="{l:T profiles.window.title}"
         Height="620" Width="900"
         Background="#1A1A2E"
         WindowStartupLocation="CenterOwner"
@@ -105,8 +106,8 @@
 
         <!-- Encabezado -->
         <StackPanel Grid.Row="0" Grid.ColumnSpan="3" Margin="0,0,0,12">
-            <TextBlock Text="Perfiles de uso" FontSize="18" FontWeight="Bold" />
-            <TextBlock Text="Los perfiles de fábrica no se editan ni se borran. Cloná uno para partir de su configuración."
+            <TextBlock Text="{l:T profiles.title}" FontSize="18" FontWeight="Bold" />
+            <TextBlock Text="{l:T profiles.subtitle}"
                        Foreground="#94a3b8" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap" />
         </StackPanel>
 
@@ -122,7 +123,7 @@
                                        Fill="{Binding AccentColor, Converter={StaticResource HexToBrush}}" />
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                                <TextBlock Text="de fábrica" Foreground="#64748b" FontSize="10"
+                                <TextBlock Text="{l:T profiles.factoryTag}" Foreground="#64748b" FontSize="10"
                                            Visibility="{Binding IsFactory, Converter={StaticResource BoolToVis}}" />
                             </StackPanel>
                         </StackPanel>
@@ -139,14 +140,14 @@
                     <Border Background="#422006" BorderBrush="#B45309" BorderThickness="1" CornerRadius="4" Padding="10"
                             Visibility="{Binding IsFactorySelected, Converter={StaticResource BoolToVis}}">
                         <TextBlock Foreground="#FCD34D" FontSize="11" TextWrapping="Wrap"
-                                   Text="Perfil de fábrica: solo lectura. Usá «Clonar» para crear una copia editable." />
+                                   Text="{l:T profiles.readOnly}" />
                     </Border>
 
-                    <TextBlock Text="NOMBRE" Style="{StaticResource FieldLabel}" />
+                    <TextBlock Text="{l:T profiles.name}" Style="{StaticResource FieldLabel}" />
                     <TextBox Text="{Binding EditName, UpdateSourceTrigger=PropertyChanged}"
                              IsEnabled="{Binding IsEditable}" />
 
-                    <TextBlock Text="PROMPT DE SISTEMA" Style="{StaticResource FieldLabel}" />
+                    <TextBlock Text="{l:T profiles.systemPrompt}" Style="{StaticResource FieldLabel}" />
                     <TextBox Text="{Binding EditSystemPrompt, UpdateSourceTrigger=PropertyChanged}"
                              IsEnabled="{Binding IsEditable}"
                              AcceptsReturn="True" TextWrapping="Wrap" Height="180"
@@ -163,17 +164,17 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="TEMPERATURA" Style="{StaticResource FieldLabel}" />
+                            <TextBlock Text="{l:T profiles.temperature}" Style="{StaticResource FieldLabel}" />
                             <TextBox Text="{Binding EditTemperature, StringFormat={}{0:F2}}" IsEnabled="{Binding IsEditable}" />
                         </StackPanel>
 
                         <StackPanel Grid.Column="2">
-                            <TextBlock Text="CONTEXTO (TOKENS)" Style="{StaticResource FieldLabel}" />
+                            <TextBlock Text="{l:T profiles.context}" Style="{StaticResource FieldLabel}" />
                             <TextBox Text="{Binding EditContextTokens}" IsEnabled="{Binding IsEditable}" />
                         </StackPanel>
 
                         <StackPanel Grid.Column="4">
-                            <TextBlock Text="COLOR DE ACENTO" Style="{StaticResource FieldLabel}" />
+                            <TextBlock Text="{l:T profiles.accent}" Style="{StaticResource FieldLabel}" />
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -187,22 +188,22 @@
                         </StackPanel>
                     </Grid>
 
-                    <TextBlock Text="CAPACIDADES" Style="{StaticResource FieldLabel}" />
+                    <TextBlock Text="{l:T profiles.capabilities}" Style="{StaticResource FieldLabel}" />
                     <CheckBox IsChecked="{Binding EditWebSearchEnabled}" IsEnabled="{Binding IsEditable}"
-                              Content="Búsqueda web habilitada" />
+                              Content="{l:T profiles.cap.web}" />
                     <CheckBox IsChecked="{Binding EditModelDownloadEnabled}" IsEnabled="{Binding IsEditable}"
-                              Content="Descarga de modelos habilitada" />
+                              Content="{l:T profiles.cap.download}" />
                     <CheckBox IsChecked="{Binding EditImageGenEnabled}" IsEnabled="{Binding IsEditable}"
-                              Content="Generación de imágenes habilitada"
+                              Content="{l:T profiles.cap.images}"
                               AutomationProperties.AutomationId="EditImageGenCheck"
-                              ToolTip="El Modo Investigación siempre la deshabilita, y la edición institucional no la incluye en absoluto." />
+                              ToolTip="{l:T profiles.cap.images.tooltip}" />
                     <CheckBox IsChecked="{Binding EditFileUploadEnabled}" IsEnabled="{Binding IsEditable}"
-                              Content="Adjuntar archivos e imágenes"
-                              ToolTip="El Modo Investigación siempre la habilita: cargar evidencia es parte del marco institucional y un perfil no puede quitarla." />
+                              Content="{l:T profiles.cap.files}"
+                              ToolTip="{l:T profiles.cap.files.tooltip}" />
                     <CheckBox IsChecked="{Binding EditMandatoryLog}" IsEnabled="{Binding IsEditable}"
-                              Content="Registro de auditoría obligatorio" />
+                              Content="{l:T profiles.cap.log}" />
 
-                    <TextBlock Text="En Modo Investigación estas tres quedan forzadas — sin web, sin descargas, con registro obligatorio — sin importar lo que diga el perfil."
+                    <TextBlock Text="{l:T profiles.forcedHint}"
                                Foreground="#64748b" FontSize="10" TextWrapping="Wrap" Margin="0,10,0,0" />
                 </StackPanel>
             </ScrollViewer>
@@ -211,13 +212,13 @@
         <!-- Barra de acciones -->
         <Grid Grid.Row="2" Grid.ColumnSpan="3" Margin="0,16,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <Button Content="Clonar" Command="{Binding CloneCommand}" Style="{StaticResource DialogButton}" />
-                <Button Content="Guardar" Command="{Binding SaveCommand}" Style="{StaticResource DialogButton}" />
-                <Button Content="Eliminar" Command="{Binding DeleteCommand}" Style="{StaticResource DangerDialogButton}" />
+                <Button Content="{l:T profiles.clone}" Command="{Binding CloneCommand}" Style="{StaticResource DialogButton}" />
+                <Button Content="{l:T profiles.save}" Command="{Binding SaveCommand}" Style="{StaticResource DialogButton}" />
+                <Button Content="{l:T profiles.delete}" Command="{Binding DeleteCommand}" Style="{StaticResource DangerDialogButton}" />
                 <TextBlock Text="{Binding StatusMessage}" Foreground="#10B981" FontSize="11"
                            VerticalAlignment="Center" Margin="8,0,0,0" />
             </StackPanel>
-            <Button Content="Cerrar" Command="{Binding CloseCommand}" Style="{StaticResource NeutralDialogButton}"
+            <Button Content="{l:T common.close}" Command="{Binding CloseCommand}" Style="{StaticResource NeutralDialogButton}"
                     HorizontalAlignment="Right" Margin="0" />
         </Grid>
     </Grid>

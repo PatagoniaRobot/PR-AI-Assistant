@@ -1,6 +1,7 @@
 using System;
 using System.Windows.Input;
 using PRImager.AIAssistant.Helpers;
+using PRImager.AIAssistant.Localization;
 using PRImager.AIAssistant.Services.Models;
 
 using System.Collections.ObjectModel;
@@ -20,6 +21,9 @@ public class ModeSelectionViewModel : ObservableObject
     public ICommand HelpCommand { get; }
     public ICommand LicensesCommand { get; }
 
+    /// <summary>Cierra y vuelve a abrir la aplicación para aplicar el idioma elegido.</summary>
+    public ICommand RestartCommand { get; } = new RelayCommand(App.Restart);
+
     /// <summary>Versión de la aplicación para mostrar en la pantalla de selección.</summary>
     public string VersionText
     {
@@ -33,6 +37,57 @@ public class ModeSelectionViewModel : ObservableObject
     private readonly ConfigManager _configManager;
     private readonly ModelProfileService _profileService;
     private AppSettings _settings;
+
+    // === Idioma ===
+
+    /// <summary>Una opción del selector de idioma: el código que se guarda y lo que se lee.</summary>
+    public sealed record LanguageOption(string Code, string Label)
+    {
+        // Lo que lee un lector de pantalla en cada opción: sin esto, el nombre del record
+        public override string ToString() => Label;
+    }
+
+    /// <summary>
+    /// «Automático» sigue a Windows. Español e English van en su propio idioma, no
+    /// traducidos: quien no entiende el idioma en que está la pantalla tiene que poder
+    /// encontrar el suyo.
+    /// </summary>
+    public List<LanguageOption> LanguageOptions { get; } = new()
+    {
+        new LanguageOption(Loc.Automatic, Loc.T("language.auto")),
+        new LanguageOption(Loc.Spanish, "Español"),
+        new LanguageOption(Loc.English, "English")
+    };
+
+    private LanguageOption? _selectedLanguage;
+
+    public LanguageOption? SelectedLanguage
+    {
+        get => _selectedLanguage;
+        set
+        {
+            var previous = _selectedLanguage;
+            if (!SetProperty(ref _selectedLanguage, value) || value is null || previous is null) return;
+
+            _settings.Language = value.Code;
+            _configManager.Save(_settings);
+
+            // Elegir «Automático» cuando Windows ya está en el idioma actual no cambia nada
+            // visible: no hace falta volver a abrir. Si cambia, se avisa al lado del
+            // selector con un botón, y no con un diálogo: un MessageBox abierto desde acá
+            // dejaba el desplegable trabado detrás hasta contestarlo.
+            IsRestartPending = Loc.Resolve(value.Code) != Loc.Language;
+        }
+    }
+
+    private bool _isRestartPending;
+
+    /// <summary>El idioma elegido no es el que está en pantalla: falta volver a abrir.</summary>
+    public bool IsRestartPending
+    {
+        get => _isRestartPending;
+        private set => SetProperty(ref _isRestartPending, value);
+    }
 
     // === Modelo y perfil de ejecución (catálogo v2) ===
 
@@ -111,13 +166,7 @@ public class ModeSelectionViewModel : ObservableObject
             if (_selectedModelItem == null) return "";
             var caps = _selectedModelItem.Model.Capabilities;
             if (caps == null || caps.Count == 0) return "";
-            var badges = caps.Select(c => c switch
-            {
-                "Vision" => "🔍 Vision",
-                "Audio" => "🔊 Audio",
-                _ => c
-            });
-            return string.Join(" · ", badges);
+            return CapabilityText.Describe(caps);
         }
     }
 
@@ -133,7 +182,7 @@ public class ModeSelectionViewModel : ObservableObject
                     ? AutoExecutionProfile.Describe(_autoRecommendation)
                     : AutoExecutionProfile.NoModelText;
             var p = _selectedExecutionProfile.Profile;
-            return $"ctx: {p.CtxSize} · capas GPU: {p.GpuLayers}";
+            return Loc.F("model.manualProfileInfo", p.CtxSize, p.GpuLayers);
         }
     }
 
@@ -154,23 +203,16 @@ public class ModeSelectionViewModel : ObservableObject
 
         LoadProfiles();
 
+        _selectedLanguage = LanguageOptions.FirstOrDefault(o => o.Code == _settings.Language)
+                            ?? LanguageOptions[0];
+
         HelpCommand = new RelayCommand(() =>
         {
-            string helpPath = System.IO.Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory, "Help", "Help_PRAIA.html");
-            if (System.IO.File.Exists(helpPath))
-            {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = helpPath,
-                    UseShellExecute = true
-                });
-            }
-            else
+            if (!HelpLauncher.Open())
             {
                 System.Windows.MessageBox.Show(
-                    "No se encontró el archivo de ayuda.\nRuta esperada: " + helpPath,
-                    "Ayuda no disponible",
+                    Loc.F("help.missing.message", HelpLauncher.HelpPath),
+                    Loc.T("help.missing.title"),
                     System.Windows.MessageBoxButton.OK,
                     System.Windows.MessageBoxImage.Warning);
             }
@@ -179,32 +221,13 @@ public class ModeSelectionViewModel : ObservableObject
         LicensesCommand = new RelayCommand(() =>
         {
             System.Windows.MessageBox.Show(
-                "PR-AI Assistant utiliza los siguientes componentes de código abierto:\n\n" +
-                "• llama.cpp / ggml — Licencia MIT\n" +
-                "  https://github.com/ggml-org/llama.cpp\n" +
-                "  Motor de inferencia local para modelos de lenguaje.\n\n" +
-                "• Gemma 4 (variantes E2B y E4B) — Licencia Apache 2.0\n" +
-                "  https://ai.google.dev/gemma\n" +
-                "  Modelos de Google DeepMind, cuando se incluyen en la distribución.\n\n" +
-                "• NVIDIA CUDA Runtime — NVIDIA CUDA Toolkit EULA\n" +
-                "  Componentes redistribuibles para aceleración por GPU.\n\n" +
-                "• LLVM OpenMP Runtime — Apache 2.0 con excepciones LLVM\n" +
-                "  https://llvm.org\n\n" +
-                "• .NET 10 — Licencia MIT\n" +
-                "  https://dotnet.microsoft.com\n" +
-                "  Framework de desarrollo de Microsoft.\n\n" +
+                Loc.T("licenses.intro") +
+                Loc.T("licenses.components") +
 #if WEB_SEARCH
-                "• AngleSharp — Licencia MIT\n" +
-                "  https://anglesharp.github.io\n" +
-                "  Extracción de texto de páginas web.\n\n" +
+                Loc.T("licenses.angleSharp") +
 #endif
-                "Los avisos completos están en THIRD-PARTY-NOTICES.txt, junto al\n" +
-                "ejecutable.\n\n" +
-                "Si cargó un modelo propio, ese modelo no forma parte de esta\n" +
-                "distribución y se rige por su propia licencia.\n\n" +
-                "PR-AI Assistant © 2026 Claudio Andino — Patagonia Robot.\n" +
-                "Distribuido bajo la Licencia Apache 2.0 (ver el archivo LICENSE).",
-                "PR-AI Assistant — Licencias de Terceros",
+                Loc.T("licenses.outro"),
+                Loc.T("licenses.title"),
                 System.Windows.MessageBoxButton.OK,
                 System.Windows.MessageBoxImage.Information);
         });

@@ -44,6 +44,7 @@ public class ModelProfileService
             };
 
             _catalog = JsonSerializer.Deserialize<ModelCatalog>(json, options) ?? new ModelCatalog();
+            Localize(_catalog);
             System.Diagnostics.Debug.WriteLine($"ModelProfileService: Cargados {_catalog.Models.Count} modelos, {_catalog.ExecutionProfiles.Count} perfiles de ejecución");
         }
         catch (Exception ex)
@@ -53,6 +54,27 @@ public class ModelProfileService
         }
 
         return _catalog;
+    }
+
+    /// <summary>
+    /// El catálogo es un JSON en español que viaja al lado del ejecutable. Lo que de él se
+    /// muestra —el nombre de los perfiles de ejecución y la etiqueta de hardware— se
+    /// traduce por id, y si un perfil no tiene traducción queda el nombre del archivo.
+    /// </summary>
+    private static void Localize(ModelCatalog catalog)
+    {
+        foreach (var p in catalog.ExecutionProfiles)
+        {
+            string key = "exec.profile." + p.Id;
+            string text = Loc.T(key);
+            if (text != key) p.DisplayName = text;
+        }
+
+        foreach (var m in catalog.Models)
+        {
+            if (m.RequiresGpu && !string.IsNullOrEmpty(m.HardwareTag))
+                m.HardwareTag = Loc.T("model.tag.gpuRecommended");
+        }
     }
 
     /// <summary>
@@ -120,11 +142,11 @@ public class ModelProfileService
             yield return new ModelInfo
             {
                 Id = $"local:{fileName}",
-                DisplayName = $"{Path.GetFileNameWithoutExtension(fileName)} (descargado)",
+                DisplayName = Loc.F("model.downloadedName", Path.GetFileNameWithoutExtension(fileName)),
                 ModelFileName = fileName,
                 DirectoryOverride = directory,
                 RequiresGpu = false,
-                HardwareTag = "📥 Descargado",
+                HardwareTag = Loc.T("model.tag.downloaded"),
                 Capabilities = new List<string>()
             };
         }

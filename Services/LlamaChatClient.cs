@@ -69,7 +69,7 @@ public class LlamaChatClient : IDisposable
         catch (HttpRequestException ex)
         {
             throw new InvalidOperationException(
-                $"Error al conectar con llama-server en {_baseUrl}: {ex.Message}", ex);
+                Loc.F("llama.connectError", _baseUrl, ex.Message), ex);
         }
 
         using (response)
@@ -155,7 +155,7 @@ public class LlamaChatClient : IDisposable
         catch (HttpRequestException ex)
         {
             throw new InvalidOperationException(
-                $"Error al conectar con llama-server en {_baseUrl}: {ex.Message}", ex);
+                Loc.F("llama.connectError", _baseUrl, ex.Message), ex);
         }
 
         using (response)
@@ -182,7 +182,7 @@ public class LlamaChatClient : IDisposable
             catch (JsonException ex)
             {
                 throw new InvalidOperationException(
-                    $"Respuesta inválida de llama-server: {json[..Math.Min(json.Length, 200)]}", ex);
+                    Loc.F("llama.badResponse", json[..Math.Min(json.Length, 200)]), ex);
             }
         }
     }

@@ -1,0 +1,29 @@
+// Pantalla de inicio: los dos modos, el pie con Ayuda, Licencias e Idioma.
+{
+  "mode.investigation.title": "Modo Investigación",
+  "mode.investigation.subtitle": "Análisis de evidencia con\ncadena de custodia",
+  "mode.investigation.bullet1": "Formulario de identificación",
+  "mode.investigation.bullet2": "Acceso al Blackboard",
+  "mode.investigation.bullet3": "Logging forense completo",
+  "mode.investigation.bullet4": "Exportación de sesión",
+  "mode.consultation.title": "Academia PR",
+  "mode.consultation.subtitle": "Consultas técnicas y legales\nsin acceso a evidencia",
+  "mode.consultation.bullet1": "Legislación y normativa",
+  "mode.consultation.bullet2": "Conceptos de informática forense",
+  "mode.consultation.bullet3": "Sandbox completamente aislado",
+  "mode.consultation.badge": "SANDBOX AISLADO",
+  "mode.licenses": "Licencias",
+  "mode.language": "Idioma",
+
+  "language.auto": "Automático (Windows)",
+  "language.restart.notice": "El idioma cambia al volver a abrir PR-AI Assistant.",
+  "language.restart.now": "Reiniciar ahora",
+
+  "help.missing.title": "Ayuda no disponible",
+  "help.missing.message": "No se encontró el archivo de ayuda.\nRuta esperada: {0}",
+
+  "licenses.title": "PR-AI Assistant — Licencias de Terceros",
+  "licenses.intro": "PR-AI Assistant utiliza los siguientes componentes de código abierto:\n\n",
+  "licenses.components": "• llama.cpp / ggml — Licencia MIT\n  https://github.com/ggml-org/llama.cpp\n  Motor de inferencia local para modelos de lenguaje.\n\n• Gemma 4 (variantes E2B y E4B) — Licencia Apache 2.0\n  https://ai.google.dev/gemma\n  Modelos de Google DeepMind, cuando se incluyen en la distribución.\n\n• NVIDIA CUDA Runtime — NVIDIA CUDA Toolkit EULA\n  Componentes redistribuibles para aceleración por GPU.\n\n• LLVM OpenMP Runtime — Apache 2.0 con excepciones LLVM\n  https://llvm.org\n\n• .NET 10 — Licencia MIT\n  https://dotnet.microsoft.com\n  Framework de desarrollo de Microsoft.\n\n",
+  "licenses.outro": "Los avisos completos están en THIRD-PARTY-NOTICES.txt, junto al\nejecutable.\n\nSi cargó un modelo propio, ese modelo no forma parte de esta\ndistribución y se rige por su propia licencia.\n\nPR-AI Assistant © 2026 Claudio Andino — Patagonia Robot.\nDistribuido bajo la Licencia Apache 2.0 (ver el archivo LICENSE)."
+}

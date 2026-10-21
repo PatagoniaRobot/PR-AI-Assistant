@@ -38,7 +38,8 @@ partial class Banco
         // pesa un poco más y es un poco mejor. Lo que no debe salir nunca es BF16.
         Check("16 GB de placa: una de 8 bits, nunca BF16", q16 is "Q8_0" or "UD-Q8_K_XL", q16);
         Check("entera en la placa", fila16?.Run?.FullyOnGpu == true);
-        Check("la fila lo marca", fila16?.VramLabel.StartsWith("★ Recomendada") == true, fila16?.VramLabel ?? "");
+        // La estrella la dibuja la vista como ícono (IsRecommended); el texto dice «Recomendada»
+        Check("la fila lo marca", fila16?.IsRecommended == true && fila16.VramLabel.StartsWith("Recomendada"), fila16?.VramLabel ?? "");
 
         var (q8, fila8, estado8) = Recomendada(Pc(nvidia(8188), 16));
         Console.WriteLine($"  · 8 GB:  {estado8}");

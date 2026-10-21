@@ -39,10 +39,10 @@ public sealed class VramEstimate
     /// <summary>Etiqueta corta para la tabla.</summary>
     public string Label => Fit switch
     {
-        VramFit.Green => "Entra completo",
-        VramFit.Yellow => "Offload parcial",
-        VramFit.Red => "No entra",
-        _ => "VRAM desconocida"
+        VramFit.Green => Loc.T("vram.label.green"),
+        VramFit.Yellow => Loc.T("vram.label.yellow"),
+        VramFit.Red => Loc.T("vram.label.red"),
+        _ => Loc.T("vram.label.unknown")
     };
 
     /// <summary>Color hex del semáforo.</summary>
@@ -134,8 +134,8 @@ public static class VramEstimator
                 RequiredMb = required,
                 AvailableMb = 0,
                 UsagePercent = 0,
-                Explanation = $"Necesita ~{FormatMb(required)}. " +
-                              (gpu?.UnavailableReason ?? "No se pudo detectar la VRAM disponible.") +
+                Explanation = Loc.F("vram.needs", FormatMb(required)) + " " +
+                              (gpu?.UnavailableReason ?? Loc.T("vram.unknownAvailable")) +
                               " " + breakdown
             };
         }
@@ -148,22 +148,17 @@ public static class VramEstimator
         if (percent > 100.0)
         {
             fit = VramFit.Red;
-            explanation = $"Necesita ~{FormatMb(required)} y la GPU tiene {FormatMb(gpu.TotalMb)}. " +
-                          "No entra: correría parcialmente en CPU, muy lento. Desaconsejado. " +
-                          breakdown;
+            explanation = Loc.F("vram.red", FormatMb(required), FormatMb(gpu.TotalMb)) + " " + breakdown;
         }
         else if (percent >= YellowThresholdPercent)
         {
             fit = VramFit.Yellow;
-            explanation = $"Necesita ~{FormatMb(required)} de los {FormatMb(gpu.TotalMb)} de la GPU " +
-                          $"({percent:F0}%). Entra, pero con poco margen: puede requerir offload " +
-                          "parcial y perder velocidad. " + breakdown;
+            explanation = Loc.F("vram.yellow", FormatMb(required), FormatMb(gpu.TotalMb), percent) + " " + breakdown;
         }
         else
         {
             fit = VramFit.Green;
-            explanation = $"Necesita ~{FormatMb(required)} de los {FormatMb(gpu.TotalMb)} de la GPU " +
-                          $"({percent:F0}%). Entra completo, con offload total a GPU. " + breakdown;
+            explanation = Loc.F("vram.green", FormatMb(required), FormatMb(gpu.TotalMb), percent) + " " + breakdown;
         }
 
         return new VramEstimate
@@ -184,8 +179,7 @@ public static class VramEstimator
     {
         int modelMb = (int)Math.Ceiling(fileSizeBytes / (1024.0 * 1024.0));
         int kvMb = (int)Math.Ceiling(contextTokens * KvCacheMbPerToken(fileSizeBytes));
-        return $"(modelo {FormatMb(modelMb)} + KV cache {FormatMb(kvMb)} para " +
-               $"{FormatTokens(contextTokens)} de contexto + {FormatMb(OverheadMb)} de runtime)";
+        return Loc.F("vram.breakdown", FormatMb(modelMb), FormatMb(kvMb), FormatTokens(contextTokens), FormatMb(OverheadMb));
     }
 
     private static string FormatMb(int mb) =>

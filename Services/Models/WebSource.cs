@@ -15,7 +15,7 @@ public sealed class WebSource
 
     public string Title { get; set; } = "";
     public string Url { get; set; } = "";
-    public string PublishedDate { get; set; } = "sin fecha";
+    public string PublishedDate { get; set; } = Loc.T("web.source.noDate");
 
     /// <summary>True si se pudo descargar y extraer el texto de la página.</summary>
     public bool WasRead { get; set; }
@@ -24,5 +24,5 @@ public sealed class WebSource
     public string? FailureReason { get; set; }
 
     /// <summary>Texto para la UI: "leída" o el motivo del fallo.</summary>
-    public string StatusText => WasRead ? "leída" : (FailureReason ?? "no leída");
+    public string StatusText => WasRead ? Loc.T("web.source.read") : (FailureReason ?? Loc.T("web.source.notRead"));
 }

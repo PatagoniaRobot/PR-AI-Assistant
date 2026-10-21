@@ -129,7 +129,7 @@ public class ChatOrchestrator : IDisposable
         // Cargar prompt base desde archivo solo si no se asignó uno programáticamente
         if (string.IsNullOrEmpty(_baseSystemPrompt))
         {
-            string promptFile = Path.Combine(promptsPath, "system_forense.txt");
+            string promptFile = Loc.LocalizedFile(Path.Combine(promptsPath, "system_forense.txt"));
             if (File.Exists(promptFile))
             {
                 BaseSystemPrompt = await File.ReadAllTextAsync(promptFile, ct);
@@ -137,7 +137,7 @@ public class ChatOrchestrator : IDisposable
         }
 
         if (string.IsNullOrEmpty(_currentSettings.SelectedModel))
-            throw new InvalidOperationException("No se ha seleccionado ningún modelo .gguf.");
+            throw new InvalidOperationException(Loc.T("chat.error.noModelSelected"));
 
         // Los modelos descargados se guardan fuera de Models/ y se persisten con ruta
         // completa: si ya viene absoluta, se respeta.
@@ -197,8 +197,8 @@ public class ChatOrchestrator : IDisposable
     /// </param>
     public async Task<string> SendMessageAsync(string userMessage, List<string>? imagePaths = null, string? historyContent = null, CancellationToken ct = default)
     {
-        if (IsProcessing) throw new InvalidOperationException("Ya existe una operación de inferencia en curso.");
-        if (!IsServerReady) throw new InvalidOperationException("El servidor no está disponible.");
+        if (IsProcessing) throw new InvalidOperationException(Loc.T("chat.error.busy"));
+        if (!IsServerReady) throw new InvalidOperationException(Loc.T("chat.error.serverUnavailable"));
 
         IsProcessing = true;
         _currentCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -285,7 +285,7 @@ public class ChatOrchestrator : IDisposable
                 {
                     var elapsed = (DateTime.Now - generationStart).TotalSeconds;
                     ReasoningProgress?.Invoke(this,
-                        $"Razonando… {reasoningTokens} tokens · {elapsed:F0}s");
+                        Loc.F("chat.reasoning", reasoningTokens, elapsed));
                 }
             }
 
@@ -342,13 +342,8 @@ public class ChatOrchestrator : IDisposable
                     $"probable_cause={(exhaustedThinking ? "reasoning_budget_exhausted" : "context_overflow")}");
 
                 string warningMessage = exhaustedThinking
-                    ? $"⚠️ El modelo gastó los {reasoningTokens} tokens disponibles razonando y no "
-                      + "llegó a responder.\n"
-                      + "• Desactivá «Thinking Mode» en el panel lateral (☰ → PARÁMETROS), o\n"
-                      + "• subí «Máx. respuesta» para darle presupuesto suficiente."
-                    : "⚠️ El modelo no pudo generar respuesta. Posibles causas:\n"
-                      + "• El contexto excedió el límite. Intente con 'Nueva Sesión'.\n"
-                      + "• La consulta fue demasiado compleja. Intente reformularla.";
+                    ? Loc.F("chat.empty.reasoning", reasoningTokens)
+                    : Loc.T("chat.empty.generic");
 
                 // No agregar respuesta vacía al historial
                 ResponseCompleted?.Invoke(this, warningMessage);
@@ -425,7 +420,7 @@ public class ChatOrchestrator : IDisposable
     public void LoadForensicContext(string contextJson)
     {
         // Se acumula aparte del prompt base para sobrevivir a un cambio de perfil
-        _additionalContext.Add($"\n\n--- CONTEXTO FORENSE ADICIONAL ---\n{contextJson}");
+        _additionalContext.Add("\n\n" + Loc.T("prompt.forensicContext") + "\n" + contextJson);
 
         int estimatedLength = contextJson.Length / 4;
         _logger.LogContextLoaded(1, estimatedLength);

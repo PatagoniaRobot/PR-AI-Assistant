@@ -93,10 +93,10 @@ public sealed class WebSearchPipeline : IDisposable
         var search = await _provider.SearchAsync(userQuery, ResultCount, freshness, ct)
                                     .ConfigureAwait(false);
         if (!search.Success)
-            return WebSearchContext.Fail(search.ErrorMessage ?? "Fallo la búsqueda.");
+            return WebSearchContext.Fail(search.ErrorMessage ?? Loc.T("pipeline.searchFailed"));
 
         if (search.Results.Count == 0)
-            return WebSearchContext.Fail("La búsqueda no devolvió resultados.");
+            return WebSearchContext.Fail(Loc.T("pipeline.noResults"));
 
         var candidates = search.Results.Take(MaxFetchAttempts).ToList();
         var attempted = new List<(WebSearchResult result, string? text, string? failure)>();
@@ -117,8 +117,8 @@ public sealed class WebSearchPipeline : IDisposable
 
             int soFar = attempted.Count(a => a.failure == null);
             ProgressChanged?.Invoke(this, soFar == 0
-                ? $"Leyendo {wave.Count} páginas…"
-                : $"Leyendo {wave.Count} páginas más… ({soFar} de {TargetPages})");
+                ? Loc.F("pipeline.reading", wave.Count)
+                : Loc.F("pipeline.readingMore", wave.Count, soFar, TargetPages));
 
             var waveResults = await ReadPagesAsync(wave, ct).ConfigureAwait(false);
             attempted.AddRange(waveResults);
@@ -143,7 +143,7 @@ public sealed class WebSearchPipeline : IDisposable
                 Index = i + 1,
                 Title = string.IsNullOrWhiteSpace(r.Title) ? r.Url : r.Title,
                 Url = r.Url,
-                PublishedDate = string.IsNullOrWhiteSpace(r.PublishedDate) ? "sin fecha" : r.PublishedDate!,
+                PublishedDate = string.IsNullOrWhiteSpace(r.PublishedDate) ? Loc.T("web.source.noDate") : r.PublishedDate!,
                 WasRead = failure == null
             };
 
@@ -156,7 +156,7 @@ public sealed class WebSearchPipeline : IDisposable
                 source.FailureReason = failure;
                 // Sin página, al menos queda la descripción que dio el buscador
                 pageTexts.Add(string.IsNullOrWhiteSpace(r.Description)
-                    ? "[No se pudo leer esta fuente.]"
+                    ? Loc.T("pipeline.sourceUnreadable")
                     : r.Description);
             }
 
@@ -169,7 +169,7 @@ public sealed class WebSearchPipeline : IDisposable
             return new WebSearchContext
             {
                 Success = false,
-                ErrorMessage = $"No se pudo leer ninguna de las {sources.Count} fuentes encontradas.",
+                ErrorMessage = Loc.F("pipeline.noneRead", sources.Count),
                 Sources = sources,
                 PagesRead = 0,
                 PagesAttempted = sources.Count
@@ -203,7 +203,7 @@ public sealed class WebSearchPipeline : IDisposable
                 var (text, failure) = await TryReadPageAsync(r.Url, ct).ConfigureAwait(false);
 
                 if (failure == null && string.IsNullOrWhiteSpace(text))
-                    failure = "sin contenido legible";
+                    failure = Loc.T("pipeline.fail.noContent");
 
                 return (r, text, failure);
             }
@@ -234,7 +234,7 @@ public sealed class WebSearchPipeline : IDisposable
 
             string? mediaType = response.Content.Headers.ContentType?.MediaType;
             if (mediaType != null && !mediaType.Contains("html", StringComparison.OrdinalIgnoreCase))
-                return (null, $"tipo no soportado ({mediaType})");
+                return (null, Loc.F("pipeline.fail.mediaType", mediaType));
 
             string html = await response.Content.ReadAsStringAsync(timeoutCts.Token)
                                         .ConfigureAwait(false);
@@ -242,7 +242,7 @@ public sealed class WebSearchPipeline : IDisposable
                                           .ConfigureAwait(false);
 
             return string.IsNullOrWhiteSpace(text)
-                ? (null, "sin texto extraíble")
+                ? (null, Loc.T("pipeline.fail.noText"))
                 : (text, null);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -251,15 +251,15 @@ public sealed class WebSearchPipeline : IDisposable
         }
         catch (OperationCanceledException)
         {
-            return (null, "timeout (10s)");
+            return (null, Loc.F("pipeline.fail.timeout", PerPageTimeoutSeconds));
         }
         catch (HttpRequestException ex)
         {
-            return (null, $"error de red: {ex.Message}");
+            return (null, Loc.F("pipeline.fail.network", ex.Message));
         }
         catch (Exception ex)
         {
-            return (null, $"error: {ex.Message}");
+            return (null, Loc.F("pipeline.fail.other", ex.Message));
         }
     }
 
@@ -272,11 +272,11 @@ public sealed class WebSearchPipeline : IDisposable
     {
         var sb = new StringBuilder(16 * 1024);
 
-        sb.Append("Fecha de hoy: ")
+        sb.Append(Loc.T("prompt.web.today"))
           .Append(DateTime.Now.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture))
           .Append(".\n\n");
 
-        sb.Append("Resultados de búsqueda web:\n\n");
+        sb.Append(Loc.T("prompt.web.results")).Append("\n\n");
 
         for (int i = 0; i < sources.Count; i++)
         {
@@ -289,11 +289,8 @@ public sealed class WebSearchPipeline : IDisposable
         }
 
         sb.Append("---\n")
-          .Append("Pregunta del usuario: ").Append(userQuery).Append("\n\n")
-          .Append("Respondé usando ÚNICAMENTE la información de los resultados anteriores.\n")
-          .Append("Citá la fuente con [n] después de cada afirmación.\n")
-          .Append("Si los resultados no contienen la respuesta, decilo explícitamente.\n")
-          .Append("No completes con conocimiento propio.");
+          .Append(Loc.T("prompt.web.question")).Append(userQuery).Append("\n\n")
+          .Append(Loc.T("prompt.web.instructions"));
 
         return sb.ToString();
     }

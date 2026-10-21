@@ -96,13 +96,16 @@ static class Humo
             var textos = TodosLosTextos(ventana).ToList();
             Check("se ve el nombre del primer adjunto", textos.Any(t => t.Contains("informe-tecnico.txt")));
             Check("se ve el nombre del segundo adjunto", textos.Any(t => t.Contains("planilla.csv")));
-            Check("se ve el ícono de archivo", textos.Any(t => t.Contains("📄")));
+            // Desde el 20 de octubre de 2026 el ícono es un control dibujado y no un emoji
+            Check("se ve el ícono de archivo", TodosLosIconos((DependencyObject)tira)
+                .Any(i => i.Kind == PRImager.AIAssistant.Controls.IconKind.Document));
             Check("se ve el tamaño", textos.Any(t => t.EndsWith(" B") || t.EndsWith(" KB")));
 
             // Quitar desde la UI, no desde el ViewModel. Se busca dentro de la tira y
             // no en toda la vista: ChatView tiene otras ✕ que no son de los adjuntos.
             var equis = TodosLosBotones((DependencyObject)tira)
-                .Where(b => (b.Content as string) == "✕").ToList();
+                .Where(b => System.Windows.Automation.AutomationProperties.GetAutomationId(b) == "RemoveAttachmentButton")
+                .ToList();
             Check("hay una ✕ por adjunto", equis.Count == 2, $"hay {equis.Count}");
 
             if (equis.Count > 0)
@@ -185,6 +188,17 @@ static class Humo
         for (int i = 0; i < n; i++)
             foreach (string t in TodosLosTextos(VisualTreeHelper.GetChild(raiz, i)))
                 yield return t;
+    }
+
+    static System.Collections.Generic.IEnumerable<PRImager.AIAssistant.Controls.Icon> TodosLosIconos(
+        DependencyObject raiz)
+    {
+        if (raiz is PRImager.AIAssistant.Controls.Icon ic) yield return ic;
+
+        int n = VisualTreeHelper.GetChildrenCount(raiz);
+        for (int i = 0; i < n; i++)
+            foreach (var x in TodosLosIconos(VisualTreeHelper.GetChild(raiz, i)))
+                yield return x;
     }
 
     static System.Collections.Generic.IEnumerable<System.Windows.Controls.Button> TodosLosBotones(

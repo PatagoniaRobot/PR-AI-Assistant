@@ -46,6 +46,10 @@ cd ..\PrimerArranque
 dotnet run -p:EdicionApp=Debug      :: 18 aserciones + 4 de humo
 dotnet run -p:EdicionApp=Forense    :: 14: sin catálogo, la guía manda a copiar el archivo
 
+cd ..\Idiomas
+dotnet run -p:EdicionApp=Debug      :: 38: español e inglés parejos, claves, emojis, íconos, reporte, pantallas en inglés
+dotnet run -p:EdicionApp=Forense    :: igual, y que no viajen los textos de web, catálogo e imágenes
+
 cd ..\GeneracionDeImagenes
 dotnet run                          :: 286 aserciones + 61 de humo (necesita el motor)
 dotnet run -- --con-red             :: además, la descarga real del VAE (0,31 GB)

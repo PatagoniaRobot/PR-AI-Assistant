@@ -47,7 +47,7 @@ public sealed class AppFolderRowViewModel : ObservableObject
     /// modelos bajados, que son gigabytes y una descarga de horas.
     /// </summary>
     public string WarningText => IsInsideBuildOutput
-        ? "Esta carpeta está adentro del directorio de la aplicación. Una limpieza de compilación se lleva lo que haya acá dentro. Conviene moverla a otro lugar."
+        ? Loc.T("folders.insideBuild")
         : "";
 
     // --- Movimiento pendiente ---
@@ -198,9 +198,8 @@ public sealed class FolderSettingsViewModel : ObservableObject
 
     private static string DescribeContents(int archivos, long bytes) => archivos switch
     {
-        0 => "La carpeta está vacía.",
-        1 => $"1 archivo · {AppFolderRowViewModel.FormatSize(bytes)}",
-        _ => $"{archivos} archivos · {AppFolderRowViewModel.FormatSize(bytes)}"
+        0 => Loc.T("folders.empty"),
+        _ => Loc.P("folders.contents", archivos, AppFolderRowViewModel.FormatSize(bytes))
     };
 
     // --- Cambiar la carpeta ---
@@ -209,7 +208,7 @@ public sealed class FolderSettingsViewModel : ObservableObject
     {
         if (fila is null) return;
 
-        var elegida = _dialogs.SelectFolder($"Elegí la carpeta para: {fila.DisplayName}", fila.Path);
+        var elegida = _dialogs.SelectFolder(Loc.F("folders.pickFor", fila.DisplayName), fila.Path);
         if (string.IsNullOrWhiteSpace(elegida)) return;
 
         Apply(fila, elegida);
@@ -238,7 +237,7 @@ public sealed class FolderSettingsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            Message = $"No se pudo cambiar la carpeta: {ex.Message}";
+            Message = Loc.F("folders.changeFailed", ex.Message);
             return;
         }
 
@@ -253,9 +252,7 @@ public sealed class FolderSettingsViewModel : ObservableObject
         if (archivos > 0 && !PathsEqual(anterior, actualizada.Path))
         {
             actualizada.PreviousFolder = anterior;
-            actualizada.PendingText = archivos == 1
-                ? $"Quedó 1 archivo ({AppFolderRowViewModel.FormatSize(bytes)}) en la carpeta anterior:"
-                : $"Quedaron {archivos} archivos ({AppFolderRowViewModel.FormatSize(bytes)}) en la carpeta anterior:";
+            actualizada.PendingText = Loc.P("folders.pending", archivos, AppFolderRowViewModel.FormatSize(bytes));
             actualizada.HasPendingMove = true;
         }
         else
@@ -264,7 +261,7 @@ public sealed class FolderSettingsViewModel : ObservableObject
             actualizada.PreviousFolder = "";
         }
 
-        Message = $"{actualizada.DisplayName}: la carpeta nueva ya está guardada.";
+        Message = Loc.F("folders.saved", actualizada.DisplayName);
         _auditLog?.Invoke("FOLDER_CHANGED", $"kind={fila.Kind} to=\"{actualizada.Path}\"");
 
         ((RelayCommand<AppFolderRowViewModel>)DismissPendingCommand).RaiseCanExecuteChanged();
@@ -314,7 +311,7 @@ public sealed class FolderSettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             fila.IsMoving = false;
-            fila.ResultText = $"Error inesperado al mover: {ex.Message}";
+            fila.ResultText = Loc.F("folders.moveUnexpected", ex.Message);
             RaiseMoveCommands();
             return;
         }
@@ -377,27 +374,26 @@ public sealed class FolderSettingsViewModel : ObservableObject
         if (!r.Success) return r.ErrorMessage;
 
         if (r.NothingToDo)
-            return "No había nada para mover en la carpeta anterior.";
+            return Loc.T("folders.nothingToMove");
 
         var partes = new List<string>();
 
         if (r.Moved.Count > 0)
-            partes.Add($"Se movieron {r.Moved.Count} archivo{(r.Moved.Count == 1 ? "" : "s")} " +
-                       $"({AppFolderRowViewModel.FormatSize(r.BytesMoved)})");
+            partes.Add(Loc.P("folders.result.moved", r.Moved.Count, AppFolderRowViewModel.FormatSize(r.BytesMoved)));
 
         if (r.Skipped.Count > 0)
-            partes.Add($"{r.Skipped.Count} ya estaba{(r.Skipped.Count == 1 ? "" : "n")} en la carpeta nueva y no se pisó nada");
+            partes.Add(Loc.P("folders.result.skipped", r.Skipped.Count));
 
         if (r.Failed.Count > 0)
-            partes.Add($"{r.Failed.Count} no se pudo mover y sigue en {origen}: {string.Join("; ", r.Failed)}");
+            partes.Add(Loc.P("folders.result.failed", r.Failed.Count, origen, string.Join("; ", r.Failed)));
 
         if (paquetesReapuntados > 0)
-            partes.Add($"se actualizaron las rutas de {paquetesReapuntados} paquete{(paquetesReapuntados == 1 ? "" : "s")}");
+            partes.Add(Loc.P("folders.result.repointed", paquetesReapuntados));
 
         var texto = string.Join(". ", partes) + ".";
 
         if (r.WasCancelled)
-            texto = "Movimiento cancelado. " + texto + " Lo que quedó atrás se puede mover cuando quieras.";
+            texto = Loc.F("folders.result.cancelled", texto);
 
         return texto;
     }
@@ -413,7 +409,7 @@ public sealed class FolderSettingsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            Message = $"No se pudo abrir la carpeta: {ex.Message}";
+            Message = Loc.F("folders.openFailed", ex.Message);
         }
     }
 

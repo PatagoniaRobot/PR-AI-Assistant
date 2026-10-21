@@ -1,0 +1,34 @@
+// Web search (E2). The Forensic edition does not embed this file: it does not compile
+// the code that uses it.
+{
+  "licenses.angleSharp": "• AngleSharp — MIT License\n  https://anglesharp.github.io\n  Text extraction from web pages.\n\n",
+
+  "searx.notConfigured": "No SearXNG instance is configured. Enter its address in the side panel, WEB SEARCH section (for example http://127.0.0.1:8080).",
+  "searx.emptyQuery": "The query is empty.",
+  "searx.cancelled": "Search cancelled.",
+  "searx.timeout": "The SearXNG instance at {0} did not answer in time.",
+  "searx.unreachable": "The SearXNG instance at {0} could not be reached: {1} Check that it is running.",
+  "searx.unexpected": "Unexpected error in the search: {0}",
+  "searx.http403": "The instance {0} rejected the query (403). It almost always means the JSON format is not enabled: in its settings.yml, under «search», add «json» to the «formats» list and restart it. On someone else's public instance this cannot be changed: use your own.",
+  "searx.http404": "The search endpoint was not found at {0} (404). Check that the address points to the root of the instance, without /search.",
+  "searx.http429": "The instance {0} limited the number of queries (429). Public instances usually restrict automated use; your own instance has no such limit.",
+  "searx.httpOther": "The SearXNG instance answered {0} ({1}).",
+  "searx.notJson": "The instance did not return JSON. Check that the «json» format is enabled in the «formats» list of its settings.yml.",
+  "pipeline.searchFailed": "The search failed.",
+  "pipeline.noResults": "The search returned no results.",
+  "pipeline.reading": "Reading {0} pages…",
+  "pipeline.readingMore": "Reading {0} more pages… ({1} of {2})",
+  "pipeline.sourceUnreadable": "[This source could not be read.]",
+  "pipeline.noneRead": "None of the {0} sources found could be read.",
+  "pipeline.fail.noContent": "no readable content",
+  "pipeline.fail.mediaType": "unsupported type ({0})",
+  "pipeline.fail.noText": "no extractable text",
+  "pipeline.fail.timeout": "timeout ({0}s)",
+  "pipeline.fail.network": "network error: {0}",
+  "pipeline.fail.other": "error: {0}",
+  "pipeline.truncated": "… [truncated]",
+  "prompt.web.today": "Today's date: ",
+  "prompt.web.results": "Web search results:",
+  "prompt.web.question": "User question: ",
+  "prompt.web.instructions": "Answer using ONLY the information in the results above.\nCite the source with [n] after each statement.\nIf the results do not contain the answer, say so explicitly.\nDo not fill in with your own knowledge."
+}

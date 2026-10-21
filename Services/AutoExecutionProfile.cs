@@ -26,7 +26,7 @@ public static class AutoExecutionProfile
     public static ExecutionProfile Create() => new()
     {
         Id = Id,
-        DisplayName = "Automático",
+        DisplayName = Loc.T("exec.auto"),
         GpuLayers = RunRecommendation.AllLayers,
         CtxSize = ModelRecommender.MinComfortContext,
         Threads = 0
@@ -92,17 +92,17 @@ public static class AutoExecutionProfile
     /// El texto bajo los botones de perfil cuando todavía no hay ningún modelo: antes decía
     /// «no se pudo leer el modelo», que hacía pensar en un archivo roto.
     /// </summary>
-    public const string NoModelText =
+    public static string NoModelText =>
 #if MODEL_DOWNLOAD
-        "todavía no hay modelos: entrá y bajá uno desde el catálogo";
+        Loc.T("exec.noModel.catalog");
 #else
-        "todavía no hay modelos: copiá un archivo .gguf en la carpeta Models";
+        Loc.T("exec.noModel.copy");
 #endif
 
     /// <summary>El texto bajo los botones de perfil.</summary>
     public static string Describe(RunRecommendation? rec) => rec == null
-        ? "automático: no se pudo leer el modelo, se usan 8k y todo a la placa"
-        : $"automático: {rec.Summary}";
+        ? Loc.T("exec.auto.unreadable")
+        : Loc.F("exec.auto.summary", rec.Summary);
 
     // --- rutas, con el mismo criterio que ChatOrchestrator al lanzar el servidor ---
 

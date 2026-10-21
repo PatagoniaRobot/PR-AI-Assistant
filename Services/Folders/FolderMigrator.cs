@@ -96,7 +96,7 @@ public sealed class FolderMigrator
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(from) || string.IsNullOrWhiteSpace(to))
-            return Fail("Falta la carpeta de origen o la de destino.");
+            return Fail(Loc.T("migrate.missingPath"));
 
         string origen, destino;
         try
@@ -106,7 +106,7 @@ public sealed class FolderMigrator
         }
         catch (Exception ex)
         {
-            return Fail($"Alguna de las dos rutas no es válida: {ex.Message}");
+            return Fail(Loc.F("migrate.invalidPath", ex.Message));
         }
 
         if (PathsEqual(origen, destino))
@@ -115,7 +115,7 @@ public sealed class FolderMigrator
         // Mover una carpeta adentro de sí misma copiaría archivos sobre los que todavía
         // se está iterando. Se corta antes de tocar nada.
         if (IsInside(destino, origen))
-            return Fail("La carpeta de destino está adentro de la de origen. Elegí una carpeta que no cuelgue de la anterior.");
+            return Fail(Loc.T("migrate.nested"));
 
         if (!Directory.Exists(origen))
             return new FolderMigrationResult { Success = true };
@@ -131,7 +131,7 @@ public sealed class FolderMigrator
         }
         catch (Exception ex)
         {
-            return Fail($"No se pudo leer la carpeta anterior: {ex.Message}");
+            return Fail(Loc.F("migrate.readFailed", ex.Message));
         }
 
         if (archivos.Count == 0)
@@ -143,7 +143,7 @@ public sealed class FolderMigrator
         }
         catch (Exception ex)
         {
-            return Fail($"No se pudo crear la carpeta de destino: {ex.Message}");
+            return Fail(Loc.F("migrate.createFailed", ex.Message));
         }
 
         bool mismoVolumen = SameVolume(origen, destino);
@@ -176,12 +176,12 @@ public sealed class FolderMigrator
                 resultado.Skipped.Add(nombre);
                 hechos++;
                 bytesHechos += tamano;
-                Report(nombre, hechos, archivos.Count, bytesHechos, totalBytes, "ya estaba en la carpeta nueva");
+                Report(nombre, hechos, archivos.Count, bytesHechos, totalBytes, Loc.T("migrate.step.alreadyThere"));
                 continue;
             }
 
             Report(nombre, hechos, archivos.Count, bytesHechos, totalBytes,
-                mismoVolumen ? "moviendo" : "copiando");
+                mismoVolumen ? Loc.T("migrate.step.moving") : Loc.T("migrate.step.copying"));
 
             string? error = mismoVolumen
                 ? MoveSameVolume(archivo, final)
@@ -204,7 +204,7 @@ public sealed class FolderMigrator
             hechos++;
             bytesHechos += tamano;
             Report(nombre, hechos, archivos.Count, bytesHechos, totalBytes,
-                error is null ? "listo" : "no se pudo");
+                error is null ? Loc.T("migrate.step.done") : Loc.T("migrate.step.failed"));
         }
 
         return resultado;
@@ -301,13 +301,13 @@ public sealed class FolderMigrator
         catch (Exception ex)
         {
             TryDelete(parcial);
-            return $"no se pudo verificar la copia: {ex.Message}";
+            return Loc.F("migrate.verifyFailed", ex.Message);
         }
 
         if (!hashOrigen.AsSpan().SequenceEqual(hashDestino))
         {
             TryDelete(parcial);
-            return "la copia no coincide con el original y se descartó. El archivo sigue en la carpeta anterior.";
+            return Loc.T("migrate.hashMismatch");
         }
 
         try
@@ -317,7 +317,7 @@ public sealed class FolderMigrator
         catch (Exception ex)
         {
             TryDelete(parcial);
-            return $"no se pudo promover la copia: {ex.Message}";
+            return Loc.F("migrate.promoteFailed", ex.Message);
         }
 
         try
@@ -328,8 +328,7 @@ public sealed class FolderMigrator
         {
             // El archivo YA está bien en el destino. No es una falla del movimiento:
             // quedó duplicado, que es molesto pero no pierde nada. Se dice así.
-            return $"se copió correctamente pero no se pudo borrar el original: {ex.Message}. " +
-                   "Quedó en las dos carpetas.";
+            return Loc.F("migrate.deleteOriginalFailed", ex.Message);
         }
 
         return null;
@@ -397,7 +396,7 @@ public sealed class FolderMigrator
             FilesTotal = total,
             BytesDone = bytes,
             BytesTotal = bytesTotales,
-            Text = $"{archivo} — {que} ({Math.Min(hechos + 1, total)} de {total})"
+            Text = Loc.F("migrate.progress", archivo, que, Math.Min(hechos + 1, total), total)
         });
     }
 

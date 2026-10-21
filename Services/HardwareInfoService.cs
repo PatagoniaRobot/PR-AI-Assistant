@@ -72,11 +72,11 @@ public sealed class HardwareInfo
     {
         get
         {
-            string ram = $"{TotalRamMb / 1024.0:F0} GB de RAM";
-            string cpu = PhysicalCores > 0 ? $"{PhysicalCores} núcleos" : $"{LogicalCores} hilos";
+            string ram = Loc.F("hw.ram", TotalRamMb / 1024.0);
+            string cpu = PhysicalCores > 0 ? Loc.F("hw.cores", PhysicalCores) : Loc.F("hw.threads", LogicalCores);
             string gpu = UsableGpu != null
-                ? $"{UsableGpu.Name} · {UsableGpu.DedicatedVramMb / 1024.0:F0} GB de VRAM"
-                : GpuNotUsableReason ?? "sin placa de video utilizable: corre en CPU";
+                ? Loc.F("hw.gpu", UsableGpu.Name, UsableGpu.DedicatedVramMb / 1024.0)
+                : GpuNotUsableReason ?? Loc.T("hw.noUsableGpu");
             return $"{gpu} · {ram} · {cpu}";
         }
     }
@@ -197,8 +197,8 @@ public class HardwareInfoService
         var discrete = gpus.Where(g => g.IsDiscrete).OrderByDescending(g => g.DedicatedVramMb).ToList();
         if (discrete.Count == 0)
             return (null, gpus.Count == 0
-                ? "sin placa de video: corre en CPU"
-                : $"{gpus[0].Name} es integrada: corre en CPU");
+                ? Loc.T("hw.noGpu")
+                : Loc.F("hw.integrated", gpus[0].Name));
 
         bool Compatible(GpuAdapterInfo g) => backend switch
         {
@@ -214,8 +214,8 @@ public class HardwareInfoService
 
         var best = discrete[0];
         string reason = backend == ChatBackend.CpuOnly
-            ? $"{best.Name} no se usa: el motor de chat instalado es solo CPU"
-            : $"{best.Name} no se usa: el motor de chat instalado es para {BackendName(backend)}, que no la soporta. Corre en CPU";
+            ? Loc.F("hw.cpuOnlyEngine", best.Name)
+            : Loc.F("hw.unsupportedEngine", best.Name, BackendName(backend));
         return (null, reason);
     }
 

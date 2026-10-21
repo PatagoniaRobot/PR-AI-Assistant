@@ -32,10 +32,10 @@ public static class SearchFreshnessExtensions
 
     public static string ToDisplayName(this SearchFreshness f) => f switch
     {
-        SearchFreshness.Day => "Último día",
-        SearchFreshness.Week => "Última semana",
-        SearchFreshness.Month => "Último mes",
-        _ => "Sin filtro"
+        SearchFreshness.Day => Loc.T("web.freshness.day"),
+        SearchFreshness.Week => Loc.T("web.freshness.week"),
+        SearchFreshness.Month => Loc.T("web.freshness.month"),
+        _ => Loc.T("web.freshness.any")
     };
 }
 

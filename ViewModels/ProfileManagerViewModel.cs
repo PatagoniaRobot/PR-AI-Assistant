@@ -138,9 +138,9 @@ public class ProfileManagerViewModel : ObservableObject
     {
         if (_selectedProfile == null) return;
 
-        var clone = _service.Clone(_selectedProfile, $"{_selectedProfile.Name} (copia)");
+        var clone = _service.Clone(_selectedProfile, Loc.F("profiles.copyName", _selectedProfile.Name));
         Reload(clone.Id);
-        StatusMessage = $"Perfil «{clone.Name}» creado. Ya podés editarlo.";
+        StatusMessage = Loc.F("profiles.created", clone.Name);
     }
 
     private void ExecuteSave()
@@ -149,7 +149,7 @@ public class ProfileManagerViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(EditName))
         {
-            StatusMessage = "El nombre no puede estar vacío.";
+            StatusMessage = Loc.T("profiles.emptyName");
             return;
         }
 
@@ -172,11 +172,11 @@ public class ProfileManagerViewModel : ObservableObject
         if (_service.Update(edited))
         {
             Reload(edited.Id);
-            StatusMessage = $"Perfil «{edited.Name}» guardado.";
+            StatusMessage = Loc.F("profiles.saved", edited.Name);
         }
         else
         {
-            StatusMessage = "No se pudo guardar: el perfil es de fábrica o ya no existe.";
+            StatusMessage = Loc.T("profiles.saveFailed");
         }
     }
 
@@ -185,8 +185,8 @@ public class ProfileManagerViewModel : ObservableObject
         if (_selectedProfile == null || _selectedProfile.IsFactory) return;
 
         var confirm = System.Windows.MessageBox.Show(
-            $"¿Eliminar el perfil «{_selectedProfile.Name}»?\n\nEsta acción no se puede deshacer.",
-            "Eliminar perfil",
+            Loc.F("profiles.delete.message", _selectedProfile.Name),
+            Loc.T("profiles.delete.title"),
             System.Windows.MessageBoxButton.YesNo,
             System.Windows.MessageBoxImage.Warning);
 
@@ -196,11 +196,11 @@ public class ProfileManagerViewModel : ObservableObject
         if (_service.Delete(_selectedProfile.Id))
         {
             Reload(_service.ActiveProfile.Id);
-            StatusMessage = $"Perfil «{name}» eliminado.";
+            StatusMessage = Loc.F("profiles.deleted", name);
         }
         else
         {
-            StatusMessage = "No se pudo eliminar: los perfiles de fábrica son permanentes.";
+            StatusMessage = Loc.T("profiles.deleteFailed");
         }
     }
 }

@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using PRImager.AIAssistant.Helpers;
+using PRImager.AIAssistant.Localization;
 using PRImager.AIAssistant.Services;
 using PRImager.AIAssistant.Services.HuggingFace;
 
@@ -39,11 +40,12 @@ public class QuantizationItem : ObservableObject
 
     public string VramLabel => Verdict.Kind switch
     {
-        GgufKind.Model when Run != null => (IsRecommended ? "★ Recomendada · " : "") + RunLabel(Run),
+        // La estrella de la recomendada la dibuja la vista como ícono; acá solo el texto
+        GgufKind.Model when Run != null => (IsRecommended ? Loc.T("catalog.recommended") + " · " : "") + RunLabel(Run),
         GgufKind.Model => Vram.Label,
-        GgufKind.Projector => "Proyector de visión",
-        GgufKind.SplitPart => "Parte de un modelo",
-        _ => "No es un modelo"
+        GgufKind.Projector => Loc.T("catalog.kind.projector"),
+        GgufKind.SplitPart => Loc.T("catalog.kind.splitPart"),
+        _ => Loc.T("catalog.kind.notModel")
     };
 
     public string VramColor => !Verdict.IsModel ? NotModelColor
@@ -56,17 +58,17 @@ public class QuantizationItem : ObservableObject
     public string VramExplanation => !Verdict.IsModel ? Verdict.Reason
         : Run == null ? Vram.Explanation
         : Run.Explanation +
-          (Run.Fits ? $" Parámetros: contexto {ModelRecommender.K(Run.ContextTokens)}, {GpuText(Run)}, {Run.Threads} hilos." : "") +
-          (ModelRecommender.IsLowQuality(File.Quantization) ? " Ojo: 2 bits o menos, la calidad se nota." : "");
+          (Run.Fits ? " " + Loc.F("catalog.run.params", ModelRecommender.K(Run.ContextTokens), GpuText(Run), Run.Threads) : "") +
+          (ModelRecommender.IsLowQuality(File.Quantization) ? " " + Loc.T("catalog.run.lowQuality") : "");
 
     /// <summary>True si no entra en la PC ni repartiendo: la descarga se confirma antes.</summary>
     public bool DoesNotFit => Run != null ? !Run.Fits : Vram.Fit == VramFit.Red;
 
     private static string RunLabel(RunRecommendation r) =>
-        !r.Fits ? "No entra" : r.FullyOnGpu ? "Entra entera" : r.CpuOnly ? "Solo CPU" : "Repartida";
+        !r.Fits ? Loc.T("catalog.fit.no") : r.FullyOnGpu ? Loc.T("catalog.fit.full") : r.CpuOnly ? Loc.T("catalog.fit.cpu") : Loc.T("catalog.fit.split");
 
     private static string GpuText(RunRecommendation r) =>
-        r.FullyOnGpu ? "todas las capas en la placa" : r.CpuOnly ? "sin placa" : $"{r.GpuLayers} capas en la placa";
+        r.FullyOnGpu ? Loc.T("catalog.gpu.all") : r.CpuOnly ? Loc.T("catalog.gpu.none") : Loc.F("catalog.gpu.some", r.GpuLayers);
 
     /// <summary>
     /// Se puede bajar un modelo o un proyector, que la aplicación usa junto al modelo.
@@ -190,7 +192,7 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
         private set => SetProperty(ref _isError, value);
     }
 
-    private string _gpuText = "Detectando GPU…";
+    private string _gpuText = Loc.T("catalog.detectingGpu");
     public string GpuText
     {
         get => _gpuText;
@@ -358,12 +360,12 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
 
         if (models.Count == 0)
         {
-            DownloadedSummary = "No hay modelos descargados.";
+            DownloadedSummary = Loc.T("catalog.downloaded.none");
             return;
         }
 
         string total = DownloadedModelInfo.FormatSize(models.Sum(m => m.SizeBytes));
-        DownloadedSummary = $"{models.Count} modelo{(models.Count == 1 ? "" : "s")} · {total} en {_store.DirectoryText}";
+        DownloadedSummary = Loc.P("catalog.downloaded.summary", models.Count, total, _store.DirectoryText);
     }
 
     /// <summary>
@@ -374,14 +376,14 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
     {
         _hw = await _hardware.GetAsync();
         _vram = await _gpuInfo.GetVramAsync();
-        GpuText = $"Tu PC: {_hw.Summary}";
+        GpuText = Loc.F("hardware.yourPc", _hw.Summary);
     }
 
     private async Task ExecuteSearchAsync()
     {
         IsBusy = true;
         IsError = false;
-        Status = "Buscando en HuggingFace…";
+        Status = Loc.T("catalog.searching");
         Repos.Clear();
         Quantizations.Clear();
 
@@ -390,7 +392,7 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
         if (!result.Success)
         {
             IsError = true;
-            Status = result.ErrorMessage ?? "Fallo la búsqueda.";
+            Status = result.ErrorMessage ?? Loc.T("catalog.searchFailed");
             IsBusy = false;
             return;
         }
@@ -399,8 +401,8 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
             Repos.Add(r);
 
         Status = Repos.Count == 0
-            ? $"Sin resultados GGUF para «{Query.Trim()}»."
-            : $"{Repos.Count} repositorios encontrados. Seleccioná uno para ver sus cuantizaciones.";
+            ? Loc.F("catalog.noResults", Query.Trim())
+            : Loc.P("catalog.reposFound", Repos.Count);
         IsBusy = false;
     }
 
@@ -408,7 +410,7 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
     {
         IsBusy = true;
         IsError = false;
-        Status = $"Cargando archivos de {repo.Id}…";
+        Status = Loc.F("catalog.loadingRepo", repo.Id);
         Quantizations.Clear();
         SelectedQuantization = null;
 
@@ -418,7 +420,7 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
         {
             IsError = true;
             // Un repo gated se informa tal cual: no se esconde el fallo
-            Status = detail.ErrorMessage ?? "No se pudo cargar el repositorio.";
+            Status = detail.ErrorMessage ?? Loc.T("catalog.repoFailed");
             IsBusy = false;
             return;
         }
@@ -454,31 +456,29 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
 
         int notModels = Quantizations.Count(q => !q.Verdict.IsModel);
         string counts = notModels == 0
-            ? $"{Cuantizaciones(Quantizations.Count)}."
-            : $"{Cuantizaciones(Quantizations.Count - notModels)} y {notModels} archivo{(notModels == 1 ? "" : "s")} " +
-              "que no carga" + (notModels == 1 ? "" : "n") + " solo" + (notModels == 1 ? "" : "s") +
-              " (seleccioná uno para ver qué es).";
+            ? Cuantizaciones(Quantizations.Count) + "."
+            : Cuantizaciones(Quantizations.Count - notModels) + " " + Loc.P("catalog.notModelFiles", notModels);
         var best = recommended >= 0 ? Quantizations[recommended] : null;
         // La recomendada queda elegida: su explicación a la vista y el botón listo
         if (best != null) SelectedQuantization = best;
         Status = Quantizations.Count == 0
-            ? "El repositorio no expone archivos .gguf."
+            ? Loc.T("catalog.noGguf")
             : best != null
-                ? $"Recomendada para tu PC: {best.Quantization} — {best.Run!.Summary}. {counts}"
+                ? Loc.F("catalog.recommendedForPc", best.Quantization, best.Run!.Summary, counts)
                 : shape != null
-                    ? $"Ninguna cuantización de este modelo entra en tu PC. {counts}"
-                    : $"{counts} No se pudo leer la cabecera del modelo: el semáforo estima por tamaño.";
+                    ? Loc.F("catalog.noneFits", counts)
+                    : Loc.F("catalog.noHeader", counts);
 
         if (detail.Value.Repo.IsGated)
         {
             IsError = true;
-            Status = "Atención: este repositorio es de acceso restringido. " + HuggingFaceClient.GatedMessage();
+            Status = Loc.T("catalog.gatedPrefix") + " " + HuggingFaceClient.GatedMessage();
         }
 
         IsBusy = false;
     }
 
-    private static string Cuantizaciones(int n) => n == 1 ? "1 cuantización" : $"{n} cuantizaciones";
+    private static string Cuantizaciones(int n) => Loc.P("catalog.quantizations", n);
 
     /// <summary>
     /// Lee la cabecera de una de las cuantizaciones —la más chica, da igual cuál: la
@@ -498,7 +498,7 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
                     ?? (models.Count > 0 ? models[models.Count / 2] : null);
         if (probe == null) return (null, 0);
 
-        Status = $"Analizando la arquitectura de {repoId}…";
+        Status = Loc.F("catalog.probing", repoId);
         var r = await _client.ProbeGgufAsync(repoId, probe.FileName, fileLength: probe.SizeBytes);
         if (!r.Success || r.Value!.BlockCount is null || !GgufInspector.FromHeader(r.Value).IsModel)
             return (null, 0);
@@ -520,7 +520,7 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
         {
             IsBusy = true;
             IsError = false;
-            Status = $"Verificando que {item.FileName} sea un modelo completo…";
+            Status = Loc.F("catalog.verifying", item.FileName);
             var probe = await _client.ProbeGgufAsync(_selectedRepo.Id, item.FileName);
             IsBusy = false;
 
@@ -530,7 +530,7 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
                 if (!verdict.IsModel)
                 {
                     IsError = true;
-                    Status = $"No se descarga {item.FileName}. {verdict.Reason}";
+                    Status = Loc.F("catalog.notDownloading", item.FileName, verdict.Reason);
                     return;
                 }
             }
@@ -540,8 +540,8 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
         if (item.Verdict.IsModel && item.DoesNotFit)
         {
             var confirm = System.Windows.MessageBox.Show(
-                $"{item.VramExplanation}\n\n¿Descargar igual?",
-                "El modelo no entra en la GPU",
+                Loc.F("catalog.confirmNoFit.message", item.VramExplanation),
+                Loc.T("catalog.confirmNoFit.title"),
                 System.Windows.MessageBoxButton.YesNo,
                 System.Windows.MessageBoxImage.Warning);
 
@@ -554,8 +554,8 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
         IsError = false;
         LastHash = "";
         DownloadPercent = 0;
-        DownloadText = "Iniciando descarga…";
-        Status = $"Descargando {item.FileName}…";
+        DownloadText = Loc.T("catalog.download.starting");
+        Status = Loc.F("catalog.download.running", item.FileName);
 
         var result = await _downloader.DownloadAsync(
             _selectedRepo.Id, item.FileName, _destinationDirectory, _downloadCts.Token);
@@ -568,7 +568,7 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
         if (!result.Success)
         {
             IsError = true;
-            Status = result.ErrorMessage ?? "La descarga falló.";
+            Status = result.ErrorMessage ?? Loc.T("catalog.download.failed");
             DownloadText = "";
             DownloadPercent = 0;
             return;
@@ -580,8 +580,7 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
         LastHash = record.Sha256;
         DownloadPercent = 100;
         DownloadText = "";
-        Status = $"✅ {record.FileName} descargado en {_destinationDirectory}. " +
-                 "Ya aparece en el selector de modelos.";
+        Status = Loc.F("catalog.download.done", record.FileName, _destinationDirectory);
 
         // El modelo recién bajado tiene que aparecer en la lista de descargados,
         // que es desde donde se lo puede volver a eliminar
@@ -594,7 +593,7 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
     private void ExecuteCancelDownload()
     {
         _downloadCts?.Cancel();
-        Status = "Cancelando…";
+        Status = Loc.T("catalog.cancelling");
     }
 
     /// <summary>
@@ -604,11 +603,8 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
     private static bool ConfirmDeletionWithDialog(DownloadedModelInfo model)
     {
         var answer = System.Windows.MessageBox.Show(
-            $"Se va a eliminar del disco:\n\n{model.FileName}\n{model.SizeText}\n\n" +
-            $"Carpeta: {System.IO.Path.GetDirectoryName(model.FullPath)}\n\n" +
-            "La operación no se puede deshacer. Para volver a usarlo habría que " +
-            "descargarlo de nuevo.\n\n¿Eliminar?",
-            "Eliminar modelo descargado",
+            Loc.F("catalog.delete.message", model.FileName, model.SizeText, System.IO.Path.GetDirectoryName(model.FullPath)),
+            Loc.T("catalog.delete.title"),
             System.Windows.MessageBoxButton.YesNo,
             System.Windows.MessageBoxImage.Warning,
             // El botón por defecto es No: este diálogo borra gigabytes
@@ -629,7 +625,7 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
         if (!result.Success)
         {
             IsError = true;
-            Status = result.ErrorMessage ?? "No se pudo eliminar el modelo.";
+            Status = result.ErrorMessage ?? Loc.T("catalog.delete.failed");
             RefreshDownloaded();
             return;
         }
@@ -638,12 +634,11 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
         _downloadLog.RecordDeletion(record);
 
         string extra = record.AlsoDeleted.Count > 0
-            ? $" También se borró {string.Join(", ", record.AlsoDeleted)}."
+            ? " " + Loc.F("catalog.delete.alsoDeleted", string.Join(", ", record.AlsoDeleted))
             : "";
 
         IsError = false;
-        Status = $"🗑 {record.FileName} eliminado. Se liberaron " +
-                 $"{DownloadedModelInfo.FormatSize(record.SizeBytes)}.{extra}";
+        Status = Loc.F("catalog.delete.done", record.FileName, DownloadedModelInfo.FormatSize(record.SizeBytes)) + extra;
 
         RefreshDownloaded();
         _onModelDeleted?.Invoke(record);
@@ -657,9 +652,8 @@ public class ModelCatalogViewModel : ObservableObject, IDisposable
 
         IsError = false;
         Status = deleted.Count == 0
-            ? "No había descargas interrumpidas que limpiar."
-            : $"🗑 {deleted.Count} archivo{(deleted.Count == 1 ? "" : "s")} parcial{(deleted.Count == 1 ? "" : "es")} " +
-              $"eliminado{(deleted.Count == 1 ? "" : "s")}, {DownloadedModelInfo.FormatSize(freed)} liberados.";
+            ? Loc.T("catalog.partials.none")
+            : Loc.P("catalog.partials.deleted", deleted.Count, DownloadedModelInfo.FormatSize(freed));
 
         RefreshDownloaded();
     }

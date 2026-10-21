@@ -93,7 +93,7 @@
             <div class="card">
                 <h2>Guía de Uso</h2>
                 <ol>
-                    <li><strong>Seleccionar modo de operación:</strong> Al iniciar la aplicación, elija entre Modo Investigación o Academia PR según el contexto de trabajo.</li>
+                    <li><strong>Seleccionar modo de operación:</strong> Al iniciar la aplicación, elija entre Modo Investigación o Academia PR según el contexto de trabajo. Al pie de esa pantalla está el selector de <strong>idioma</strong>: «Automático» sigue al idioma de Windows; el cambio se aplica al volver a abrir la aplicación.</li>
                     <li><strong>Seleccionar perfil de ejecución:</strong> En el panel izquierdo. <strong>Automático</strong>, el que viene elegido, lee el modelo y la PC —placa de cualquier marca, RAM y procesador— y fija solo el contexto, las capas que van a la placa y los hilos; debajo de los botones dice qué eligió. Los otros tres son valores fijos para quien prefiera elegir a mano:
                         <table>
                             <tr><th>Perfil</th><th>Descripción</th><th>Hardware</th></tr>
@@ -113,8 +113,8 @@
                     </li>
                     <li><strong>Cargar archivos</strong>:
                         <ul>
-                            <li>Botón <strong>📎</strong> — Cargar archivos de texto, CSV, JSON o volcados hexadecimales.</li>
-                            <li>Botón <strong>🖼️</strong> — Cargar imágenes para análisis visual (requiere perfil con soporte de Visión).</li>
+                            <li>Botón del <strong>clip</strong> — Cargar archivos de texto, CSV, JSON o volcados hexadecimales.</li>
+                            <li>Botón de la <strong>imagen</strong> — Cargar imágenes para análisis visual (requiere perfil con soporte de Visión).</li>
                             <li>También puede arrastrar archivos directamente sobre el área de chat.</li>
                         </ul>
                         <p><strong>Qué ocurre con lo que se carga depende del modo, y la diferencia es importante:</strong></p>
@@ -146,8 +146,8 @@
                 <h2>Búsqueda Web (SearXNG)</h2>
                 <p>La edición comercial puede enriquecer una consulta con resultados web actuales. Es la única función del programa que usa la red, y está construida sobre tres decisiones deliberadas:</p>
                 <ul>
-                    <li><strong>La decide el usuario, nunca el modelo.</strong> La búsqueda se activa con el botón <strong>🌐</strong> junto al campo de texto, consulta por consulta. No hay <em>tool-calling</em>: el modelo no puede decidir salir a Internet por su cuenta.</li>
-                    <li><strong>No existe en la edición institucional.</strong> No es un permiso desactivado por configuración: el código de red directamente no se compila en ese binario. El botón 🌐 ni siquiera aparece.</li>
+                    <li><strong>La decide el usuario, nunca el modelo.</strong> La búsqueda se activa con el botón del <strong>globo</strong> junto al campo de texto, consulta por consulta. No hay <em>tool-calling</em>: el modelo no puede decidir salir a Internet por su cuenta.</li>
+                    <li><strong>No existe en la edición institucional.</strong> No es un permiso desactivado por configuración: el código de red directamente no se compila en ese binario. El botón del globo ni siquiera aparece.</li>
                     <li><strong>El Modo Investigación la bloquea siempre.</strong> Aunque el perfil activo la habilite, al entrar en Modo Investigación queda forzada a apagado.</li>
                 </ul>
 
@@ -180,7 +180,7 @@ search:
 
                 <h3>Configurar la aplicación</h3>
                 <ol>
-                    <li>Abrir el panel lateral con <strong>☰</strong> y bajar hasta <strong>BÚSQUEDA WEB</strong>.</li>
+                    <li>Abrir el menú lateral con el botón de arriba a la izquierda y bajar hasta <strong>BÚSQUEDA WEB</strong>.</li>
                     <li>En <strong>Instancia de SearXNG</strong>, escribir la dirección: <code>http://127.0.0.1:8080</code>. Se acepta también sin el esquema (<code>127.0.0.1:8080</code>).</li>
                     <li>Verificar que el estado debajo del campo diga <em>«Instancia configurada»</em> en verde.</li>
                     <li>Elegir la <strong>frescura</strong> de los resultados: último día, última semana, último mes o sin filtro.</li>
@@ -190,7 +190,7 @@ search:
                 </div>
 
                 <h3>Qué ocurre al buscar</h3>
-                <p>Con el botón 🌐 encendido, la aplicación pide <strong>12 candidatos</strong> al buscador y los descarga en tandas paralelas hasta reunir <strong>6 páginas leídas</strong> (10 segundos de espera máxima cada una, con un tope de 10 intentos), las convierte a texto plano y arma la consulta al modelo con las fuentes numeradas y la instrucción de citar con <code>[n]</code>. En pantalla se ve <em>Buscando…</em> y luego <em>Leyendo páginas…</em>.</p>
+                <p>Con el botón del globo encendido, la aplicación pide <strong>12 candidatos</strong> al buscador y los descarga en tandas paralelas hasta reunir <strong>6 páginas leídas</strong> (10 segundos de espera máxima cada una, con un tope de 10 intentos), las convierte a texto plano y arma la consulta al modelo con las fuentes numeradas y la instrucción de citar con <code>[n]</code>. En pantalla se ve <em>Buscando…</em> y luego <em>Leyendo páginas…</em>.</p>
                 <p>Se piden más candidatos que páginas a propósito: contra sitios reales, alrededor de una de cada cuatro descargas se rechaza —portales judiciales, redes sociales y algunos medios bloquean la lectura automática—, así que pedir 6 daría 4 o 5 en la práctica.</p>
                 <p>Bajo la respuesta aparece un panel desplegable de <strong>fuentes</strong> con el título, la URL en la que se puede hacer clic, la fecha y si la página pudo leerse o no. Verificar las fuentes es responsabilidad del perito.</p>
                 <p>Los fallos no interrumpen la consulta: si una página no responde, se informa y se sigue con las demás. Si no se puede leer ninguna, el modelo responde igual, sin fuentes y avisando en pantalla.</p>
@@ -220,7 +220,7 @@ search:
 
                 <h3>Cómo se usa</h3>
                 <ol>
-                    <li>Abrir el panel lateral con <strong>☰</strong> y bajar hasta <strong>IMÁGENES</strong>.</li>
+                    <li>Abrir el menú lateral con el botón de arriba a la izquierda y bajar hasta <strong>IMÁGENES</strong>.</li>
                     <li>La primera vez, entrar en <strong>Modelos de imagen</strong> y descargar el paquete recomendado, o apuntar a los tres archivos si ya se tienen.</li>
                     <li>Volver y presionar <strong>Generar imágenes</strong>. Se abre una ventana aparte.</li>
                     <li>Escribir el prompt, elegir el tamaño y presionar <strong>Generar imagen</strong>.</li>
@@ -354,7 +354,7 @@ PR-AI-Assistant/
                     <strong>Important:</strong> The AI model assists the examiner but never replaces them. Every AI-generated response must be verified by the examiner before being incorporated into any report or judicial proceeding. Responses automatically include a disclaimer indicating their artificial origin.
                 </div>
 
-                <h3>Consultation Mode (Academia PR)</h3>
+                <h3>Consultation Mode (PR Academy)</h3>
                 <p>Functions as an isolated academic sandbox for queries about:</p>
                 <ul>
                     <li>Legislation and regulations (Law 26.388, Budapest Convention, RFC 3227, ISO 27037).</li>
@@ -369,8 +369,8 @@ PR-AI-Assistant/
             <div class="card">
                 <h2>Usage Guide</h2>
                 <ol>
-                    <li><strong>Select operating mode:</strong> Upon launching the application, choose between Investigation Mode or Academia PR according to your work context.</li>
-                    <li><strong>Select execution profile:</strong> In the left panel. <strong>Automático</strong> (automatic), selected by default, reads the model and the PC —any brand of GPU, RAM and CPU— and sets the context size, the layers sent to the GPU and the threads by itself; below the buttons it shows what it chose. The other three are fixed values for those who prefer to choose by hand:
+                    <li><strong>Select operating mode:</strong> Upon launching the application, choose between Investigation Mode or PR Academy according to your work context. At the bottom of that screen is the <strong>language</strong> selector: «Automatic» follows the Windows language; a change applies when the application is opened again.</li>
+                    <li><strong>Select execution profile:</strong> In the left panel. <strong>Automatic</strong>, selected by default, reads the model and the PC —any brand of GPU, RAM and CPU— and sets the context size, the layers sent to the GPU and the threads by itself; below the buttons it shows what it chose. The other three are fixed values for those who prefer to choose by hand:
                         <table>
                             <tr><th>Profile</th><th>Description</th><th>Hardware</th></tr>
                             <tr><td>Automatic</td><td>Computed for the model and the PC</td><td>Any</td></tr>
@@ -387,13 +387,18 @@ PR-AI-Assistant/
                             <li><strong>Max. response:</strong> Token limit for the generated response.</li>
                         </ul>
                     </li>
-                    <li><strong>Load forensic context</strong> (Investigation Mode only):
+                    <li><strong>Load files</strong>:
                         <ul>
-                            <li>Button <strong>📎</strong> — Load text files, CSV, JSON, or hex dumps.</li>
-                            <li>Button <strong>🖼️</strong> — Load images for visual analysis (requires profile with Vision support).</li>
+                            <li><strong>Paperclip</strong> button — Load text files, CSV, JSON, or hex dumps.</li>
+                            <li><strong>Image</strong> button — Load images for visual analysis (requires a profile with Vision support).</li>
                             <li>You can also drag and drop files directly onto the chat area.</li>
                         </ul>
-                        <p>Loaded files appear in the right panel "Forensic Context" with their type and size. The estimated token counter updates in real time.</p>
+                        <p><strong>What happens to what you load depends on the mode, and the difference matters:</strong></p>
+                        <ul>
+                            <li><strong>In Investigation Mode it is evidence.</strong> Files appear in the right panel "Forensic Context" with their type and size, are injected into the analysis context, stay available for the whole session and are recorded in the audit log. The estimated token counter updates in real time.</li>
+                            <li><strong>In General Mode it is a message attachment.</strong> Files appear as tags above the text box, are sent with that single query and are then discarded. They are <em>not</em> evidence, do not enter the forensic context panel and do not stay in the session. The log only records which file was attached —name, size and type—, never its content.</li>
+                        </ul>
+                        <p>The load buttons are shown according to the active usage profile. Investigation Mode always enables them: loading evidence is part of the institutional framework and a profile cannot remove it.</p>
                     </li>
                     <li><strong>Interact with the assistant:</strong> Type your query in the bottom text field and press <span class="kbd">Enter</span> or the send button. Use <span class="kbd">Shift+Enter</span> for line breaks without sending. The response is displayed in real time (streaming).</li>
                     <li><strong>Export session</strong> (Investigation Mode only): Press "Export Session" in the left panel. Select the format (TXT, HTML, or JSON) and location. The exported file includes a SHA-256 integrity hash.</li>
@@ -417,8 +422,8 @@ PR-AI-Assistant/
                 <h2>Web Search (SearXNG)</h2>
                 <p>The commercial edition can enrich a query with current web results. It is the only feature in the program that uses the network, and it rests on three deliberate decisions:</p>
                 <ul>
-                    <li><strong>The user decides, never the model.</strong> Search is enabled with the <strong>🌐</strong> button next to the text field, one query at a time. There is no <em>tool-calling</em>: the model cannot decide to reach the Internet on its own.</li>
-                    <li><strong>It does not exist in the institutional edition.</strong> This is not a permission turned off in a config file: the networking code is simply not compiled into that binary. The 🌐 button does not even appear.</li>
+                    <li><strong>The user decides, never the model.</strong> Search is enabled with the <strong>globe</strong> button next to the text field, one query at a time. There is no <em>tool-calling</em>: the model cannot decide to reach the Internet on its own.</li>
+                    <li><strong>It does not exist in the institutional edition.</strong> This is not a permission turned off in a config file: the networking code is simply not compiled into that binary. The globe button does not even appear.</li>
                     <li><strong>Investigation Mode always blocks it.</strong> Even if the active profile allows it, entering Investigation Mode forces it off.</li>
                 </ul>
 
@@ -451,7 +456,7 @@ search:
 
                 <h3>Configuring the application</h3>
                 <ol>
-                    <li>Open the side panel with <strong>☰</strong> and scroll down to <strong>WEB SEARCH</strong>.</li>
+                    <li>Open the side menu with the top-left button and scroll down to <strong>WEB SEARCH</strong>.</li>
                     <li>Under <strong>SearXNG instance</strong>, enter the address: <code>http://127.0.0.1:8080</code>. It is also accepted without the scheme (<code>127.0.0.1:8080</code>).</li>
                     <li>Check that the status below the field reads <em>"Instance configured"</em> in green.</li>
                     <li>Choose the result <strong>freshness</strong>: last day, last week, last month, or no filter.</li>
@@ -461,7 +466,7 @@ search:
                 </div>
 
                 <h3>What happens during a search</h3>
-                <p>With the 🌐 button on, the application requests <strong>12 candidates</strong> from the search engine and downloads them in parallel batches until it has <strong>6 pages read</strong> (10-second timeout each, capped at 10 attempts), converts them to plain text and builds the model query with numbered sources and an instruction to cite using <code>[n]</code>. The screen shows <em>Searching…</em> and then <em>Reading pages…</em>.</p>
+                <p>With the globe button on, the application requests <strong>12 candidates</strong> from the search engine and downloads them in parallel batches until it has <strong>6 pages read</strong> (10-second timeout each, capped at 10 attempts), converts them to plain text and builds the model query with numbered sources and an instruction to cite using <code>[n]</code>. The screen shows <em>Searching…</em> and then <em>Reading pages…</em>.</p>
                 <p>More candidates than pages are requested on purpose: against real sites, roughly one in four downloads is refused — court portals, social networks and some news outlets block automated reading — so asking for 6 would yield 4 or 5 in practice.</p>
                 <p>Below the answer, a collapsible <strong>sources</strong> panel lists the title, a clickable URL, the date, and whether each page could be read. Verifying the sources is the examiner's responsibility.</p>
                 <p>Failures do not abort the query: if a page does not respond, it is reported and the rest continue. If none can be read, the model answers anyway, without sources and with an on-screen notice.</p>
@@ -491,7 +496,7 @@ search:
 
                 <h3>How to use it</h3>
                 <ol>
-                    <li>Open the sidebar with <strong>☰</strong> and scroll to <strong>IMÁGENES</strong>.</li>
+                    <li>Open the side menu with the top-left button and scroll to <strong>IMAGES</strong>.</li>
                     <li>The first time, open <strong>Image models</strong> and download the recommended package, or point to the three files if you already have them.</li>
                     <li>Go back and press <strong>Generate images</strong>. A separate window opens.</li>
                     <li>Write the prompt, choose the size and press <strong>Generate image</strong>.</li>
@@ -560,7 +565,7 @@ PR-AI-Assistant/
 │   └── mmproj-*.gguf       Multimodal projector (vision)
 ├── Prompts/
 │   ├── system_forense.txt  Investigation Mode prompt
-│   └── system_consulta.txt Academia PR prompt
+│   └── system_consulta.txt PR Academy prompt
 ├── Tools/
 │   ├── llama-server.exe    Inference engine
 │   ├── ggml-cuda.dll       CUDA backend
@@ -612,8 +617,12 @@ PR-AI-Assistant/
             if (lang === 'es') { document.getElementById('content-es').classList.add('active'); document.getElementById('btn-es').classList.add('active'); }
             else { document.getElementById('content-en').classList.add('active'); document.getElementById('btn-en').classList.add('active'); }
         }
-        var userLang = navigator.language || navigator.userLanguage;
-        if (userLang.toLowerCase().startsWith('es')) setLang('es'); else setLang('en');
+        // La aplicación abre la ayuda con #es o #en, según su idioma. Abierta a mano,
+        // sin marca, se elige por el idioma del navegador.
+        var fromApp = (location.hash || '').replace('#', '');
+        var userLang = (navigator.language || navigator.userLanguage || '').toLowerCase();
+        if (fromApp === 'es' || fromApp === 'en') setLang(fromApp);
+        else if (userLang.startsWith('es')) setLang('es'); else setLang('en');
     </script>
 </body>
 </html>

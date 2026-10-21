@@ -156,15 +156,12 @@ public class InvestigationFormViewModel : ObservableObject
     /// <summary>
     /// Texto completo del disclaimer para hashear (auditoría).
     /// </summary>
+    /// <remarks>
+    /// En el idioma en que se mostró: lo que se hashea es lo que el perito leyó y aceptó.
+    /// </remarks>
     private string GetDisclaimerFullText()
     {
-        return $@"DECLARACIÓN DE CUMPLIMIENTO – PR-AI ASSISTANT
-1. CERO ALTERACIÓN: PR-AI Assistant NO accede, modifica ni toca la evidencia digital original.
-2. RFC 3227: El orden de volatilidad y las buenas prácticas se respetan en todo momento.
-3. TRAZABILIDAD: Toda interacción queda registrada con timestamp UTC, hash SHA-256, e identificación del perito.
-4. VALIDACIÓN HUMANA: Ninguna respuesta constituye evidencia ni conclusión pericial.
-Perito: {PeritoName} | Legajo: {PeritoBadge} | Causa: {CaseNumber}
-Fecha: {CurrentTimestamp}";
+        return Localization.Loc.F("declaration.hashText", PeritoName, PeritoBadge, CaseNumber, CurrentTimestamp);
     }
 
     private static string ComputeSha256(string input)

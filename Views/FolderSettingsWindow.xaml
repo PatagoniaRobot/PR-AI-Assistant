@@ -7,7 +7,8 @@
         xmlns:vm="clr-namespace:PRImager.AIAssistant.ViewModels"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:FolderSettingsViewModel}"
-        Title="Carpetas — PR-AI Assistant"
+        xmlns:l="clr-namespace:PRImager.AIAssistant.Localization"
+        Title="{l:T folders.window.title}"
         Height="700" Width="880"
         Background="#1A1A2E"
         WindowStartupLocation="CenterOwner"
@@ -90,12 +91,12 @@
 
         <!-- Encabezado -->
         <StackPanel Grid.Row="0" Margin="0,0,0,12">
-            <TextBlock Text="Carpetas" FontSize="18" FontWeight="Bold" />
+            <TextBlock Text="{l:T sidebar.folders.button}" FontSize="18" FontWeight="Bold" />
             <TextBlock Foreground="#94a3b8" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap"
-                       Text="Elegí dónde viven los modelos y las imágenes. Podés tener el programa en un disco y los archivos grandes en otro." />
+                       Text="{l:T sidebar.folders.tooltip}" />
             <TextBlock Foreground="#94a3b8" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap"
                        AutomationProperties.AutomationId="FolderRuleText"
-                       Text="Cambiar una carpeta solo cambia a dónde van los archivos nuevos. Los que ya están se mueven aparte, con el botón que aparece debajo." />
+                       Text="{l:T folders.changeHint}" />
         </StackPanel>
 
         <!-- Las carpetas. Va en un ScrollViewer porque el panel de movimiento de una fila
@@ -106,7 +107,7 @@
             <StackPanel>
                 <!-- Aviso de edición sin carpetas configurables. La edición institucional no
                      descarga modelos ni genera imágenes, así que no tiene ninguna. -->
-                <TextBlock Text="Esta edición no administra carpetas de datos del usuario."
+                <TextBlock Text="{l:T folders.notManaged}"
                            Foreground="#94a3b8" FontSize="12" Margin="0,8,0,0"
                            AutomationProperties.AutomationId="FolderEmptyText"
                            Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}" />
@@ -130,12 +131,12 @@
                                         <TextBox Grid.Column="0" Text="{Binding Path, Mode=OneWay}"
                                                  Style="{StaticResource RutaBox}"
                                                  ToolTip="{Binding Path}" />
-                                        <Button Grid.Column="1" Content="Examinar…" Margin="8,0,0,0"
+                                        <Button Grid.Column="1" Content="{l:T common.browse}" Margin="8,0,0,0"
                                                 Style="{StaticResource FolderButton}"
                                                 Command="{Binding DataContext.ChangeFolderCommand,
                                                           RelativeSource={RelativeSource AncestorType=Window}}"
                                                 CommandParameter="{Binding}" />
-                                        <Button Grid.Column="2" Content="Abrir" Margin="6,0,0,0"
+                                        <Button Grid.Column="2" Content="{l:T folders.open}" Margin="6,0,0,0"
                                                 Style="{StaticResource NeutralFolderButton}"
                                                 Command="{Binding DataContext.OpenFolderCommand,
                                                           RelativeSource={RelativeSource AncestorType=Window}}"
@@ -150,7 +151,7 @@
                                         <TextBlock Grid.Column="0" Text="{Binding ContentsText}"
                                                    Foreground="#94a3b8" FontSize="11"
                                                    VerticalAlignment="Center" />
-                                        <Button Grid.Column="1" Content="Volver a la de fábrica"
+                                        <Button Grid.Column="1" Content="{l:T folders.reset}"
                                                 FontSize="11" Padding="10,4"
                                                 Style="{StaticResource NeutralFolderButton}"
                                                 Command="{Binding DataContext.ResetToDefaultCommand,
@@ -177,12 +178,12 @@
 
                                             <StackPanel Orientation="Horizontal"
                                                         Visibility="{Binding IsIdle, Converter={StaticResource BoolToVis}}">
-                                                <Button Content="Mover los archivos"
+                                                <Button Content="{l:T folders.move}"
                                                         Style="{StaticResource FolderButton}"
                                                         Command="{Binding DataContext.MoveCommand,
                                                                   RelativeSource={RelativeSource AncestorType=Window}}"
                                                         CommandParameter="{Binding}" />
-                                                <Button Content="Dejarlos donde están" Margin="8,0,0,0"
+                                                <Button Content="{l:T folders.leave}" Margin="8,0,0,0"
                                                         Style="{StaticResource NeutralFolderButton}"
                                                         Command="{Binding DataContext.DismissPendingCommand,
                                                                   RelativeSource={RelativeSource AncestorType=Window}}"
@@ -203,7 +204,7 @@
                                                                  Value="{Binding MovePercent, Mode=OneWay}"
                                                                  Background="#1e293b" Foreground="#10B981"
                                                                  BorderThickness="0" />
-                                                    <Button Grid.Column="1" Content="Cancelar" Margin="8,0,0,0"
+                                                    <Button Grid.Column="1" Content="{l:T common.cancel}" Margin="8,0,0,0"
                                                             FontSize="11" Padding="10,4"
                                                             Style="{StaticResource DangerFolderButton}"
                                                             Command="{Binding DataContext.CancelMoveCommand,
@@ -235,7 +236,7 @@
             <TextBlock Grid.Column="0" Text="{Binding Message}" Foreground="#94a3b8" FontSize="11"
                        VerticalAlignment="Center" TextWrapping="Wrap"
                        AutomationProperties.AutomationId="FolderMessage" />
-            <Button Grid.Column="1" Content="Cerrar" Style="{StaticResource NeutralFolderButton}"
+            <Button Grid.Column="1" Content="{l:T common.close}" Style="{StaticResource NeutralFolderButton}"
                     Click="Cerrar_Click"
                     AutomationProperties.AutomationId="FolderCloseButton" />
         </Grid>

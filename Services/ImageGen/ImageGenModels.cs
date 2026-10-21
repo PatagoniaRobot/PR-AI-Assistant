@@ -72,7 +72,7 @@ public sealed class ImageGenResult
         new() { Success = false, ErrorMessage = message };
 
     public static ImageGenResult Cancelled() =>
-        new() { Success = false, WasCancelled = true, ErrorMessage = "Generación cancelada." };
+        new() { Success = false, WasCancelled = true, ErrorMessage = Loc.T("imagegen.status.cancelled") };
 }
 
 /// <summary>

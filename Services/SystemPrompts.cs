@@ -19,12 +19,13 @@ public static class SystemPrompts
     public static string GetInvestigationPrompt(InvestigationSession session)
     {
         var template = LoadOrDefault("system_investigacion.txt", DefaultInvestigationPrompt);
+        // Los marcadores {nombre}, {legajo}… son los mismos en todos los idiomas
         return template
             .Replace("{nombre}", session.PeritoName)
             .Replace("{legajo}", session.PeritoBadge)
             .Replace("{numero_causa}", session.CaseNumber)
-            .Replace("{juzgado}", session.Court ?? "No especificado")
-            .Replace("{descripcion}", session.Description ?? "No especificada");
+            .Replace("{juzgado}", session.Court ?? Loc.T("prompt.notSpecified.court"))
+            .Replace("{descripcion}", session.Description ?? Loc.T("prompt.notSpecified.description"));
     }
 
     /// <summary>
@@ -38,7 +39,8 @@ public static class SystemPrompts
 
     private static string LoadOrDefault(string fileName, string defaultContent)
     {
-        var filePath = Path.Combine(_promptsDir, fileName);
+        // En inglés se busca system_xxx.en.txt; si no está, el original en español
+        var filePath = Loc.LocalizedFile(Path.Combine(_promptsDir, fileName));
         try
         {
             if (File.Exists(filePath))

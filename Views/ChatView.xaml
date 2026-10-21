@@ -6,6 +6,8 @@
              xmlns:conv="clr-namespace:PRImager.AIAssistant.Views.Converters"
              xmlns:vm="clr-namespace:PRImager.AIAssistant.ViewModels"
              xmlns:helpers="clr-namespace:PRImager.AIAssistant.Helpers"
+             xmlns:l="clr-namespace:PRImager.AIAssistant.Localization"
+             xmlns:c="clr-namespace:PRImager.AIAssistant.Controls"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
              Background="#1A1A2E" FontFamily="{StaticResource MainFont}"
@@ -163,16 +165,18 @@
             <!-- Franja de acento del perfil activo: identificación visual inconfundible (E1) -->
             <Border Grid.Row="0" Height="4"
                     Background="{Binding AccentColor, Converter={StaticResource HexToBrush}}"
-                    ToolTip="{Binding ProfileName, StringFormat=Perfil activo: {0}}" />
+                    ToolTip="{Binding ProfileName, StringFormat={l:T chat.activeProfileFormat}}" />
 
             <!-- A. Header Mínimo -->
             <Border Grid.Row="1" Background="#0f172a" BorderBrush="#334155" BorderThickness="0,0,0,1" Height="48">
                 <Grid>
                     <!-- Izquierda: Hamburger + selector de perfil -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,0,0,0">
-                        <Button Style="{StaticResource HeaderIconButton}" Padding="12,8"
+                        <Button Style="{StaticResource HeaderIconButton}" Padding="10,8"
+                                AutomationProperties.AutomationId="MenuButton"
+                                AutomationProperties.Name="{l:T chat.menu}" ToolTip="{l:T chat.menu}"
                                 Command="{Binding ToggleSidebarCommand}">
-                            <TextBlock Text="☰" FontSize="20" FontFamily="Segoe UI Symbol" />
+                            <c:Icon Kind="Menu" Size="20" />
                         </Button>
 
                         <!-- Punto de color: repite el acento junto al nombre del perfil -->
@@ -184,11 +188,14 @@
                                   SelectedItem="{Binding SelectedUsageProfile}"
                                   DisplayMemberPath="Name"
                                   MinWidth="140" VerticalAlignment="Center"
-                                  ToolTip="Perfil de uso activo" />
-                        <Button Content="⚙" Style="{StaticResource HeaderIconButton}" Padding="8,4" FontSize="14"
+                                  ToolTip="{l:T chat.profileSelector}" />
+                        <Button Style="{StaticResource HeaderIconButton}" Padding="8,6"
                                 AutomationProperties.AutomationId="ManageProfilesButton"
+                                AutomationProperties.Name="{l:T chat.manageProfiles}"
                                 Margin="4,0,0,0" Command="{Binding ManageProfilesCommand}"
-                                ToolTip="Gestionar perfiles" />
+                                ToolTip="{l:T chat.manageProfiles}">
+                            <c:Icon Kind="Settings" Size="18" />
+                        </Button>
                     </StackPanel>
 
                     <!-- Centro: nombre del perfil activo, en grande -->
@@ -202,20 +209,35 @@
                         <!-- Pill Sandbox -->
                         <Border Background="#92400e" Padding="12,4" CornerRadius="12" Margin="0,0,12,0"
                                 Visibility="{Binding ShowModeBadge, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="🔒 SANDBOX — Sin acceso a evidencia" Foreground="White" FontWeight="SemiBold" FontSize="12" FontFamily="{StaticResource MainFont}" />
+                            <StackPanel Orientation="Horizontal">
+                                <c:Icon Kind="Lock" Size="14" Foreground="White" Accent="White" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Text="{l:T chat.badge.sandbox}" Foreground="White" FontWeight="SemiBold" FontSize="12" FontFamily="{StaticResource MainFont}" VerticalAlignment="Center" />
+                            </StackPanel>
                         </Border>
                         <!-- Pill Investigación -->
                         <Border Background="#065f46" Padding="12,4" CornerRadius="12" Margin="0,0,12,0"
                                 Visibility="{Binding IsInvestigationMode, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="🔍 INVESTIGACIÓN — Modo forense activo" Foreground="White" FontWeight="SemiBold" FontSize="12" FontFamily="{StaticResource MainFont}" />
+                            <StackPanel Orientation="Horizontal">
+                                <c:Icon Kind="Search" Size="14" Foreground="White" Accent="White" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Text="{l:T chat.badge.investigation}" Foreground="White" FontWeight="SemiBold" FontSize="12" FontFamily="{StaticResource MainFont}" VerticalAlignment="Center" />
+                            </StackPanel>
                         </Border>
 
-                        <Button Content="❓" Style="{StaticResource HeaderIconButton}" Padding="8,4" FontSize="16" Click="OpenHelp_Click" ToolTip="Ayuda" />
-                        
-                        <Button Content="Contexto Forense ☰" Margin="8,0,0,0"
+                        <Button Style="{StaticResource HeaderIconButton}" Padding="8,6" Click="OpenHelp_Click"
+                                AutomationProperties.AutomationId="HelpButton"
+                                AutomationProperties.Name="{l:T chat.help}" ToolTip="{l:T chat.help}">
+                            <c:Icon Kind="Help" Size="20" />
+                        </Button>
+
+                        <Button Margin="8,0,0,0"
                                 Foreground="#00D4AA" Style="{StaticResource HeaderIconButton}" Padding="8,4"
                                 Click="ToggleRightPanel_Click"
-                                Visibility="Collapsed"/>
+                                Visibility="Collapsed">
+                            <StackPanel Orientation="Horizontal">
+                                <c:Icon Kind="Document" Size="16" Margin="0,0,6,0" />
+                                <TextBlock Text="{l:T context.title}" Foreground="#00D4AA" />
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -276,7 +298,7 @@
                             </Ellipse>
                         </StackPanel>
 
-                        <TextBlock Text="Iniciando modelo..." FontFamily="{StaticResource MainFont}" FontSize="16" FontWeight="SemiBold" Foreground="#94a3b8" HorizontalAlignment="Center" />
+                        <TextBlock Text="{l:T chat.startingModel}" FontFamily="{StaticResource MainFont}" FontSize="16" FontWeight="SemiBold" Foreground="#94a3b8" HorizontalAlignment="Center" />
                         <TextBlock Text="{Binding SelectedModelItem.DisplayName}" FontFamily="{StaticResource MainFont}" FontSize="13" Foreground="#64748b" HorizontalAlignment="Center" Margin="0,4,0,0" />
                     </StackPanel>
 
@@ -294,23 +316,35 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <TextBlock Text="Todavía no hay ningún modelo" FontFamily="{StaticResource MainFont}" FontSize="18"
+                        <TextBlock Text="{l:T chat.firstRun.title}" FontFamily="{StaticResource MainFont}" FontSize="18"
                                    FontWeight="SemiBold" Foreground="#e2e8f0" HorizontalAlignment="Center" />
                         <TextBlock Text="{Binding FirstRunText}" FontFamily="{StaticResource MainFont}" FontSize="14"
                                    Foreground="#94a3b8" TextWrapping="Wrap" TextAlignment="Center" Margin="0,10,0,18"
                                    AutomationProperties.AutomationId="FirstRunText" />
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Button Content="⤓ Abrir el catálogo" Command="{Binding OpenModelCatalogCommand}"
+                            <Button Command="{Binding OpenModelCatalogCommand}"
                                     Style="{StaticResource ActionButtonStyle}" Padding="16,8" Margin="4,0"
                                     AutomationProperties.AutomationId="FirstRunCatalogButton"
-                                    Visibility="{Binding IsModelDownloadAvailable, Converter={StaticResource BoolToVis}}" />
-                            <Button Content="Usar el perfil General" Command="{Binding UseGeneralProfileCommand}"
+                                    AutomationProperties.Name="{l:T chat.firstRun.openCatalog}"
+                                    Visibility="{Binding IsModelDownloadAvailable, Converter={StaticResource BoolToVis}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <c:Icon Kind="Download" Size="16" Accent="White" Margin="0,0,6,0" />
+                                    <TextBlock Text="{l:T chat.firstRun.openCatalog}" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                                </StackPanel>
+                            </Button>
+                            <Button Content="{l:T chat.firstRun.useGeneral}" Command="{Binding UseGeneralProfileCommand}"
                                     Style="{StaticResource ActionButtonStyle}" Padding="16,8" Margin="4,0"
                                     AutomationProperties.AutomationId="FirstRunGeneralButton"
                                     Visibility="{Binding CanSwitchToGeneralForDownload, Converter={StaticResource BoolToVis}}" />
-                            <Button Content="📁 Abrir la carpeta de modelos" Command="{Binding OpenModelsFolderCommand}"
+                            <Button Command="{Binding OpenModelsFolderCommand}"
                                     Style="{StaticResource SecondaryButtonStyle}" Padding="16,8" Margin="4,0"
-                                    AutomationProperties.AutomationId="FirstRunFolderButton" />
+                                    AutomationProperties.AutomationId="FirstRunFolderButton"
+                                    AutomationProperties.Name="{l:T chat.firstRun.openFolder}">
+                                <StackPanel Orientation="Horizontal">
+                                    <c:Icon Kind="Folder" Size="16" Accent="White" Margin="0,0,6,0" />
+                                    <TextBlock Text="{l:T chat.firstRun.openFolder}" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                     </StackPanel>
 
@@ -334,9 +368,10 @@
                                 </Style.Triggers>
                             </Style>
                         </TextBlock.Style>
-                        <Run Text="🖥 PR-AI Assistant listo." FontSize="16" FontFamily="{StaticResource MainFont}" />
+                        <InlineUIContainer BaselineAlignment="Center"><c:Icon Kind="Monitor" Size="20" Foreground="#94a3b8" Margin="0,0,8,0" /></InlineUIContainer>
+                        <Run Text="{l:T chat.ready.title}" FontSize="16" FontFamily="{StaticResource MainFont}" />
                         <LineBreak />
-                        <Run Text="Escriba una consulta o cargue archivos para analizar." FontSize="14" FontFamily="{StaticResource MainFont}" />
+                        <Run Text="{l:T chat.ready.hint}" FontSize="14" FontFamily="{StaticResource MainFont}" />
                     </TextBlock>
 
                     <!-- Estado 3: Error al iniciar -->
@@ -352,9 +387,12 @@
                             </Style>
                         </StackPanel.Style>
                         
-                        <TextBlock Text="⚠ No se pudo iniciar el servidor" FontFamily="{StaticResource MainFont}" FontSize="16" FontWeight="SemiBold" Foreground="#ef4444" HorizontalAlignment="Center" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <c:Icon Kind="Warning" Size="20" Foreground="#ef4444" Margin="0,0,8,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{l:T chat.error.title}" FontFamily="{StaticResource MainFont}" FontSize="16" FontWeight="SemiBold" Foreground="#ef4444" VerticalAlignment="Center" />
+                        </StackPanel>
                         <TextBlock Text="{Binding StartupError}" FontFamily="{StaticResource MonoFont}" FontSize="13" Foreground="#94a3b8" HorizontalAlignment="Center" Margin="0,8,0,16" TextWrapping="Wrap" MaxWidth="600" TextAlignment="Center" />
-                        <TextBlock Text="Abra el menú (☰) para revisar la configuración." FontFamily="{StaticResource MainFont}" FontSize="13" Foreground="#64748b" HorizontalAlignment="Center" />
+                        <TextBlock Text="{l:T chat.error.hint}" FontFamily="{StaticResource MainFont}" FontSize="13" Foreground="#64748b" HorizontalAlignment="Center" />
                     </StackPanel>
 
                 </Grid>
@@ -418,7 +456,7 @@
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="Pensando..." Foreground="#10B981" FontFamily="{StaticResource MainFont}" FontStyle="Italic" FontSize="14" Visibility="{Binding IsWaitingForFirstToken, Converter={StaticResource BoolToVis}}" Margin="0,0,0,6">
+                                                <TextBlock Grid.Column="0" Text="{l:T chat.thinking}" Foreground="#10B981" FontFamily="{StaticResource MainFont}" FontStyle="Italic" FontSize="14" Visibility="{Binding IsWaitingForFirstToken, Converter={StaticResource BoolToVis}}" Margin="0,0,0,6">
                                                     <TextBlock.Triggers>
                                                         <EventTrigger RoutedEvent="Loaded">
                                                             <BeginStoryboard>
@@ -521,7 +559,7 @@
                                             <StackPanel Visibility="{Binding HasDisclaimer, Converter={StaticResource BoolToVis}}" Margin="0,8,0,0">
                                                 <Rectangle Height="1" Fill="#334155" Margin="0,0,0,8" />
                                                 <TextBlock Foreground="#475569" FontSize="11" FontFamily="{StaticResource MainFont}" TextWrapping="Wrap">
-                                                    <Run Text="[PR-AI Assistant — Generado por IA] " FontWeight="SemiBold" />
+                                                    <Run Text="{l:T chat.disclaimer.label}" FontWeight="SemiBold" />
                                                     <Run Text="{Binding DisclaimerText, Mode=OneWay}" />
                                                 </TextBlock>
                                             </StackPanel>
@@ -536,7 +574,11 @@
                                     <!-- System Bubble -->
                                     <Border CornerRadius="8" Padding="12" MaxWidth="600" Visibility="{Binding IsSystem, Converter={StaticResource BoolToVis}}" Background="#2A2A4A" BorderBrush="#777777" BorderThickness="1">
                                         <StackPanel>
-                                            <TextBlock Text="{Binding Content}" Foreground="#E0E0E0" FontSize="11" FontStyle="Italic" TextWrapping="Wrap" TextAlignment="Center" />
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                <c:Icon Kind="{Binding IconKind}" Size="14" Margin="0,0,6,0" VerticalAlignment="Top"
+                                                        Visibility="{Binding HasIcon, Converter={StaticResource BoolToVis}}" />
+                                                <TextBlock Text="{Binding Content}" Foreground="#E0E0E0" FontSize="11" FontStyle="Italic" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="560" />
+                                            </StackPanel>
                                             <TextBlock Text="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}" Foreground="#AAAAAA" FontSize="9" HorizontalAlignment="Center" Margin="0,5,0,0" />
                                         </StackPanel>
                                     </Border>
@@ -554,7 +596,7 @@
                 <Border Background="#1e3a5f" CornerRadius="6" Padding="10,6" Margin="0,0,0,8"
                         Visibility="{Binding IsWebSearchRunning, Converter={StaticResource BoolToVis}}">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="🌐" FontSize="13" Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <c:Icon Kind="Globe" Size="16" Foreground="#93c5fd" Margin="0,0,8,0" VerticalAlignment="Center" />
                         <TextBlock Text="{Binding WebSearchStatus}" Foreground="#93c5fd" FontSize="12"
                                    VerticalAlignment="Center" />
                     </StackPanel>
@@ -575,18 +617,22 @@
                             <Border Background="#1e293b" BorderBrush="#334155" BorderThickness="1"
                                     CornerRadius="6" Padding="8,4" Margin="0,0,6,6">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="{Binding Icon}" FontSize="12" VerticalAlignment="Center"
-                                               Margin="0,0,6,0" />
+                                    <c:Icon Kind="{Binding IconKind}" Size="14" Foreground="#cbd5e1" VerticalAlignment="Center"
+                                            Margin="0,0,6,0" />
                                     <TextBlock Text="{Binding FileName}" Foreground="#E0E0E0" FontSize="11"
                                                VerticalAlignment="Center" MaxWidth="220"
                                                TextTrimming="CharacterEllipsis"
                                                ToolTip="{Binding FilePath}" />
                                     <TextBlock Text="{Binding FileSizeFormatted}" Foreground="#64748b"
                                                FontSize="10" VerticalAlignment="Center" Margin="6,0,0,0" />
-                                    <Button Command="{Binding RemoveCommand}" Content="✕"
+                                    <Button Command="{Binding RemoveCommand}"
                                             Style="{StaticResource TransparentHoverButton}"
-                                            Width="20" Height="20" FontSize="10" Margin="6,0,0,0"
-                                            ToolTip="Quitar este adjunto" />
+                                            Width="20" Height="20" Margin="6,0,0,0"
+                                            AutomationProperties.AutomationId="RemoveAttachmentButton"
+                                            AutomationProperties.Name="{l:T chat.attachment.remove}"
+                                            ToolTip="{l:T chat.attachment.remove}">
+                                        <c:Icon Kind="Close" Size="12" />
+                                    </Button>
                                 </StackPanel>
                             </Border>
                         </DataTemplate>
@@ -602,12 +648,20 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <Button Grid.Column="0" Command="{Binding LoadFilesCommand}" Content="📎"
-                            Style="{StaticResource TransparentHoverButton}" Width="40" Height="40" FontSize="18" Margin="0,0,5,0"
-                            Visibility="{Binding ShowFileButtons, Converter={StaticResource BoolToVis}}"/>
-                    <Button Grid.Column="1" Command="{Binding LoadImagesCommand}" Content="🖼️"
-                            Style="{StaticResource TransparentHoverButton}" Width="40" Height="40" FontSize="18" Margin="0,0,10,0"
-                            Visibility="{Binding ShowFileButtons, Converter={StaticResource BoolToVis}}"/>
+                    <Button Grid.Column="0" Command="{Binding LoadFilesCommand}"
+                            Style="{StaticResource TransparentHoverButton}" Width="40" Height="40" Margin="0,0,5,0"
+                            AutomationProperties.AutomationId="AttachFilesButton"
+                            AutomationProperties.Name="{l:T chat.attachFiles}" ToolTip="{l:T chat.attachFiles}"
+                            Visibility="{Binding ShowFileButtons, Converter={StaticResource BoolToVis}}">
+                        <c:Icon Kind="Attach" Size="20" Foreground="#cbd5e1" />
+                    </Button>
+                    <Button Grid.Column="1" Command="{Binding LoadImagesCommand}"
+                            Style="{StaticResource TransparentHoverButton}" Width="40" Height="40" Margin="0,0,10,0"
+                            AutomationProperties.AutomationId="AttachImagesButton"
+                            AutomationProperties.Name="{l:T chat.attachImages}" ToolTip="{l:T chat.attachImages}"
+                            Visibility="{Binding ShowFileButtons, Converter={StaticResource BoolToVis}}">
+                        <c:Icon Kind="Image" Size="20" Foreground="#cbd5e1" />
+                    </Button>
 
                     <!-- Toggle de búsqueda web: el usuario decide cuándo buscar, no el modelo.
                          Solo existe si el binario la incluye; solo se habilita si el perfil efectivo la permite. -->
@@ -621,7 +675,7 @@
                         <ToggleButton.Style>
                             <Style TargetType="ToggleButton">
                                 <Setter Property="Background" Value="Transparent"/>
-                                <Setter Property="Foreground" Value="#64748b"/>
+                                <Setter Property="Foreground" Value="#94a3b8"/>
                                 <Setter Property="BorderThickness" Value="1"/>
                                 <Setter Property="BorderBrush" Value="#334155"/>
                                 <Setter Property="Template">
@@ -631,9 +685,9 @@
                                                     BorderBrush="{TemplateBinding BorderBrush}"
                                                     BorderThickness="{TemplateBinding BorderThickness}"
                                                     CornerRadius="8">
-                                                <TextBlock Text="🌐" FontSize="18" HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"
-                                                           Foreground="{TemplateBinding Foreground}"/>
+                                                <c:Icon Kind="Globe" Size="20" HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        Foreground="{TemplateBinding Foreground}"/>
                                             </Border>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
@@ -642,6 +696,7 @@
                                                 <Trigger Property="IsChecked" Value="True">
                                                     <Setter TargetName="bd" Property="Background" Value="#1D4ED8"/>
                                                     <Setter TargetName="bd" Property="BorderBrush" Value="#3B82F6"/>
+                                                    <Setter Property="Foreground" Value="White"/>
                                                 </Trigger>
                                                 <Trigger Property="IsEnabled" Value="False">
                                                     <Setter TargetName="bd" Property="Opacity" Value="0.35"/>
@@ -656,7 +711,7 @@
 
                     <Border Grid.Column="3" Background="#1E293B" CornerRadius="8" BorderBrush="#334155" BorderThickness="1">
                         <Grid>
-                            <TextBlock Text="Escriba una consulta o cargue archivos para analizar..." 
+                            <TextBlock Text="{l:T chat.input.placeholder}" 
                                        Foreground="#64748b" FontFamily="{StaticResource MainFont}" FontSize="15"
                                        Margin="12,10,12,10" IsHitTestVisible="False" VerticalAlignment="Center">
                                 <TextBlock.Style>
@@ -684,17 +739,30 @@
                     </Border>
 
                     <!-- Botón Enviar / Cancelar -->
-                    <Button Grid.Column="4" Width="40" Height="40" Margin="10,0,0,0"
+                    <!-- Padding 0: el estilo base trae 16 a cada lado, y en un botón de 40
+                         dejaba 8 px para el ícono, que salía cortado en una medialuna. -->
+                    <Button Grid.Column="4" Width="40" Height="40" Margin="10,0,0,0" Padding="0"
                             AutomationProperties.AutomationId="SendButton">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource CircularActionButtonStyle}">
                                 <Setter Property="Command" Value="{Binding SendMessageCommand}" />
-                                <Setter Property="Content" Value="➤" />
-                                <Setter Property="FontSize" Value="16" />
+                                <Setter Property="ToolTip" Value="{l:T chat.send}" />
+                                <Setter Property="AutomationProperties.Name" Value="{l:T chat.send}" />
+                                <Setter Property="Content">
+                                    <Setter.Value>
+                                        <c:Icon Kind="Send" Size="18" Accent="White" />
+                                    </Setter.Value>
+                                </Setter>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsProcessing}" Value="True">
                                         <Setter Property="Command" Value="{Binding CancelCommand}" />
-                                        <Setter Property="Content" Value="⬛" />
+                                        <Setter Property="ToolTip" Value="{l:T chat.cancel}" />
+                                        <Setter Property="AutomationProperties.Name" Value="{l:T chat.cancel}" />
+                                        <Setter Property="Content">
+                                            <Setter.Value>
+                                                <c:Icon Kind="Stop" Size="18" Accent="White" />
+                                            </Setter.Value>
+                                        </Setter>
                                         <Setter Property="Background" Value="#EF4444" />
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -730,8 +798,10 @@
                     </Grid.RowDefinitions>
 
                     <!-- Botón Cerrar (X) -->
-                    <Button Grid.Row="0" Command="{Binding ToggleSidebarCommand}" Style="{StaticResource HeaderIconButton}" HorizontalAlignment="Right" Padding="8,4" Margin="0,0,-8,0">
-                        <TextBlock Text="✕" FontSize="16" />
+                    <Button Grid.Row="0" Command="{Binding ToggleSidebarCommand}" Style="{StaticResource HeaderIconButton}" HorizontalAlignment="Right" Padding="8,6" Margin="0,0,-8,0"
+                            AutomationProperties.AutomationId="CloseSidebarButton"
+                            AutomationProperties.Name="{l:T sidebar.close}" ToolTip="{l:T sidebar.close}">
+                        <c:Icon Kind="Close" Size="16" />
                     </Button>
 
                     <!-- Info de sesión de investigación (solo visible en modo investigación) -->
@@ -742,14 +812,14 @@
 
                     <!-- Botón Nueva Sesión -->
                     <Button Grid.Row="2" Command="{Binding ClearHistoryCommand}" Style="{StaticResource ActionButtonStyle}" MinHeight="35" Margin="0,0,0,24">
-                        <TextBlock Text="+ Nueva sesión" FontWeight="SemiBold" />
+                        <TextBlock Text="{l:T sidebar.newSession}" FontWeight="SemiBold" />
                     </Button>
 
                     <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
                         <StackPanel>
                             <!-- Perfil de uso activo -->
                             <StackPanel Margin="0,0,0,24">
-                                <TextBlock Text="PERFIL DE USO" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <TextBlock Text="{l:T sidebar.profile.header}" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                     <Rectangle Width="4" Height="16" Margin="0,0,8,0"
                                                Fill="{Binding AccentColor, Converter={StaticResource HexToBrush}}" />
@@ -760,13 +830,13 @@
                                            Visibility="{Binding IsProfilePromptOverridden, Converter={StaticResource BoolToVis}}" />
                                 <Button Command="{Binding ManageProfilesCommand}" Style="{StaticResource SecondaryButtonStyle}"
                                         Background="#1E1E3A" MinHeight="28">
-                                    <TextBlock Text="Gestionar perfiles" FontSize="11" />
+                                    <TextBlock Text="{l:T chat.manageProfiles}" FontSize="11" />
                                 </Button>
                             </StackPanel>
 
                             <!-- 3. Sección Estado del Servidor -->
                             <StackPanel Margin="0,0,0,24">
-                                <TextBlock Text="ESTADO DEL SERVIDOR" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <TextBlock Text="{l:T sidebar.server.header}" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                     <Ellipse Width="12" Height="12" Fill="{Binding ServerStatus, Converter={StaticResource StatusToColor}}" Margin="0,0,10,0" />
                                     <TextBlock Text="{Binding ServerStatusText}" VerticalAlignment="Center" />
@@ -777,14 +847,28 @@
                                         <ColumnDefinition Width="5" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <Button Grid.Column="0" Command="{Binding StartServerCommand}" Content="▶ Iniciar" Style="{StaticResource ActionButtonStyle}" MinHeight="25" />
-                                    <Button Grid.Column="2" Command="{Binding StopServerCommand}" Content="■ Detener" Style="{StaticResource DangerButtonStyle}" MinHeight="25" />
+                                    <Button Grid.Column="0" Command="{Binding StartServerCommand}" Style="{StaticResource ActionButtonStyle}" MinHeight="25"
+                                            AutomationProperties.AutomationId="StartServerButton"
+                                            AutomationProperties.Name="{l:T sidebar.server.start}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <c:Icon Kind="Play" Size="14" Accent="White" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="{l:T sidebar.server.start}" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Column="2" Command="{Binding StopServerCommand}" Style="{StaticResource DangerButtonStyle}" MinHeight="25"
+                                            AutomationProperties.AutomationId="StopServerButton"
+                                            AutomationProperties.Name="{l:T sidebar.server.stop}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <c:Icon Kind="Stop" Size="14" Accent="#EF4444" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="{l:T sidebar.server.stop}" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
                                 </Grid>
                             </StackPanel>
 
                             <!-- 4. Sección Modelo + Parámetros -->
                             <StackPanel Margin="0,0,0,16">
-                                <TextBlock Text="MODELO" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <TextBlock Text="{l:T sidebar.model.header}" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -796,8 +880,12 @@
                                               SelectedItem="{Binding SelectedModelItem}"
                                               DisplayMemberPath="DisplayName"
                                               Margin="0,0,5,0" />
-                                    <Button Grid.Column="1" Command="{Binding RefreshModelsCommand}" Content="↻"
-                                            Style="{StaticResource SecondaryButtonStyle}" Background="#1E1E3A" />
+                                    <Button Grid.Column="1" Command="{Binding RefreshModelsCommand}" Padding="0"
+                                            AutomationProperties.AutomationId="RefreshModelsButton"
+                                            AutomationProperties.Name="{l:T sidebar.model.refresh}" ToolTip="{l:T sidebar.model.refresh}"
+                                            Style="{StaticResource SecondaryButtonStyle}" Background="#1E1E3A">
+                                        <c:Icon Kind="Refresh" Size="16" />
+                                    </Button>
                                 </Grid>
 
                                 <!-- Catálogo de HuggingFace: solo si el binario lo incluye
@@ -807,7 +895,10 @@
                                         Style="{StaticResource SecondaryButtonStyle}" Background="#1E1E3A"
                                         MinHeight="28" Margin="0,6,0,0"
                                         Visibility="{Binding IsModelCatalogCompiledIn, Converter={StaticResource BoolToVis}}">
-                                    <TextBlock Text="⤓ Catálogo de modelos" FontSize="11" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <c:Icon Kind="Download" Size="14" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="{l:T sidebar.model.catalog}" FontSize="11" VerticalAlignment="Center" />
+                                    </StackPanel>
                                 </Button>
                                 <!-- Info del modelo seleccionado -->
                                 <TextBlock Foreground="#00D4AA" FontSize="9" Margin="0,6,0,0">
@@ -830,22 +921,28 @@
                                      la capacidad existe y que su perfil se la quita. -->
                                 <StackPanel Margin="0,16,0,0"
                                             Visibility="{Binding IsImageGenCompiledIn, Converter={StaticResource BoolToVis}}">
-                                    <TextBlock Text="IMÁGENES" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                    <TextBlock Text="{l:T sidebar.images.header}" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
                                     <Button Command="{Binding OpenImageGenerationCommand}"
                                             AutomationProperties.AutomationId="OpenImageGenButton"
                                             Style="{StaticResource SecondaryButtonStyle}" Background="#1E1E3A"
                                             MinHeight="28"
-                                            ToolTip="Genera una imagen a partir de un prompt. Se abre en su propia ventana y podés seguir conversando mientras genera.">
-                                        <TextBlock Text="🖼 Generar imágenes" FontSize="11" />
+                                            ToolTip="{l:T sidebar.images.generate.tooltip}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <c:Icon Kind="GenerateImage" Size="14" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="{l:T sidebar.images.generate}" FontSize="11" VerticalAlignment="Center" />
+                                        </StackPanel>
                                     </Button>
                                     <Button Command="{Binding OpenImagePackagesCommand}"
                                             AutomationProperties.AutomationId="OpenImagePackagesButton"
                                             Style="{StaticResource SecondaryButtonStyle}" Background="#1E1E3A"
                                             MinHeight="28" Margin="0,6,0,0"
-                                            ToolTip="Elegí o descargá el paquete de modelo de imagen. Son tres archivos: difusión, text encoder y VAE.">
-                                        <TextBlock Text="⤓ Modelos de imagen" FontSize="11" />
+                                            ToolTip="{l:T sidebar.images.packages.tooltip}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <c:Icon Kind="Download" Size="14" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="{l:T sidebar.images.packages}" FontSize="11" VerticalAlignment="Center" />
+                                        </StackPanel>
                                     </Button>
-                                    <TextBlock Text="El perfil activo no habilita la generación de imágenes."
+                                    <TextBlock Text="{l:T sidebar.images.disabled}"
                                                Foreground="#F59E0B" FontSize="10" TextWrapping="Wrap" Margin="0,6,0,0"
                                                AutomationProperties.AutomationId="ImageGenDisabledNotice"
                                                Visibility="{Binding IsImageGenAvailable, Converter={StaticResource InverseBoolToVis}}" />
@@ -860,18 +957,21 @@
                                      que el perfil la quite, es que no existe. -->
                                 <StackPanel Margin="0,16,0,0"
                                             Visibility="{Binding AreFoldersConfigurable, Converter={StaticResource BoolToVis}}">
-                                    <TextBlock Text="CARPETAS" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                    <TextBlock Text="{l:T sidebar.folders.header}" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
                                     <Button Command="{Binding OpenFolderSettingsCommand}"
                                             AutomationProperties.AutomationId="OpenFolderSettingsButton"
                                             Style="{StaticResource SecondaryButtonStyle}" Background="#1E1E3A"
                                             MinHeight="28"
-                                            ToolTip="Elegí dónde viven los modelos y las imágenes. Podés tener el programa en un disco y los archivos grandes en otro.">
-                                        <TextBlock Text="📁 Carpetas" FontSize="11" />
+                                            ToolTip="{l:T sidebar.folders.tooltip}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <c:Icon Kind="Folder" Size="14" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="{l:T sidebar.folders.button}" FontSize="11" VerticalAlignment="Center" />
+                                        </StackPanel>
                                     </Button>
                                 </StackPanel>
 
                                 <!-- Perfil de ejecución: toggle buttons -->
-                                <TextBlock Text="EJECUCIÓN" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,16,0,8" />
+                                <TextBlock Text="{l:T sidebar.execution.header}" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,16,0,8" />
                                 <ItemsControl ItemsSource="{Binding AvailableExecutionProfiles}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
@@ -916,26 +1016,26 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
-                                <TextBlock Text="PARÁMETROS" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,16,0,8" />
+                                <TextBlock Text="{l:T sidebar.params.header}" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,16,0,8" />
                                 <CheckBox IsChecked="{Binding EnableThinking}" Foreground="#E0E0E0" Margin="0,0,0,15">
-                                    <TextBlock Text="Thinking Mode" Margin="5,0,0,0" />
+                                    <TextBlock Text="{l:T sidebar.params.thinking}" Margin="5,0,0,0" />
                                 </CheckBox>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                                    <TextBlock Text="Temperatura: " Foreground="#AAAAAA" />
+                                    <TextBlock Text="{l:T sidebar.params.temperature}" Foreground="#AAAAAA" />
                                     <TextBlock Text="{Binding Temperature, StringFormat={}{0:F2}}" Foreground="#00D4AA" />
                                 </StackPanel>
                                 <Slider Minimum="0.0" Maximum="2.0" Value="{Binding Temperature}" TickFrequency="0.1" IsSnapToTickEnabled="True" />
 
-                                <TextBlock Text="Máx. respuesta:" Foreground="#E0E0E0" FontSize="10" Margin="0,10,0,5" />
+                                <TextBlock Text="{l:T sidebar.params.maxTokens}" Foreground="#E0E0E0" FontSize="10" Margin="0,10,0,5" />
                                 <ComboBox ItemsSource="{Binding MaxTokensOptions}" Style="{StaticResource ModernComboBox}" SelectedItem="{Binding SelectedMaxTokens}" DisplayMemberPath="Label" />
                             </StackPanel>
 
                             <!-- Búsqueda web: solo si el binario la incluye -->
                             <StackPanel Margin="0,0,0,16"
                                         Visibility="{Binding IsWebSearchCompiledIn, Converter={StaticResource BoolToVis}}">
-                                <TextBlock Text="BÚSQUEDA WEB" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <TextBlock Text="{l:T sidebar.web.header}" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
 
-                                <TextBlock Text="Instancia de SearXNG:" Foreground="#E0E0E0" FontSize="10" Margin="0,0,0,4" />
+                                <TextBlock Text="{l:T sidebar.web.instance}" Foreground="#E0E0E0" FontSize="10" Margin="0,0,0,4" />
                                 <TextBox x:Name="SearxngUrlBox"
                                          AutomationProperties.AutomationId="SearxngUrlBox"
                                          Text="{Binding SearxngUrl, UpdateSourceTrigger=PropertyChanged, Delay=500}"
@@ -955,7 +1055,7 @@
                                     </TextBlock.Style>
                                 </TextBlock>
 
-                                <TextBlock Text="Frescura de resultados:" Foreground="#E0E0E0" FontSize="10" Margin="0,10,0,4" />
+                                <TextBlock Text="{l:T sidebar.web.freshness}" Foreground="#E0E0E0" FontSize="10" Margin="0,10,0,4" />
                                 <ComboBox ItemsSource="{Binding FreshnessOptions}" Style="{StaticResource ModernComboBox}"
                                           SelectedItem="{Binding SelectedFreshness}" DisplayMemberPath="Label" />
 
@@ -967,8 +1067,13 @@
 
                     <!-- Footer de sidebar -->
                     <StackPanel Grid.Row="4" Margin="0,16,0,0">
-                        <Button Command="{Binding GoBackCommand}" Style="{StaticResource TransparentHoverButton}" HorizontalAlignment="Left" Padding="8,4" Margin="-8,0,0,8">
-                            <TextBlock Text="← Volver al inicio" Foreground="#AAAAAA" FontSize="12"/>
+                        <Button Command="{Binding GoBackCommand}" Style="{StaticResource TransparentHoverButton}" HorizontalAlignment="Left" Padding="8,4" Margin="-8,0,0,8"
+                                AutomationProperties.AutomationId="BackToStartButton"
+                                AutomationProperties.Name="{l:T sidebar.backToStart}">
+                            <StackPanel Orientation="Horizontal">
+                                <c:Icon Kind="ArrowBack" Size="14" Foreground="#AAAAAA" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Text="{l:T sidebar.backToStart}" Foreground="#AAAAAA" FontSize="12" VerticalAlignment="Center" />
+                            </StackPanel>
                         </Button>
                         <TextBlock Text="{Binding GpuInfo}" Foreground="#777777" FontFamily="{StaticResource MonoFont}" FontSize="10" VerticalAlignment="Bottom" TextWrapping="Wrap" />
                     </StackPanel>
@@ -988,8 +1093,11 @@
 
                 <!-- Header Contexto -->
                 <Grid Grid.Row="0" Margin="0,0,0,20">
-                    <TextBlock Text="Contexto Forense" Foreground="#00D4AA" FontWeight="Bold" />
-                    <Button HorizontalAlignment="Right" Content="✕" Style="{StaticResource TransparentHoverButton}" Click="CollapseRightPanel_Click" />
+                    <TextBlock Text="{l:T context.title}" Foreground="#00D4AA" FontWeight="Bold" />
+                    <Button HorizontalAlignment="Right" Style="{StaticResource TransparentHoverButton}" Click="CollapseRightPanel_Click"
+                            AutomationProperties.Name="{l:T context.close}" ToolTip="{l:T context.close}">
+                        <c:Icon Kind="Close" Size="14" />
+                    </Button>
                 </Grid>
 
                 <Grid Grid.Row="1">
@@ -1006,7 +1114,7 @@
                             </Style>
                         </Grid.Style>
                         <Rectangle Stroke="#777777" StrokeThickness="1" StrokeDashArray="4 4" Fill="Transparent" />
-                        <TextBlock Text="Arrastre archivos aquí&#x0a;o use los botones de carga" Foreground="#777777" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" />
+                        <TextBlock Text="{l:T context.empty}" Foreground="#777777" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" />
                     </Grid>
 
                     <!-- Lista de artefactos cargados -->
@@ -1037,10 +1145,13 @@
                                                     <TextBlock Text="{Binding FileSizeFormatted}" Foreground="#777777" FontSize="9" Margin="0,2,0,0"/>
                                                 </StackPanel>
                                             </StackPanel>
-                                            <Button Grid.Column="1" Content="✕" Command="{Binding RemoveCommand}"
+                                            <Button Grid.Column="1" Command="{Binding RemoveCommand}"
                                                     Style="{StaticResource TransparentHoverButton}"
-                                                    Foreground="#EF4444" FontSize="12"
-                                                    Width="24" Height="24" VerticalAlignment="Center"/>
+                                                    Foreground="#EF4444"
+                                                    AutomationProperties.Name="{l:T context.remove}" ToolTip="{l:T context.remove}"
+                                                    Width="24" Height="24" VerticalAlignment="Center">
+                                                <c:Icon Kind="Close" Size="12" />
+                                            </Button>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -1051,7 +1162,7 @@
 
                 <!-- Footer métricas -->
                 <StackPanel Grid.Row="2" Margin="0,20,0,0">
-                    <TextBlock Text="{Binding EstimatedTokens, StringFormat=Tokens estimados: {0}}" FontSize="11">
+                    <TextBlock Text="{Binding EstimatedTokens, StringFormat={l:T context.tokensFormat}}" FontSize="11">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Foreground" Value="#AAAAAA" />
@@ -1075,11 +1186,12 @@
                             </Style>
                         </TextBlock.Style>
                     </TextBlock>
-                    <TextBlock FontSize="10" Foreground="#F59E0B" Margin="0,3,0,0"
-                               Visibility="{Binding IsNearContextLimit, Converter={StaticResource BoolToVis}}">
-                        ⚠️ Contexto casi lleno
-                    </TextBlock>
-                    <TextBlock Text="{Binding LoadedArtifacts, StringFormat=Artefactos: {0}}" Foreground="#777777" FontSize="11" Margin="0,5,0,0" />
+                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0"
+                                Visibility="{Binding IsNearContextLimit, Converter={StaticResource BoolToVis}}">
+                        <c:Icon Kind="Warning" Size="12" Foreground="#F59E0B" Margin="0,0,4,0" VerticalAlignment="Center" />
+                        <TextBlock Text="{l:T context.nearLimit}" FontSize="10" Foreground="#F59E0B" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding LoadedArtifacts, StringFormat={l:T context.artifactsFormat}}" Foreground="#777777" FontSize="11" Margin="0,5,0,0" />
                 </StackPanel>
             </Grid>
         </Border>

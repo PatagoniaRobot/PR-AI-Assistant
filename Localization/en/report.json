@@ -1,0 +1,39 @@
+// The report of an investigation session, exported as text, HTML or JSON. It is written
+// in the application language at the time of export.
+{
+  "report.txt.title": "PR-AI ASSISTANT — INVESTIGATION SESSION REPORT",
+  "report.txt.session": "SESSION DETAILS",
+  "report.txt.artifacts": "ARTIFACTS CONSULTED ({0})",
+  "report.txt.artifactLine": "{0} | Type: {1} | Size: {2} bytes",
+  "report.txt.notes": "Notes: {0}",
+  "report.txt.interactions": "INTERACTIONS ({0} questions, {1} answers)",
+  "report.txt.stats": "STATISTICS",
+  "report.txt.declaration": "STATEMENT",
+  "report.txt.hash": "SHA-256 hash of the document: {0}",
+
+  "report.perito": "Examiner",
+  "report.badge": "Badge",
+  "report.case": "Case",
+  "report.court": "Court",
+  "report.description": "Description",
+  "report.start": "Start",
+  "report.end": "End (export)",
+  "report.sessionId": "Session ID",
+  "report.role.user": "EXAMINER",
+  "report.role.system": "SYSTEM",
+  "report.hasImages": "[CONTAINS IMAGES]",
+  "report.totalQueries": "Total questions",
+  "report.totalResponses": "Total answers",
+  "report.tokens": "Estimated tokens",
+  "report.inferenceTime": "Total inference time",
+  "report.declaration": "This report was generated automatically by PR-AI Assistant v1.0.\nAI-generated content must be verified by the examiner.\nModel used: {0} running locally.\nNo data was sent to external servers.",
+
+  "report.html.title": "Session Report",
+  "report.html.name": "Name",
+  "report.html.type": "Type",
+  "report.html.size": "Size",
+  "report.html.notes": "Notes",
+  "report.html.noArtifacts": "No artifacts were consulted in this session.",
+  "report.html.statsAndDeclaration": "Statistics and Statement",
+  "report.html.hash": "SHA-256 hash of the original document:"
+}

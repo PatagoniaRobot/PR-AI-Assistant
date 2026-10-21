@@ -1,0 +1,38 @@
+// Investigation Mode: the examiner form and the Compliance Statement.
+{
+  "form.subtitle": "Fill in the details to start the forensic session",
+  "form.perito": "Examiner name *",
+  "form.perito.example": "E.g.: Tech. Jane Doe",
+  "form.badge": "Badge / credential no. *",
+  "form.badge.example": "E.g.: LP-4521",
+  "form.case": "Case / file no. *",
+  "form.case.example": "E.g.: CASE-2026-0142",
+  "form.court": "Court / Prosecutor's office (optional)",
+  "form.court.example": "E.g.: Prosecutor's Office No. 5",
+  "form.description": "Short description (optional)",
+  "form.description.example": "E.g.: Analysis of a Samsung S23 Ultra device",
+  "form.required": "* Required fields",
+  "form.continue": "Continue",
+  "form.back": "Back",
+
+  "declaration.title": "Compliance Statement",
+  "declaration.subtitle": "PR-AI Assistant — Investigation Mode",
+  "declaration.intro": "This artificial intelligence module operates under the following principles:",
+  "declaration.p1.title": "ZERO ALTERATION",
+  "declaration.p1.text": ": PR-AI Assistant does NOT access, modify or touch the original digital evidence under any circumstances. It works only with data already extracted and hashed by the PRImager forensic modules.",
+  "declaration.p2.text": ": The order of volatility and good practices for collecting digital evidence are respected at all times. AI is an ASSISTANCE tool, not a collection tool.",
+  "declaration.p3.title": "TRACEABILITY",
+  "declaration.p3.text": ": Every interaction with the AI model is recorded with a UTC timestamp, a SHA-256 hash and the identity of the examiner. This record cannot be altered.",
+  "declaration.p4.title": "HUMAN VALIDATION",
+  "declaration.p4.text": ": No answer from the model constitutes evidence or an expert conclusion. All output must be verified by the examiner before it is included in the report.",
+  "declaration.perito": "Examiner: ",
+  "declaration.badge": " | Badge: ",
+  "declaration.case": "Case: ",
+  "declaration.date": "Date: ",
+  "declaration.accept": "I accept and declare that I have read the terms above",
+  "declaration.enter": "Enter the Analysis",
+  "declaration.backToForm": "Back to the form",
+  // What is hashed on acceptance and stored in the forensic log. {0} examiner, {1} badge,
+  // {2} case, {3} date.
+  "declaration.hashText": "COMPLIANCE STATEMENT – PR-AI ASSISTANT\n1. ZERO ALTERATION: PR-AI Assistant does NOT access, modify or touch the original digital evidence.\n2. RFC 3227: The order of volatility and good practices are respected at all times.\n3. TRACEABILITY: Every interaction is recorded with a UTC timestamp, a SHA-256 hash and the identity of the examiner.\n4. HUMAN VALIDATION: No answer constitutes evidence or an expert conclusion.\nExaminer: {0} | Badge: {1} | Case: {2}\nDate: {3}"
+}

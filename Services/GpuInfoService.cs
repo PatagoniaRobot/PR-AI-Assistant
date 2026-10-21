@@ -66,13 +66,13 @@ public class GpuInfoService
 
             using var process = Process.Start(psi);
             if (process == null)
-                return GpuVramInfo.Unavailable("No se pudo ejecutar nvidia-smi.");
+                return GpuVramInfo.Unavailable(Loc.T("vram.smi.notRun"));
 
             string output = await process.StandardOutput.ReadToEndAsync(ct);
             await process.WaitForExitAsync(ct);
 
             if (process.ExitCode != 0)
-                return GpuVramInfo.Unavailable($"nvidia-smi terminó con código {process.ExitCode}.");
+                return GpuVramInfo.Unavailable(Loc.F("vram.smi.exitCode", process.ExitCode));
 
             return Parse(output);
         }
@@ -84,16 +84,16 @@ public class GpuInfoService
             var placa = HardwareInfoService.ReadGpus()
                 .Where(g => g.IsDiscrete).OrderByDescending(g => g.DedicatedVramMb).FirstOrDefault();
             return GpuVramInfo.Unavailable(placa != null
-                ? $"{placa.Name}, {placa.DedicatedVramMb / 1024.0:F0} GB: la memoria libre solo se mide en placas NVIDIA."
-                : "No se encontró nvidia-smi. El semáforo de VRAM requiere una GPU NVIDIA con drivers instalados.");
+                ? Loc.F("vram.smi.notNvidia", placa.Name, placa.DedicatedVramMb / 1024.0)
+                : Loc.T("vram.smi.missing"));
         }
         catch (OperationCanceledException)
         {
-            return GpuVramInfo.Unavailable("Consulta de VRAM cancelada.");
+            return GpuVramInfo.Unavailable(Loc.T("vram.smi.cancelled"));
         }
         catch (Exception ex)
         {
-            return GpuVramInfo.Unavailable($"Error al consultar la VRAM: {ex.Message}");
+            return GpuVramInfo.Unavailable(Loc.F("vram.smi.error", ex.Message));
         }
     }
 
@@ -104,7 +104,7 @@ public class GpuInfoService
     internal static GpuVramInfo Parse(string csvOutput)
     {
         if (string.IsNullOrWhiteSpace(csvOutput))
-            return GpuVramInfo.Unavailable("nvidia-smi no devolvió datos.");
+            return GpuVramInfo.Unavailable(Loc.T("vram.smi.noData"));
 
         string firstLine = csvOutput
             .Split('\n', StringSplitOptions.RemoveEmptyEntries)[0]
@@ -112,12 +112,12 @@ public class GpuInfoService
 
         var parts = firstLine.Split(',', StringSplitOptions.TrimEntries);
         if (parts.Length < 3)
-            return GpuVramInfo.Unavailable("Formato inesperado en la salida de nvidia-smi.");
+            return GpuVramInfo.Unavailable(Loc.T("vram.smi.badFormat"));
 
         if (!int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int total) ||
             !int.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out int free))
         {
-            return GpuVramInfo.Unavailable("No se pudieron leer los valores de memoria.");
+            return GpuVramInfo.Unavailable(Loc.T("vram.smi.badValues"));
         }
 
         return new GpuVramInfo

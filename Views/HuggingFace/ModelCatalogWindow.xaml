@@ -5,9 +5,11 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:conv="clr-namespace:PRImager.AIAssistant.Views.Converters"
         xmlns:vm="clr-namespace:PRImager.AIAssistant.ViewModels.HuggingFace"
+        xmlns:l="clr-namespace:PRImager.AIAssistant.Localization"
+        xmlns:c="clr-namespace:PRImager.AIAssistant.Controls"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:ModelCatalogViewModel}"
-        Title="Catálogo de modelos — PR-AI Assistant"
+        Title="{l:T catalog.window.title}"
         Height="700" Width="1040"
         Background="#1A1A2E"
         WindowStartupLocation="CenterOwner"
@@ -116,7 +118,7 @@
 
         <!-- Encabezado -->
         <StackPanel Grid.Row="0" Margin="0,0,0,12">
-            <TextBlock Text="Catálogo de modelos" FontSize="18" FontWeight="Bold" />
+            <TextBlock Text="{l:T sidebar.model.catalog}" FontSize="18" FontWeight="Bold" />
             <TextBlock Text="{Binding GpuText}" Foreground="#00D4AA" FontSize="11" Margin="0,4,0,0" />
         </StackPanel>
 
@@ -133,7 +135,7 @@
                      Background="#1E293B" Foreground="#E0E0E0" BorderBrush="#334155"
                      BorderThickness="1" Padding="8,6" FontSize="13"
                      KeyDown="SearchBox_KeyDown" />
-            <Button Grid.Column="1" Content="Buscar" Command="{Binding SearchCommand}"
+            <Button Grid.Column="1" Content="{l:T catalog.search}" Command="{Binding SearchCommand}"
                     AutomationProperties.AutomationId="CatalogSearchButton"
                     Style="{StaticResource CatalogButton}" Margin="8,0,0,0" />
         </Grid>
@@ -155,14 +157,14 @@
 
             <Border Grid.Column="0" Background="#0f172a" BorderBrush="#334155" BorderThickness="1" CornerRadius="6">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="REPOSITORIOS" Style="{StaticResource SectionLabel}" Margin="10,8,10,6" />
+                    <TextBlock DockPanel.Dock="Top" Text="{l:T catalog.repos.header}" Style="{StaticResource SectionLabel}" Margin="10,8,10,6" />
                     <DataGrid ItemsSource="{Binding Repos}" SelectedItem="{Binding SelectedRepo}"
                               AutomationProperties.AutomationId="RepoGrid">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Modelo" Binding="{Binding ShortName}" Width="*" />
-                            <DataGridTextColumn Header="Autor" Binding="{Binding Author}" Width="Auto" />
-                            <DataGridTextColumn Header="Descargas" Binding="{Binding DownloadsText}" Width="Auto" />
-                            <DataGridTextColumn Header="Licencia" Binding="{Binding License}" Width="Auto" />
+                            <DataGridTextColumn Header="{l:T catalog.col.model}" Binding="{Binding ShortName}" Width="*" />
+                            <DataGridTextColumn Header="{l:T catalog.col.author}" Binding="{Binding Author}" Width="Auto" />
+                            <DataGridTextColumn Header="{l:T catalog.col.downloads}" Binding="{Binding DownloadsText}" Width="Auto" />
+                            <DataGridTextColumn Header="{l:T catalog.col.license}" Binding="{Binding License}" Width="Auto" />
                         </DataGrid.Columns>
                     </DataGrid>
                 </DockPanel>
@@ -170,20 +172,22 @@
 
             <Border Grid.Column="2" Background="#0f172a" BorderBrush="#334155" BorderThickness="1" CornerRadius="6">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="CUANTIZACIONES DISPONIBLES" Style="{StaticResource SectionLabel}" Margin="10,8,10,6" />
+                    <TextBlock DockPanel.Dock="Top" Text="{l:T catalog.quants.header}" Style="{StaticResource SectionLabel}" Margin="10,8,10,6" />
                     <DataGrid ItemsSource="{Binding Quantizations}" SelectedItem="{Binding SelectedQuantization}"
                               SelectionChanged="QuantGrid_SelectionChanged"
                               AutomationProperties.AutomationId="QuantGrid">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Archivo" Binding="{Binding FileName}" Width="*" />
-                            <DataGridTextColumn Header="Cuant." Binding="{Binding Quantization}" Width="Auto" />
-                            <DataGridTextColumn Header="Tamaño" Binding="{Binding SizeText}" Width="Auto" />
+                            <DataGridTextColumn Header="{l:T catalog.col.file}" Binding="{Binding FileName}" Width="*" />
+                            <DataGridTextColumn Header="{l:T catalog.col.quant}" Binding="{Binding Quantization}" Width="Auto" />
+                            <DataGridTextColumn Header="{l:T catalog.col.size}" Binding="{Binding SizeText}" Width="Auto" />
                             <!-- Ancho fijo: con Auto se mide contra las filas visibles al cargar, y la
                                  recomendada, que suele estar más abajo, quedaba cortada -->
-                            <DataGridTemplateColumn Header="En tu PC" Width="200">
+                            <DataGridTemplateColumn Header="{l:T catalog.col.onYourPc}" Width="220">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal" ToolTip="{Binding VramExplanation}">
+                                            <c:Icon Kind="Star" Size="14" Foreground="#F59E0B" VerticalAlignment="Center" Margin="0,0,4,0"
+                                                    Visibility="{Binding IsRecommended, Converter={StaticResource BoolToVis}}" />
                                             <Ellipse Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,6,0"
                                                      Fill="{Binding VramColor, Converter={StaticResource HexToBrush}}" />
                                             <TextBlock Text="{Binding VramLabel}" FontSize="11" VerticalAlignment="Center" />
@@ -203,7 +207,7 @@
                     CornerRadius="6" Margin="0,12,0,0">
                 <DockPanel>
                     <Grid DockPanel.Dock="Top" Margin="10,8,10,6">
-                        <TextBlock Text="MODELOS DESCARGADOS" Style="{StaticResource SectionLabel}"
+                        <TextBlock Text="{l:T catalog.downloaded.header}" Style="{StaticResource SectionLabel}"
                                    Margin="0" VerticalAlignment="Center" />
                         <TextBlock Text="{Binding DownloadedSummary}" Foreground="#64748b" FontSize="11"
                                    HorizontalAlignment="Right" VerticalAlignment="Center"
@@ -231,11 +235,11 @@
                               MaxHeight="132"
                               AutomationProperties.AutomationId="DownloadedGrid">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Archivo" Binding="{Binding FileName}" Width="*" />
-                            <DataGridTextColumn Header="Tamaño" Binding="{Binding SizeText}" Width="Auto" />
+                            <DataGridTextColumn Header="{l:T catalog.col.file}" Binding="{Binding FileName}" Width="*" />
+                            <DataGridTextColumn Header="{l:T catalog.col.size}" Binding="{Binding SizeText}" Width="Auto" />
                             <!-- Ancho fijo: con Auto la columna se mide contra el texto
                                  inicial y el DataTrigger del modelo en uso queda cortado -->
-                            <DataGridTemplateColumn Header="Estado" Width="90">
+                            <DataGridTemplateColumn Header="{l:T catalog.col.state}" Width="90">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <!-- El texto por defecto va en el Style y no como
@@ -248,7 +252,7 @@
                                                     <Setter Property="Foreground" Value="#64748b" />
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                                            <Setter Property="Text" Value="● en uso" />
+                                                            <Setter Property="Text" Value="{l:T catalog.inUse}" />
                                                             <Setter Property="Foreground" Value="#00D4AA" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
@@ -282,7 +286,7 @@
                     Padding="8" Margin="0,4,0,0"
                     Visibility="{Binding HasLastHash, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <TextBlock Text="SHA-256 del archivo descargado" Foreground="#94a3b8" FontSize="10" />
+                    <TextBlock Text="{l:T catalog.lastHash}" Foreground="#94a3b8" FontSize="10" />
                     <TextBox Text="{Binding LastHash, Mode=OneWay}" IsReadOnly="True"
                              AutomationProperties.AutomationId="LastHashBox"
                              Background="Transparent" BorderThickness="0" Foreground="#10B981"
@@ -308,21 +312,33 @@
         <!-- Acciones -->
         <Grid Grid.Row="4" Margin="0,12,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <Button Content="Descargar" Command="{Binding DownloadCommand}"
+                <Button Command="{Binding DownloadCommand}"
                         AutomationProperties.AutomationId="DownloadButton"
-                        Style="{StaticResource CatalogButton}" Margin="0,0,8,0" />
-                <Button Content="Cancelar descarga" Command="{Binding CancelDownloadCommand}"
+                        AutomationProperties.Name="{l:T catalog.download}"
+                        Style="{StaticResource CatalogButton}" Margin="0,0,8,0">
+                    <StackPanel Orientation="Horizontal">
+                        <c:Icon Kind="Download" Size="14" Accent="White" Margin="0,0,6,0" VerticalAlignment="Center" />
+                        <TextBlock Text="{l:T catalog.download}" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Content="{l:T catalog.cancelDownload}" Command="{Binding CancelDownloadCommand}"
                         AutomationProperties.AutomationId="CancelDownloadButton"
                         Style="{StaticResource DangerCatalogButton}" Margin="0,0,24,0" />
-                <Button Content="Eliminar descargado" Command="{Binding DeleteDownloadedCommand}"
+                <Button Command="{Binding DeleteDownloadedCommand}"
                         AutomationProperties.AutomationId="DeleteDownloadedButton"
-                        Style="{StaticResource DangerCatalogButton}" Margin="0,0,8,0" />
-                <Button Content="Limpiar parciales" Command="{Binding CleanPartialsCommand}"
+                        AutomationProperties.Name="{l:T catalog.deleteDownloaded}"
+                        Style="{StaticResource DangerCatalogButton}" Margin="0,0,8,0">
+                    <StackPanel Orientation="Horizontal">
+                        <c:Icon Kind="Trash" Size="14" Accent="White" Margin="0,0,6,0" VerticalAlignment="Center" />
+                        <TextBlock Text="{l:T catalog.deleteDownloaded}" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Content="{l:T catalog.cleanPartials}" Command="{Binding CleanPartialsCommand}"
                         AutomationProperties.AutomationId="CleanPartialsButton"
-                        ToolTip="Borra los .part que hayan quedado de descargas interrumpidas"
+                        ToolTip="{l:T catalog.cleanPartials.tooltip}"
                         Style="{StaticResource NeutralCatalogButton}" />
             </StackPanel>
-            <Button Content="Cerrar" Command="{Binding CloseCommand}"
+            <Button Content="{l:T common.close}" Command="{Binding CloseCommand}"
                     Style="{StaticResource NeutralCatalogButton}" HorizontalAlignment="Right" />
         </Grid>
     </Grid>

@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using PRImager.AIAssistant.Controls;
 using PRImager.AIAssistant.Helpers;
+using PRImager.AIAssistant.Localization;
 
 namespace PRImager.AIAssistant.ViewModels;
 
@@ -32,15 +34,19 @@ public class ChatMessageViewModel : ObservableObject
     // Para el disclaimer
     public bool HasDisclaimer => IsAssistant;
 
-    public string DisclaimerText =>
-        "\n\n---\n[PR-AI Assistant – Generado por IA]\n" +
-        $"Este contenido fue generado por inteligencia artificial ({ModelLabel}) " +
-        "ejecutándose localmente. Debe ser verificado por el perito antes de " +
-        "incorporarse a cualquier informe o actuación judicial.";
+    public string DisclaimerText => Loc.F("message.disclaimer", ModelLabel);
 
     private string ModelLabel => string.IsNullOrWhiteSpace(ModelDisplayName)
-        ? "modelo local"
+        ? Loc.T("message.localModel")
         : ModelDisplayName;
+
+    /// <summary>
+    /// Ícono de un mensaje del sistema: correcto, error, aviso, información. Antes iba
+    /// como emoji al principio del texto; ahora el texto queda limpio para traducirlo.
+    /// </summary>
+    public IconKind IconKind { get; }
+
+    public bool HasIcon => IconKind != IconKind.None;
 
     /// <summary>
     /// Texto del mensaje. Se respalda en un StringBuilder porque el streaming crece
@@ -135,7 +141,7 @@ public class ChatMessageViewModel : ObservableObject
         {
             if (_webSources == null || _webSources.Count == 0) return "";
             int read = _webSources.Count(s => s.WasRead);
-            return $"🌐 Fuentes web ({read} de {_webSources.Count} leídas)";
+            return Loc.F("message.webSourcesHeader", read, _webSources.Count);
         }
     }
 
@@ -149,9 +155,10 @@ public class ChatMessageViewModel : ObservableObject
     }
 
     public ChatMessageViewModel(string role, string content, List<string>? imagePaths = null,
-                                string? modelDisplayName = null)
+                                string? modelDisplayName = null, IconKind icon = IconKind.None)
     {
         Role = role;
+        IconKind = icon;
         Content = content;
         Timestamp = DateTime.Now;
         ImagePaths = imagePaths;

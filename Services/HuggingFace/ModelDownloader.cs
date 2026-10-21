@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using PRImager.AIAssistant.Localization;
 
 namespace PRImager.AIAssistant.Services.HuggingFace;
 
@@ -68,8 +69,7 @@ public sealed class ModelDownloader : IDisposable
             if (File.Exists(finalPath))
             {
                 return HfResult<ModelDownloadRecord>.Fail(
-                    $"Ya existe {Path.GetFileName(finalPath)} en la carpeta de modelos. " +
-                    "Borralo o renombralo si querés volver a descargarlo.");
+                    Loc.F("hf.download.exists", Path.GetFileName(finalPath)));
             }
 
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -108,22 +108,22 @@ public sealed class ModelDownloader : IDisposable
         catch (OperationCanceledException)
         {
             DeletePartial(partialPath);
-            return HfResult<ModelDownloadRecord>.Fail("Descarga cancelada. No quedó archivo parcial.");
+            return HfResult<ModelDownloadRecord>.Fail(Loc.T("hf.download.cancelled"));
         }
         catch (HttpRequestException ex)
         {
             DeletePartial(partialPath);
-            return HfResult<ModelDownloadRecord>.Fail($"Error de red durante la descarga: {ex.Message}");
+            return HfResult<ModelDownloadRecord>.Fail(Loc.F("hf.download.network", ex.Message));
         }
         catch (IOException ex)
         {
             DeletePartial(partialPath);
-            return HfResult<ModelDownloadRecord>.Fail($"Error de disco: {ex.Message}");
+            return HfResult<ModelDownloadRecord>.Fail(Loc.F("hf.download.disk", ex.Message));
         }
         catch (Exception ex)
         {
             DeletePartial(partialPath);
-            return HfResult<ModelDownloadRecord>.Fail($"Error inesperado: {ex.Message}");
+            return HfResult<ModelDownloadRecord>.Fail(Loc.F("hf.download.unexpected", ex.Message));
         }
     }
 

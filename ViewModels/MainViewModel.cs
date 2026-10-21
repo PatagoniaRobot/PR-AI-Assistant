@@ -5,7 +5,9 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using PRImager.AIAssistant.Controls;
 using PRImager.AIAssistant.Helpers;
+using PRImager.AIAssistant.Localization;
 using PRImager.AIAssistant.Services;
 using PRImager.AIAssistant.Services.Enums;
 using PRImager.AIAssistant.Services.Models;
@@ -38,7 +40,7 @@ public class MainViewModel : ObservableObject
     private string _userInput = string.Empty;
     private bool _isProcessing;
     private string _selectedModel = string.Empty;
-    private string _gpuInfo = "GPU: Detección Automática";
+    private string _gpuInfo = "";
     private int _loadedArtifacts;
     private int _estimatedTokens;
     private bool _isNearContextLimit;
@@ -142,13 +144,7 @@ public class MainViewModel : ObservableObject
             if (_selectedModelItem == null) return "";
             var caps = _selectedModelItem.Model.Capabilities;
             if (caps == null || caps.Count == 0) return "";
-            var badges = caps.Select(c => c switch
-            {
-                "Vision" => "🔍 Vision",
-                "Audio" => "🔊 Audio",
-                _ => c
-            });
-            return string.Join(" · ", badges);
+            return CapabilityText.Describe(caps);
         }
     }
 
@@ -165,7 +161,7 @@ public class MainViewModel : ObservableObject
                     ? AutoExecutionProfile.Describe(_autoRecommendation)
                     : AutoExecutionProfile.NoModelText;
             var p = _selectedExecutionProfile.Profile;
-            return $"ctx: {p.CtxSize} · capas GPU: {p.GpuLayers}";
+            return Loc.F("model.manualProfileInfo", p.CtxSize, p.GpuLayers);
         }
     }
 
@@ -186,7 +182,7 @@ public class MainViewModel : ObservableObject
                 return _selectedModelItem.Model.DisplayName;
 
             return string.IsNullOrWhiteSpace(_settings.SelectedModel)
-                ? "modelo local"
+                ? Loc.T("message.localModel")
                 : Path.GetFileNameWithoutExtension(_settings.SelectedModel);
         }
     }
@@ -210,12 +206,12 @@ public class MainViewModel : ObservableObject
 
     public string ServerStatusText => ServerStatus switch
     {
-        ServerStatus.Stopped => "Detenido",
-        ServerStatus.Starting => "Iniciando...",
-        ServerStatus.LoadingModel => "Cargando modelo...",
-        ServerStatus.Ready => "Listo",
-        ServerStatus.Error => "Error",
-        _ => "Desconocido"
+        ServerStatus.Stopped => Loc.T("server.stopped"),
+        ServerStatus.Starting => Loc.T("server.starting"),
+        ServerStatus.LoadingModel => Loc.T("server.loadingModel"),
+        ServerStatus.Ready => Loc.T("server.ready"),
+        ServerStatus.Error => Loc.T("server.error"),
+        _ => Loc.T("server.unknown")
     };
 
     public bool IsServerReady => ServerStatus == ServerStatus.Ready;
@@ -295,10 +291,10 @@ public class MainViewModel : ObservableObject
     /// <summary>Opciones predefinidas para MaxTokens en el ComboBox de la UI.</summary>
     public List<MaxTokensOption> MaxTokensOptions { get; } = new()
     {
-        new MaxTokensOption(2048, "2048 (rápido)"),
-        new MaxTokensOption(4096, "4096 (normal)"),
-        new MaxTokensOption(8192, "8192 (largo)"),
-        new MaxTokensOption(16384, "16384 (máximo)")
+        new MaxTokensOption(2048, Loc.F("maxTokens.fast", 2048)),
+        new MaxTokensOption(4096, Loc.F("maxTokens.normal", 4096)),
+        new MaxTokensOption(8192, Loc.F("maxTokens.long", 8192)),
+        new MaxTokensOption(16384, Loc.F("maxTokens.max", 16384))
     };
 
     private MaxTokensOption? _selectedMaxTokens;
@@ -398,12 +394,8 @@ public class MainViewModel : ObservableObject
             if (previous != null && Messages.Count > 0)
             {
                 var choice = System.Windows.MessageBox.Show(
-                    $"Vas a cambiar el perfil de «{previous.Name}» a «{value.Name}».\n\n" +
-                    "La conversación en curso se generó con el perfil anterior.\n\n" +
-                    "Sí — cambiar y limpiar el historial\n" +
-                    "No — cambiar y conservar el historial\n" +
-                    "Cancelar — seguir con el perfil actual",
-                    "Cambio de perfil",
+                    Loc.F("profile.change.message", previous.Name, value.Name),
+                    Loc.T("profile.change.title"),
                     System.Windows.MessageBoxButton.YesNoCancel,
                     System.Windows.MessageBoxImage.Question);
 
@@ -522,15 +514,11 @@ public class MainViewModel : ObservableObject
         get
         {
             string carpeta = ResolveDownloadDirectory() ?? ResolveModelsDirectory();
-            string archivo = $"un archivo de modelo (.gguf) en {carpeta}";
             if (IsModelDownloadAvailable)
-                return "Bajá uno desde el catálogo: lee tu PC, marca la versión que conviene y, " +
-                       $"cuando termina la descarga, queda elegido. También podés copiar {archivo} " +
-                       "y tocar ↻ en el menú.";
+                return Loc.F("firstRun.withCatalog", carpeta);
             if (CanSwitchToGeneralForDownload)
-                return $"El perfil «{_selectedUsageProfile?.Name}» no permite bajar modelos. Pasá al perfil " +
-                       $"General para usar el catálogo, o copiá {archivo} y tocá ↻ en el menú.";
-            return $"Para usar el asistente, copiá {archivo} y tocá ↻ en el menú.";
+                return Loc.F("firstRun.profileBlocks", _selectedUsageProfile?.Name, carpeta);
+            return Loc.F("firstRun.copyOnly", carpeta);
         }
     }
 
@@ -601,7 +589,7 @@ public class MainViewModel : ObservableObject
 
     /// <summary>Aviso para la UI cuando el perfil está parcialmente pisado por el modo.</summary>
     public string ProfileOverrideNotice => IsProfilePromptOverridden
-        ? "El Modo Investigación tiene precedencia: se usa el prompt institucional y se fuerza el registro de auditoría."
+        ? Loc.T("profile.overriddenByInvestigation")
         : "";
 
     // === Búsqueda web (E2) ===
@@ -641,14 +629,14 @@ public class MainViewModel : ObservableObject
         get
         {
             if (!IsWebSearchCompiledIn)
-                return "Esta compilación no incluye búsqueda web.";
+                return Loc.T("web.toggle.notCompiled");
             if (IsProfilePromptOverridden)
-                return "Búsqueda web deshabilitada: el Modo Investigación no permite acceso a red.";
+                return Loc.T("web.toggle.investigation");
             if (!IsWebSearchAvailable)
-                return $"El perfil «{ProfileName}» no habilita la búsqueda web.";
+                return Loc.F("web.toggle.profileBlocks", ProfileName);
             return IsWebSearchOn
-                ? "Búsqueda web activa: la consulta se enriquecerá con resultados frescos."
-                : "Activar búsqueda web para esta consulta.";
+                ? Loc.T("web.toggle.on")
+                : Loc.T("web.toggle.off");
         }
     }
 
@@ -671,10 +659,10 @@ public class MainViewModel : ObservableObject
     /// <summary>Opciones de frescura para el ComboBox.</summary>
     public List<FreshnessOption> FreshnessOptions { get; } = new()
     {
-        new FreshnessOption(1, "Último día"),
-        new FreshnessOption(2, "Última semana"),
-        new FreshnessOption(3, "Último mes"),
-        new FreshnessOption(0, "Sin filtro")
+        new FreshnessOption(1, Loc.T("web.freshness.day")),
+        new FreshnessOption(2, Loc.T("web.freshness.week")),
+        new FreshnessOption(3, Loc.T("web.freshness.month")),
+        new FreshnessOption(0, Loc.T("web.freshness.any"))
     };
 
     private FreshnessOption? _selectedFreshness;
@@ -733,13 +721,11 @@ public class MainViewModel : ObservableObject
         get
         {
             if (IsWebSearchConfigured)
-                return $"Instancia configurada. Las consultas salen hacia {_settings.SearxngUrl}.";
+                return Loc.F("web.config.ok", _settings.SearxngUrl);
 
             return string.IsNullOrWhiteSpace(_settings.SearxngUrl)
-                ? "Sin instancia. Indicá la dirección de un SearXNG, por ejemplo " +
-                  "http://127.0.0.1:8080. Ver la ayuda para levantar uno propio."
-                : "La dirección no es válida. Debe ser una URL http o https, " +
-                  "por ejemplo http://127.0.0.1:8080.";
+                ? Loc.T("web.config.missing")
+                : Loc.T("web.config.invalid");
         }
     }
 
@@ -794,7 +780,7 @@ public class MainViewModel : ObservableObject
 
     /// <summary>Texto del badge de sandbox para modo consulta.</summary>
     public string ModeBadgeText => CurrentMode == OperationMode.Consultation
-        ? "SANDBOX — Sin acceso a evidencia" : "";
+        ? Loc.T("chat.badge.sandbox") : "";
 
     /// <summary>Muestra el badge de sandbox (solo Consulta).</summary>
     public bool ShowModeBadge => CurrentMode == OperationMode.Consultation;
@@ -807,11 +793,11 @@ public class MainViewModel : ObservableObject
 
     /// <summary>Texto con nombre y legajo del perito para el panel izquierdo.</summary>
     public string SessionPeritoText => CurrentSession != null
-        ? $"Perito: {CurrentSession.PeritoName} | {CurrentSession.PeritoBadge}" : "";
+        ? Loc.F("session.peritoFormat", CurrentSession.PeritoName, CurrentSession.PeritoBadge) : "";
 
     /// <summary>Texto con número de causa para el panel izquierdo.</summary>
     public string SessionCaseText => CurrentSession != null
-        ? $"Causa: {CurrentSession.CaseNumber}" : "";
+        ? Loc.F("session.caseFormat", CurrentSession.CaseNumber) : "";
 
     // Comandos
     public ICommand SendMessageCommand { get; }
@@ -862,7 +848,7 @@ public class MainViewModel : ObservableObject
         // El pie de la barra lateral decía «GPU: Detección Automática» hasta arrancar el
         // servidor. La PC se conoce desde antes (E5); al arrancar, el motor lo reemplaza
         // por el dispositivo que efectivamente usa.
-        _gpuInfo = "Tu PC: " + AutoExecutionProfile.Hardware(AutoExecutionProfile.ServerDirectory(_settings)).Summary;
+        _gpuInfo = Loc.F("hardware.yourPc", AutoExecutionProfile.Hardware(AutoExecutionProfile.ServerDirectory(_settings)).Summary);
 
         // Inicializar gestor de ventana de contexto con valores de configuración
         _contextWindowManager = new ContextWindowManager
@@ -926,7 +912,7 @@ public class MainViewModel : ObservableObject
         _orchestrator.HistoryTrimmed += (s, count) =>
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 Messages.Add(new ChatMessageViewModel("system",
-                    $"ℹ️ Se recortaron {count} mensajes anteriores para mantener el contexto dentro del límite.")));
+                    Loc.F("message.historyTrimmed", count), icon: IconKind.Info)));
 
         // Actualizar habilitación de ExportSessionCommand cuando cambian los mensajes
         Messages.CollectionChanged += (_, _) =>
@@ -1301,7 +1287,7 @@ public class MainViewModel : ObservableObject
             if (lastMsg != null && lastMsg.IsAssistant && lastMsg.IsWaitingForFirstToken)
             {
                 var elapsed = (DateTime.Now - _thinkingStartTime).TotalSeconds;
-                lastMsg.GenerationMetrics = $"Pensando... {elapsed:F1}s";
+                lastMsg.GenerationMetrics = Loc.F("message.thinkingElapsed", elapsed);
             }
             else
             {
@@ -1382,7 +1368,7 @@ public class MainViewModel : ObservableObject
                 // Sin fuentes utilizables se avisa y se sigue sin enriquecer:
                 // es preferible una respuesta del modelo que un error opaco.
                 Messages.Insert(Messages.Count - 1, new ChatMessageViewModel("system",
-                    $"⚠️ Búsqueda web: {context.ErrorMessage} Se responde sin fuentes web."));
+                    Loc.F("web.message.failed", context.ErrorMessage), icon: IconKind.Warning));
 
                 if (context.Sources.Count > 0)
                     assistantViewModel.WebSources = context.Sources;
@@ -1400,8 +1386,7 @@ public class MainViewModel : ObservableObject
             if (context.PagesRead < context.PagesAttempted)
             {
                 Messages.Insert(Messages.Count - 1, new ChatMessageViewModel("system",
-                    $"ℹ️ Se leyeron {context.PagesRead} de {context.PagesAttempted} fuentes. " +
-                    "Las que fallaron figuran en el panel de fuentes."));
+                    Loc.F("web.message.partial", context.PagesRead, context.PagesAttempted), icon: IconKind.Info));
             }
 
             return context.EnrichedQuery;
@@ -1409,7 +1394,7 @@ public class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Messages.Insert(Messages.Count - 1, new ChatMessageViewModel("system",
-                $"⚠️ Búsqueda web interrumpida: {ex.Message}. Se responde sin fuentes web."));
+                Loc.F("web.message.interrupted", ex.Message), icon: IconKind.Warning));
             _orchestrator.Logger.LogCustom("WEB_SEARCH_ERROR", ex.Message);
             return null;
         }
@@ -1530,7 +1515,7 @@ public class MainViewModel : ObservableObject
             var lastMessage = Messages.LastOrDefault();
             if (lastMessage != null && lastMessage.IsAssistant && lastMessage.IsStreaming)
             {
-                lastMessage.AppendContent($"\n\n[Error: {error}]");
+                lastMessage.AppendContent(Loc.F("message.errorSuffix", error));
                 lastMessage.IsStreaming = false;
             }
             IsProcessing = false;
@@ -1586,7 +1571,7 @@ public class MainViewModel : ObservableObject
 
         EstimatedTokens = usage.TotalInputTokens;
         IsNearContextLimit = usage.IsNearLimit;
-        ContextAvailableText = $"Disponible: {Math.Max(0, usage.AvailableTokens - usage.TotalInputTokens)} / {usage.AvailableTokens}";
+        ContextAvailableText = Loc.F("context.availableFormat", Math.Max(0, usage.AvailableTokens - usage.TotalInputTokens), usage.AvailableTokens);
     }
 
     private bool CanExecuteStartServer()
@@ -1658,6 +1643,17 @@ public class MainViewModel : ObservableObject
 #endif
     }
 
+    /// <summary>
+    /// Encabezado con que viaja al modelo el texto de un archivo. Va en el idioma de la
+    /// aplicación: es parte de lo que el modelo lee, y mezclar idiomas en la consulta
+    /// empuja a que conteste en el que no es.
+    /// </summary>
+    private static string FileContentHeader(string file, string contentType)
+        => Loc.F("files.contentHeader", Path.GetFileName(file), contentType) + "\n";
+
+    private static string TruncationNote(long original, long processed)
+        => "\n" + Loc.F("files.truncated", original, processed);
+
     private async Task ExecuteLoadFilesAsync()
     {
         bool forensic = FileUploadIsForensic;
@@ -1665,8 +1661,8 @@ public class MainViewModel : ObservableObject
         // El diálogo no puede decir "contexto forense" fuera de una investigación:
         // nombrar evidencia a un archivo cualquiera confunde sobre qué se está haciendo.
         var files = _fileDialogService.OpenTextFiles(forensic
-            ? "Seleccione archivos de contexto forense"
-            : "Seleccione archivos para adjuntar al mensaje");
+            ? Loc.T("files.pick.forensic")
+            : Loc.T("files.pick.attachment"));
 
         if (files == null || files.Length == 0) return;
 
@@ -1678,16 +1674,15 @@ public class MainViewModel : ObservableObject
                 if (!validation.IsAccepted)
                 {
                     System.Windows.MessageBox.Show(
-                        $"Archivo rechazado: {Path.GetFileName(file)}\n{validation.RejectionReason}",
-                        "Ingesta rechazada", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                        Loc.F("files.rejected.file", Path.GetFileName(file), validation.RejectionReason),
+                        Loc.T("files.rejected.title"), System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                     continue;
                 }
 
-                string header = $"--- ARCHIVO: {Path.GetFileName(file)} [{validation.ContentType}] ---\n";
-                string content = header + (validation.ProcessedContent ?? await File.ReadAllTextAsync(file));
+                string content = FileContentHeader(file, validation.ContentType) + (validation.ProcessedContent ?? await File.ReadAllTextAsync(file));
 
                 if (validation.WasTruncated)
-                    content += $"\n[TRUNCADO: {validation.OriginalLength} → {validation.ProcessedLength} chars]";
+                    content += TruncationNote(validation.OriginalLength, validation.ProcessedLength);
 
                 if (forensic)
                 {
@@ -1704,7 +1699,7 @@ public class MainViewModel : ObservableObject
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Error al cargar archivo {Path.GetFileName(file)}:\n{ex.Message}");
+                System.Windows.MessageBox.Show(Loc.F("files.loadError", Path.GetFileName(file), ex.Message));
             }
         }
 
@@ -1750,7 +1745,7 @@ public class MainViewModel : ObservableObject
 
     private async Task ExecuteLoadImagesAsync()
     {
-        var files = _fileDialogService.OpenImages("Seleccione imágenes para el análisis");
+        var files = _fileDialogService.OpenImages(Loc.T("files.pick.images"));
         if (files != null && files.Length > 0)
         {
             var batchValidation = _ingestionService.ValidateImageBatch(files.ToList());
@@ -1758,7 +1753,7 @@ public class MainViewModel : ObservableObject
             {
                 System.Windows.MessageBox.Show(
                     batchValidation.RejectionReason,
-                    "Ingesta rechazada", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    Loc.T("files.rejected.title"), System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                 return;
             }
 
@@ -1768,8 +1763,8 @@ public class MainViewModel : ObservableObject
                 if (!validation.IsAccepted)
                 {
                     System.Windows.MessageBox.Show(
-                        $"Imagen rechazada: {Path.GetFileName(file)}\n{validation.RejectionReason}",
-                        "Ingesta rechazada", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                        Loc.F("files.rejected.image", Path.GetFileName(file), validation.RejectionReason),
+                        Loc.T("files.rejected.title"), System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                     continue;
                 }
 
@@ -1825,7 +1820,7 @@ public class MainViewModel : ObservableObject
             {
                 System.Windows.MessageBox.Show(
                     batchValidation.RejectionReason,
-                    "Ingesta rechazada", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    Loc.T("files.rejected.title"), System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
             }
             else
             {
@@ -1855,16 +1850,15 @@ public class MainViewModel : ObservableObject
                 if (!validation.IsAccepted)
                 {
                     System.Windows.MessageBox.Show(
-                        $"Archivo rechazado: {Path.GetFileName(file)}\n{validation.RejectionReason}",
-                        "Ingesta rechazada", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                        Loc.F("files.rejected.file", Path.GetFileName(file), validation.RejectionReason),
+                        Loc.T("files.rejected.title"), System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                     continue;
                 }
 
-                string header = $"--- ARCHIVO: {Path.GetFileName(file)} [{validation.ContentType}] ---\n";
-                string content = header + (validation.ProcessedContent ?? await File.ReadAllTextAsync(file));
+                string content = FileContentHeader(file, validation.ContentType) + (validation.ProcessedContent ?? await File.ReadAllTextAsync(file));
 
                 if (validation.WasTruncated)
-                    content += $"\n[TRUNCADO: {validation.OriginalLength} → {validation.ProcessedLength} chars]";
+                    content += TruncationNote(validation.OriginalLength, validation.ProcessedLength);
 
                 _orchestrator.LoadForensicContext(content);
 
@@ -1874,7 +1868,7 @@ public class MainViewModel : ObservableObject
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Error al cargar {Path.GetFileName(file)}:\n{ex.Message}");
+                System.Windows.MessageBox.Show(Loc.F("files.loadError", Path.GetFileName(file), ex.Message));
             }
         }
 
@@ -1974,9 +1968,9 @@ public class MainViewModel : ObservableObject
         if (CurrentSession == null) return;
 
         string defaultName = $"PRAI_Sesion_{CurrentSession.CaseNumber}_{DateTime.Now:yyyyMMdd_HHmmss}";
-        string filter = "Texto plano (*.txt)|*.txt|HTML (*.html)|*.html|JSON (*.json)|*.json";
+        string filter = Loc.T("export.filter");
 
-        string? savePath = _fileDialogService.SaveFile("Exportar sesión", filter, defaultName);
+        string? savePath = _fileDialogService.SaveFile(Loc.T("export.title"), filter, defaultName);
         if (string.IsNullOrEmpty(savePath)) return;
 
         string ext = System.IO.Path.GetExtension(savePath).ToLowerInvariant();
@@ -2019,12 +2013,12 @@ public class MainViewModel : ObservableObject
 
         if (result.Success)
         {
-            Messages.Add(new ChatMessageViewModel("system", $"✅ Sesión exportada: {savePath}\nHash SHA-256: {result.FileHash}"));
+            Messages.Add(new ChatMessageViewModel("system", Loc.F("export.done", savePath, result.FileHash), icon: IconKind.Success));
             _orchestrator.Logger.LogCustom("SESSION_EXPORTED", $"path=\"{savePath}\" format={format} hash={result.FileHash}");
         }
         else
         {
-            Messages.Add(new ChatMessageViewModel("system", $"❌ Error al exportar: {result.ErrorMessage}"));
+            Messages.Add(new ChatMessageViewModel("system", Loc.F("export.failed", result.ErrorMessage), icon: IconKind.Error));
         }
 
         ((RelayCommand)ExportSessionCommand).RaiseCanExecuteChanged();
@@ -2059,7 +2053,7 @@ public class ModelDisplayItem
     /// <summary>Texto principal: nombre del modelo.</summary>
     public string DisplayName => Model.DisplayName;
     /// <summary>Texto de no disponible.</summary>
-    public string AvailabilityText => IsAvailable ? "" : "(modelo no encontrado)";
+    public string AvailabilityText => IsAvailable ? "" : Loc.T("model.notFound");
     /// <summary>Opacidad para modelos no disponibles.</summary>
     public double ItemOpacity => IsAvailable ? 1.0 : 0.4;
 

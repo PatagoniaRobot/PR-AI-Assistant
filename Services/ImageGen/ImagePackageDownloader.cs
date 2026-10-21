@@ -34,10 +34,10 @@ public sealed class PackageDownloadProgress
         : 0;
 
     public string Text =>
-        $"{ComponentRole} ({ComponentIndex + 1} de {ComponentCount}) — " +
-        $"{BytesDownloaded / 1024.0 / 1024.0:N0} MB" +
-        (ComponentTotalBytes > 0 ? $" de {ComponentTotalBytes / 1024.0 / 1024.0:N0} MB" : "") +
-        (SpeedMbPerSecond > 0 ? $" a {SpeedMbPerSecond:N1} MB/s" : "");
+        Loc.F("imagegen.download.component", ImageModelPackage.RoleText(ComponentRole), ComponentIndex + 1, ComponentCount,
+              BytesDownloaded / 1024.0 / 1024.0) +
+        (ComponentTotalBytes > 0 ? Loc.F("imagegen.download.of", ComponentTotalBytes / 1024.0 / 1024.0) : "") +
+        (SpeedMbPerSecond > 0 ? Loc.F("imagegen.download.speed", SpeedMbPerSecond) : "");
 }
 
 /// <summary>Resultado de bajar un paquete entero.</summary>
@@ -60,7 +60,7 @@ public sealed class PackageDownloadResult
         new() { Success = false, ErrorMessage = message };
 
     public static PackageDownloadResult Cancelled() =>
-        new() { Success = false, WasCancelled = true, ErrorMessage = "Descarga cancelada." };
+        new() { Success = false, WasCancelled = true, ErrorMessage = Loc.T("imagegen.download.cancelled") };
 }
 
 /// <summary>
@@ -107,7 +107,7 @@ public sealed class ImagePackageDownloader : IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         if (source.Components.Count == 0)
-            return PackageDownloadResult.Fail("El paquete no declara ningún archivo.");
+            return PackageDownloadResult.Fail(Loc.T("imagegen.download.noFiles"));
 
         try
         {
@@ -115,7 +115,7 @@ public sealed class ImagePackageDownloader : IDisposable
         }
         catch (Exception ex)
         {
-            return PackageDownloadResult.Fail($"No se pudo crear la carpeta de modelos: {ex.Message}");
+            return PackageDownloadResult.Fail(Loc.F("imagegen.download.folderFailed", ex.Message));
         }
 
         var yaEstaban = new List<string>();
@@ -170,10 +170,9 @@ public sealed class ImagePackageDownloader : IDisposable
                 // Se nombra el componente: "error al bajar el VAE" es accionable,
                 // "error al bajar" no.
                 var detalle = r.IsGated
-                    ? $"{r.ErrorMessage}\n\nEse repositorio exige autenticación. " +
-                      "Cargá un token de HuggingFace en la configuración."
+                    ? r.ErrorMessage + "\n\n" + Loc.T("imagegen.download.gated")
                     : r.ErrorMessage;
-                return PackageDownloadResult.Fail($"No se pudo descargar el {comp.Role}: {detalle}");
+                return PackageDownloadResult.Fail(Loc.F("imagegen.download.componentFailed", ImageModelPackage.RoleText(comp.Role), detalle));
             }
 
             if (r.Value is not null)
@@ -200,7 +199,7 @@ public sealed class ImagePackageDownloader : IDisposable
         // medias, el paquete tiene que salir incompleto y no como listo para usar.
         if (!paquete.IsComplete)
             return PackageDownloadResult.Fail(
-                $"La descarga terminó pero el paquete quedó incompleto: {paquete.MissingText}.");
+                Loc.F("imagegen.download.incomplete", paquete.MissingText));
 
         return PackageDownloadResult.Ok(paquete, yaEstaban);
     }

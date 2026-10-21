@@ -99,6 +99,27 @@
     <Compile Remove="ViewModels\ImageGen\**" />
   </ItemGroup>
 
+  <!--
+    Los textos en español e inglés (Localization\Loc.cs). Van incrustados: un .json suelto
+    al lado del ejecutable se podría editar. Los de búsqueda web, catálogo e imágenes
+    viven en archivos propios y la edición Forense no los incrusta, igual que no compila
+    el código que los usa.
+  -->
+  <ItemGroup>
+    <!-- Loc.T y Loc.F se usan en casi todos los archivos: using global -->
+    <Using Include="PRImager.AIAssistant.Localization" />
+    <EmbeddedResource Include="Localization\**\*.json" LogicalName="PRAIA.Loc.%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(EnableWebSearch)' != 'true'">
+    <EmbeddedResource Remove="Localization\**\websearch.json" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(EnableModelDownload)' != 'true'">
+    <EmbeddedResource Remove="Localization\**\catalog.json" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(EnableImageGen)' != 'true'">
+    <EmbeddedResource Remove="Localization\**\imagegen.json" />
+  </ItemGroup>
+
   <ItemGroup>
     <Resource Include="Assets\app.ico" />
     <Resource Include="Assets\logo_sidebar_40.png" />

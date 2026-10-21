@@ -17,7 +17,7 @@ public record SessionExportData
     /// <summary>
     /// Modelo con el que se produjo la sesión, para la declaración del reporte.
     /// </summary>
-    public string ModelName { get; init; } = "modelo local";
+    public string ModelName { get; init; } = Loc.T("message.localModel");
     
     // Estadísticas
     public int TotalQueries => Messages.Count(m => m.Role == "user");

@@ -48,7 +48,7 @@ public partial class ImageGenerationWindow : Window
         // arriba: acá lo que hay que evitar es que el cierre le gane.
         e.Cancel = true;
         IsEnabled = false;
-        Title = "Cerrando la generación de imágenes…";
+        Title = Localization.Loc.T("imagegen.window.closing");
 
         await _viewModel.ShutdownAsync();
 

@@ -24,7 +24,13 @@ public class LlamaServerManager : IDisposable
     private int _consecutiveFailures;
     private bool _modelLoadedOnce;
     private JobObject? _jobObject;
-    private string _detectedBackend = "Detectando...";
+    // El dispositivo detectado se muestra en el pie de la barra lateral. Los textos de
+    // «detectando» son además los centinelas que ParseBackendInfo compara: se leen de
+    // un solo lugar para que la comparación y el valor sean siempre el mismo texto.
+    private static string Detecting => Loc.T("backend.detecting");
+    private static string GpuDetecting => Loc.T("backend.gpuDetecting");
+
+    private string _detectedBackend = Detecting;
 
     /// <summary>
     /// Última línea de llama-server que explica por qué no pudo cargar el modelo.
@@ -134,7 +140,7 @@ public class LlamaServerManager : IDisposable
         {
             Debug.WriteLine("LlamaServerManager: Ejecutable encontrado: NO");
             throw new InvalidOperationException(
-                $"No se encontró llama-server.exe en: {config.ServerExecutablePath}");
+                Loc.F("llama.exeMissing", config.ServerExecutablePath));
         }
         Debug.WriteLine("LlamaServerManager: Ejecutable encontrado: SÍ");
 
@@ -144,7 +150,7 @@ public class LlamaServerManager : IDisposable
         {
             Debug.WriteLine("LlamaServerManager: Modelo encontrado: NO");
             throw new InvalidOperationException(
-                $"No se encontró el archivo de modelo .gguf en: {config.ModelPath}");
+                Loc.F("llama.modelMissing", config.ModelPath));
         }
         Debug.WriteLine("LlamaServerManager: Modelo encontrado: SÍ");
 
@@ -170,7 +176,7 @@ public class LlamaServerManager : IDisposable
         _restartsDone = 0;
         _restartInFlight = 0;
         _lastLoadError = null;
-        DetectedBackend = "Detectando...";
+        DetectedBackend = Detecting;
         CurrentStatus = ServerStatus.Starting;
 
         LaunchProcess(config);
@@ -419,14 +425,14 @@ public class LlamaServerManager : IDisposable
         {
             StopHealthCheck();
             string reason = _lastLoadError
-                ?? "llama-server terminó sin llegar a cargar el modelo.";
+                ?? Loc.T("llama.exitedBeforeLoad");
             OnLog($"El modelo no se pudo cargar: {reason}");
             SetStatus(ServerStatus.Error, reason);
             return;
         }
 
         OnLog("El proceso llama-server terminó inesperadamente.");
-        RestartOrGiveUp("el servidor se cerró solo");
+        RestartOrGiveUp(Loc.T("llama.restart.exited"));
     }
 
     /// <summary>
@@ -448,7 +454,7 @@ public class LlamaServerManager : IDisposable
 
         if (_restartsDone >= MaxRestarts)
         {
-            string message = $"El servidor falló {MaxRestarts} veces seguidas ({reason}). Se dejó de reintentar.";
+            string message = Loc.F("llama.restart.gaveUp", MaxRestarts, reason);
             OnLog(message);
             SetStatus(ServerStatus.Error, message);
             Interlocked.Exchange(ref _restartInFlight, 0);
@@ -481,7 +487,7 @@ public class LlamaServerManager : IDisposable
             catch (Exception ex)
             {
                 OnLog($"Error durante reinicio automático: {ex.Message}");
-                SetStatus(ServerStatus.Error, $"Error durante el reinicio: {ex.Message}");
+                SetStatus(ServerStatus.Error, Loc.F("llama.restart.error", ex.Message));
             }
             finally
             {
@@ -539,7 +545,7 @@ public class LlamaServerManager : IDisposable
         OnLog($"Health check fallido ({_consecutiveFailures}/3): {reason}");
 
         if (_consecutiveFailures >= 3)
-            RestartOrGiveUp($"tres health checks fallidos: {reason}");
+            RestartOrGiveUp(Loc.F("llama.restart.healthChecks", reason));
     }
 
     /// <summary>
@@ -637,10 +643,10 @@ public class LlamaServerManager : IDisposable
         if (line.Contains("ggml_cuda_init: found") && line.Contains("CUDA devices"))
         {
             // Se marca como GPU genérica hasta encontrar el nombre del dispositivo
-            if (DetectedBackend == "Detectando..." || DetectedBackend.StartsWith("CPU"))
-                DetectedBackend = "GPU: Detectando...";
+            if (DetectedBackend == Detecting || DetectedBackend.StartsWith("CPU"))
+                DetectedBackend = GpuDetecting;
         }
-        else if (line.Contains("Device 0:") && (DetectedBackend == "GPU: Detectando..." || DetectedBackend == "Detectando..."))
+        else if (line.Contains("Device 0:") && (DetectedBackend == GpuDetecting || DetectedBackend == Detecting))
         {
             // Extraer nombre del dispositivo: "Device 0: NVIDIA GeForce RTX 3060, compute capability 8.6"
             int index = line.IndexOf("Device 0:");
@@ -650,9 +656,9 @@ public class LlamaServerManager : IDisposable
         // Detección de CPU como fallback
         else if (line.Contains("load_backend: loaded CPU backend"))
         {
-            if (DetectedBackend == "Detectando...")
+            if (DetectedBackend == Detecting)
             {
-                DetectedBackend = "CPU: Backend Estándar";
+                DetectedBackend = Loc.T("backend.cpu");
             }
         }
     }

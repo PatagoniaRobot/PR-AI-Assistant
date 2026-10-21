@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using PRImager.AIAssistant.Localization;
 using PRImager.AIAssistant.Services.Models;
 
 namespace PRImager.AIAssistant.Services;
@@ -32,7 +33,7 @@ public class SessionExporter
                 case ExportFormat.Txt:
                     contentWithoutHash = GenerateTxtContent(data);
                     hashValue = ComputeSha256(contentWithoutHash);
-                    finalContent = contentWithoutHash + $"\nHash SHA-256 del documento: {hashValue}\n══════════════════════════════════════════════════════════\n";
+                    finalContent = contentWithoutHash + "\n" + Loc.F("report.txt.hash", hashValue) + "\n══════════════════════════════════════════════════════════\n";
                     break;
                     
                 case ExportFormat.Html:
@@ -79,73 +80,85 @@ public class SessionExporter
     {
         var sb = new StringBuilder();
         sb.AppendLine("══════════════════════════════════════════════════════════");
-        sb.AppendLine("PR-AI ASSISTANT — REPORTE DE SESIÓN DE INVESTIGACIÓN");
+        sb.AppendLine(Loc.T("report.txt.title"));
         sb.AppendLine("══════════════════════════════════════════════════════════");
-        sb.AppendLine("DATOS DE LA SESIÓN");
-        sb.AppendLine("──────────────────");
-        sb.AppendLine($"Perito:         {data.Session.PeritoName}");
-        sb.AppendLine($"Legajo:         {data.Session.PeritoBadge}");
-        sb.AppendLine($"Causa:          {data.Session.CaseNumber}");
-        sb.AppendLine($"Juzgado:        {data.Session.Court}");
-        sb.AppendLine($"Descripción:    {data.Session.Description}");
-        sb.AppendLine($"Inicio:         {data.Session.StartTimeUtc:O}");
-        sb.AppendLine($"Fin (export):   {data.ExportTimeUtc:O}");
-        sb.AppendLine($"ID de sesión:   {data.Session.SessionId}");
+        Heading(sb, Loc.T("report.txt.session"));
+        Row(sb, Loc.T("report.perito"), data.Session.PeritoName, 16);
+        Row(sb, Loc.T("report.badge"), data.Session.PeritoBadge, 16);
+        Row(sb, Loc.T("report.case"), data.Session.CaseNumber, 16);
+        Row(sb, Loc.T("report.court"), data.Session.Court, 16);
+        Row(sb, Loc.T("report.description"), data.Session.Description, 16);
+        Row(sb, Loc.T("report.start"), data.Session.StartTimeUtc.ToString("O"), 16);
+        Row(sb, Loc.T("report.end"), data.ExportTimeUtc.ToString("O"), 16);
+        Row(sb, Loc.T("report.sessionId"), data.Session.SessionId, 16);
         sb.AppendLine();
-        
-        sb.AppendLine($"ARTEFACTOS CONSULTADOS ({data.Artifacts.Count})");
-        sb.AppendLine("────────────────────────────────");
+
+        Heading(sb, Loc.F("report.txt.artifacts", data.Artifacts.Count));
         foreach (var art in data.Artifacts)
         {
-            sb.AppendLine($"{art.FileName} | Tipo: {art.FileType} | Tamaño: {art.FileSize} bytes");
+            sb.AppendLine(Loc.F("report.txt.artifactLine", art.FileName, art.FileType, art.FileSize));
             if (!string.IsNullOrEmpty(art.Notes))
-                sb.AppendLine($"  Notas: {art.Notes}");
+                sb.AppendLine("  " + Loc.F("report.txt.notes", art.Notes));
         }
         sb.AppendLine();
-        
-        sb.AppendLine($"INTERACCIONES ({data.TotalQueries} consultas, {data.TotalResponses} respuestas)");
-        sb.AppendLine("───────────────────────────────────────────────────────────────────────");
+
+        Heading(sb, Loc.F("report.txt.interactions", data.TotalQueries, data.TotalResponses));
         foreach (var msg in data.Messages)
         {
-            string roleLabel = msg.Role.ToUpperInvariant() == "USER" ? "PERITO" : "PR-AI ASSISTANT";
-            if (msg.Role.ToUpperInvariant() == "SYSTEM") roleLabel = "SISTEMA";
-            
+            string roleLabel = msg.Role.ToUpperInvariant() switch
+            {
+                "USER" => Loc.T("report.role.user"),
+                "SYSTEM" => Loc.T("report.role.system"),
+                _ => "PR-AI ASSISTANT"
+            };
+
             sb.AppendLine($"[{msg.Timestamp:O}] {roleLabel}:");
             if (msg.HasImages)
-                sb.AppendLine("[CONTIENE IMÁGENES]");
+                sb.AppendLine(Loc.T("report.hasImages"));
             sb.AppendLine(msg.Content);
             sb.AppendLine("---");
         }
         sb.AppendLine();
-        
-        sb.AppendLine("ESTADÍSTICAS");
-        sb.AppendLine("────────────");
-        sb.AppendLine($"Total de consultas:         {data.TotalQueries}");
-        sb.AppendLine($"Total de respuestas:        {data.TotalResponses}");
-        sb.AppendLine($"Tokens estimados:           {data.TotalTokensEstimated}");
-        sb.AppendLine($"Tiempo total de inferencia: {data.TotalInferenceMs} ms");
+
+        Heading(sb, Loc.T("report.txt.stats"));
+        Row(sb, Loc.T("report.totalQueries"), data.TotalQueries.ToString(), 28);
+        Row(sb, Loc.T("report.totalResponses"), data.TotalResponses.ToString(), 28);
+        Row(sb, Loc.T("report.tokens"), data.TotalTokensEstimated.ToString(), 28);
+        Row(sb, Loc.T("report.inferenceTime"), $"{data.TotalInferenceMs} ms", 28);
         sb.AppendLine();
-        
-        sb.AppendLine("DECLARACIÓN");
-        sb.AppendLine("───────────");
-        sb.AppendLine("Este reporte fue generado automáticamente por PR-AI Assistant v1.0.");
-        sb.AppendLine("El contenido generado por IA debe ser verificado por el perito.");
-        sb.AppendLine($"Modelo utilizado: {data.ModelName} ejecutándose localmente.");
-        sb.AppendLine("Ningún dato fue transmitido a servidores externos.");
+
+        Heading(sb, Loc.T("report.txt.declaration"));
+        sb.AppendLine(Loc.F("report.declaration", data.ModelName));
         sb.AppendLine("PR-AI Assistant © 2026 Patagonia Robot.");
         sb.AppendLine("══════════════════════════════════════════════════════════");
         
         return sb.ToString();
     }
 
+    /// <summary>Un título del reporte en texto, subrayado a su largo.</summary>
+    private static void Heading(StringBuilder sb, string title)
+    {
+        sb.AppendLine(title);
+        sb.AppendLine(new string('─', title.Length));
+    }
+
+    /// <summary>
+    /// Una fila «Etiqueta:   valor» con los valores alineados en columna. El ancho va
+    /// por parámetro y no fijo en el texto: en inglés las etiquetas tienen otro largo.
+    /// </summary>
+    private static void Row(StringBuilder sb, string label, string? value, int width)
+        => sb.AppendLine((label + ":").PadRight(width) + value);
+
+    private static string H(string? text) => System.Net.WebUtility.HtmlEncode(text ?? "");
+
     private string GenerateHtmlContent(SessionExportData data)
     {
         var sb = new StringBuilder();
         sb.AppendLine("<!DOCTYPE html>");
-        sb.AppendLine("<html>");
+        sb.AppendLine($"<html lang=\"{Loc.Language}\">");
         sb.AppendLine("<head>");
         sb.AppendLine("<meta charset=\"utf-8\">");
-        sb.AppendLine("<title>Reporte de Sesión - PR-AI Assistant</title>");
+        sb.AppendLine($"<title>{H(Loc.T("report.html.title"))} - PR-AI Assistant</title>");
         sb.AppendLine("<style>");
         sb.AppendLine("body { background-color: #1A1A2E; color: #E0E0E0; font-family: 'Consolas', monospace; padding: 20px; line-height: 1.6; }");
         sb.AppendLine(".container { max-width: 900px; margin: 0 auto; }");
@@ -175,35 +188,37 @@ public class SessionExporter
         sb.AppendLine("<body>");
         sb.AppendLine("<div class=\"container\">");
         
-        sb.AppendLine("<h1>🤖 PR-AI Assistant - Reporte de Sesión</h1>");
-        
-        sb.AppendLine("<h2>Datos de la Sesión</h2>");
+        sb.AppendLine($"<h1>PR-AI Assistant - {H(Loc.T("report.html.title"))}</h1>");
+
+        // Los datos los escribió el perito: se escapan, o un «<» en la descripción rompía
+        // el documento.
+        sb.AppendLine($"<h2>{H(Loc.T("report.txt.session"))}</h2>");
         sb.AppendLine("<table>");
-        sb.AppendLine($"<tr><th>Perito</th><td>{data.Session.PeritoName} (Legajo: {data.Session.PeritoBadge})</td></tr>");
-        sb.AppendLine($"<tr><th>Causa</th><td>{data.Session.CaseNumber} - {data.Session.Court}</td></tr>");
-        sb.AppendLine($"<tr><th>Descripción</th><td>{data.Session.Description}</td></tr>");
-        sb.AppendLine($"<tr><th>Inicio</th><td>{data.Session.StartTimeUtc:O}</td></tr>");
-        sb.AppendLine($"<tr><th>Exportación</th><td>{data.ExportTimeUtc:O}</td></tr>");
-        sb.AppendLine($"<tr><th>ID de Sesión</th><td>{data.Session.SessionId}</td></tr>");
+        sb.AppendLine($"<tr><th>{H(Loc.T("report.perito"))}</th><td>{H(data.Session.PeritoName)} ({H(Loc.T("report.badge"))}: {H(data.Session.PeritoBadge)})</td></tr>");
+        sb.AppendLine($"<tr><th>{H(Loc.T("report.case"))}</th><td>{H(data.Session.CaseNumber)} - {H(data.Session.Court)}</td></tr>");
+        sb.AppendLine($"<tr><th>{H(Loc.T("report.description"))}</th><td>{H(data.Session.Description)}</td></tr>");
+        sb.AppendLine($"<tr><th>{H(Loc.T("report.start"))}</th><td>{data.Session.StartTimeUtc:O}</td></tr>");
+        sb.AppendLine($"<tr><th>{H(Loc.T("report.end"))}</th><td>{data.ExportTimeUtc:O}</td></tr>");
+        sb.AppendLine($"<tr><th>{H(Loc.T("report.sessionId"))}</th><td>{H(data.Session.SessionId)}</td></tr>");
         sb.AppendLine("</table>");
-        
-        sb.AppendLine($"<h2>Artefactos Consultados ({data.Artifacts.Count})</h2>");
+
+        sb.AppendLine($"<h2>{H(Loc.F("report.txt.artifacts", data.Artifacts.Count))}</h2>");
         if (data.Artifacts.Count > 0)
         {
             sb.AppendLine("<table>");
-            sb.AppendLine("<tr><th>Nombre</th><th>Tipo</th><th>Tamaño</th><th>Notas</th></tr>");
+            sb.AppendLine($"<tr><th>{H(Loc.T("report.html.name"))}</th><th>{H(Loc.T("report.html.type"))}</th><th>{H(Loc.T("report.html.size"))}</th><th>{H(Loc.T("report.html.notes"))}</th></tr>");
             foreach (var art in data.Artifacts)
             {
-                sb.AppendLine($"<tr><td>{art.FileName}</td><td>{art.FileType}</td><td>{art.FileSize} bytes</td><td>{art.Notes}</td></tr>");
+                sb.AppendLine($"<tr><td>{H(art.FileName)}</td><td>{H(art.FileType)}</td><td>{art.FileSize} bytes</td><td>{H(art.Notes)}</td></tr>");
             }
             sb.AppendLine("</table>");
         }
         else
         {
-            sb.AppendLine("<p>No se consultaron artefactos en esta sesión.</p>");
+            sb.AppendLine($"<p>{H(Loc.T("report.html.noArtifacts"))}</p>");
         }
-        
-        sb.AppendLine($"<h2>Interacciones ({data.TotalQueries} consultas, {data.TotalResponses} respuestas)</h2>");
+
+        sb.AppendLine($"<h2>{H(Loc.F("report.txt.interactions", data.TotalQueries, data.TotalResponses))}</h2>");
         sb.AppendLine("<div class=\"chat-container\">");
         foreach (var msg in data.Messages)
         {
@@ -213,21 +228,26 @@ public class SessionExporter
                 "assistant" => "bubble-assistant",
                 _ => "bubble-system"
             };
-            string roleLabel = msg.Role.ToUpperInvariant() == "USER" ? "PERITO" : (msg.Role.ToUpperInvariant() == "ASSISTANT" ? "PR-AI" : "SISTEMA");
-            
+            string roleLabel = msg.Role.ToUpperInvariant() switch
+            {
+                "USER" => Loc.T("report.role.user"),
+                "ASSISTANT" => "PR-AI",
+                _ => Loc.T("report.role.system")
+            };
+
             sb.AppendLine($"<div class=\"bubble {bubbleClass}\">");
-            sb.AppendLine($"<div class=\"timestamp\">{msg.Timestamp:O} | {roleLabel}</div>");
+            sb.AppendLine($"<div class=\"timestamp\">{msg.Timestamp:O} | {H(roleLabel)}</div>");
             if (msg.HasImages)
-                sb.AppendLine("<div class=\"timestamp\">[CONTIENE IMÁGENES]</div>");
+                sb.AppendLine($"<div class=\"timestamp\">{H(Loc.T("report.hasImages"))}</div>");
             sb.AppendLine($"<div>{System.Net.WebUtility.HtmlEncode(msg.Content).Replace("\n", "<br>")}</div>");
             sb.AppendLine("</div>");
         }
         sb.AppendLine("</div>");
         
         sb.AppendLine("<div class=\"footer-section\">");
-        sb.AppendLine("<h2>Estadísticas y Declaración</h2>");
-        sb.AppendLine($"<p>Total de consultas: {data.TotalQueries} | Total de respuestas: {data.TotalResponses} | Tokens estimados: {data.TotalTokensEstimated} | Tiempo de inferencia: {data.TotalInferenceMs} ms</p>");
-        sb.AppendLine($"<p>Este reporte fue generado automáticamente por PR-AI Assistant v1.0. El contenido generado por IA debe ser verificado por el perito. Modelo utilizado: {System.Net.WebUtility.HtmlEncode(data.ModelName)} ejecutándose localmente. Ningún dato fue transmitido a servidores externos.</p>");
+        sb.AppendLine($"<h2>{H(Loc.T("report.html.statsAndDeclaration"))}</h2>");
+        sb.AppendLine($"<p>{H(Loc.T("report.totalQueries"))}: {data.TotalQueries} | {H(Loc.T("report.totalResponses"))}: {data.TotalResponses} | {H(Loc.T("report.tokens"))}: {data.TotalTokensEstimated} | {H(Loc.T("report.inferenceTime"))}: {data.TotalInferenceMs} ms</p>");
+        sb.AppendLine($"<p>{H(Loc.F("report.declaration", data.ModelName)).Replace("\n", " ")}</p>");
         sb.AppendLine("<p>PR-AI Assistant © 2026 Patagonia Robot.</p>");
         // El placeholder para el hash lo inyectaremos después de cerrarlo
         sb.AppendLine("<!-- HASH_PLACEHOLDER -->");
@@ -242,7 +262,7 @@ public class SessionExporter
 
     private string InjectHashIntoHtml(string htmlWithoutHash, string hash)
     {
-        return htmlWithoutHash.Replace("<!-- HASH_PLACEHOLDER -->", $"<p><strong>Hash SHA-256 del documento original:</strong> {hash}</p>");
+        return htmlWithoutHash.Replace("<!-- HASH_PLACEHOLDER -->", $"<p><strong>{H(Loc.T("report.html.hash"))}</strong> {hash}</p>");
     }
 
     private string GenerateJsonContent(SessionExportData data)

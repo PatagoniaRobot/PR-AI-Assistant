@@ -1,0 +1,39 @@
+// El reporte de una sesión de investigación, exportado en texto, HTML o JSON. Va en el
+// idioma de la aplicación en el momento de exportar.
+{
+  "report.txt.title": "PR-AI ASSISTANT — REPORTE DE SESIÓN DE INVESTIGACIÓN",
+  "report.txt.session": "DATOS DE LA SESIÓN",
+  "report.txt.artifacts": "ARTEFACTOS CONSULTADOS ({0})",
+  "report.txt.artifactLine": "{0} | Tipo: {1} | Tamaño: {2} bytes",
+  "report.txt.notes": "Notas: {0}",
+  "report.txt.interactions": "INTERACCIONES ({0} consultas, {1} respuestas)",
+  "report.txt.stats": "ESTADÍSTICAS",
+  "report.txt.declaration": "DECLARACIÓN",
+  "report.txt.hash": "Hash SHA-256 del documento: {0}",
+
+  "report.perito": "Perito",
+  "report.badge": "Legajo",
+  "report.case": "Causa",
+  "report.court": "Juzgado",
+  "report.description": "Descripción",
+  "report.start": "Inicio",
+  "report.end": "Fin (export)",
+  "report.sessionId": "ID de sesión",
+  "report.role.user": "PERITO",
+  "report.role.system": "SISTEMA",
+  "report.hasImages": "[CONTIENE IMÁGENES]",
+  "report.totalQueries": "Total de consultas",
+  "report.totalResponses": "Total de respuestas",
+  "report.tokens": "Tokens estimados",
+  "report.inferenceTime": "Tiempo total de inferencia",
+  "report.declaration": "Este reporte fue generado automáticamente por PR-AI Assistant v1.0.\nEl contenido generado por IA debe ser verificado por el perito.\nModelo utilizado: {0} ejecutándose localmente.\nNingún dato fue transmitido a servidores externos.",
+
+  "report.html.title": "Reporte de Sesión",
+  "report.html.name": "Nombre",
+  "report.html.type": "Tipo",
+  "report.html.size": "Tamaño",
+  "report.html.notes": "Notas",
+  "report.html.noArtifacts": "No se consultaron artefactos en esta sesión.",
+  "report.html.statsAndDeclaration": "Estadísticas y Declaración",
+  "report.html.hash": "Hash SHA-256 del documento original:"
+}

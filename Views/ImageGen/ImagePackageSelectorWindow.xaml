@@ -7,7 +7,8 @@
         xmlns:vm="clr-namespace:PRImager.AIAssistant.ViewModels.ImageGen"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:ImagePackageSelectorViewModel}"
-        Title="Modelos de imagen — PR-AI Assistant"
+        xmlns:l="clr-namespace:PRImager.AIAssistant.Localization"
+        Title="{l:T imagegen.packages.window.title}"
         Height="740" Width="920"
         Background="#1A1A2E"
         WindowStartupLocation="CenterOwner"
@@ -124,23 +125,23 @@
 
         <!-- Encabezado -->
         <StackPanel Grid.Row="0" Margin="0,0,0,12">
-            <TextBlock Text="Modelos de imagen" FontSize="18" FontWeight="Bold" />
+            <TextBlock Text="{l:T sidebar.images.packages}" FontSize="18" FontWeight="Bold" />
             <TextBlock Text="{Binding GpuText}" Foreground="#00D4AA" FontSize="11" Margin="0,4,0,0"
                        AutomationProperties.AutomationId="PkgGpuText" />
-            <TextBlock Text="Un modelo de imagen son tres archivos: difusión, text encoder y VAE."
+            <TextBlock Text="{l:T imagegen.packages.subtitle}"
                        Foreground="#94a3b8" FontSize="11" Margin="0,4,0,0" />
         </StackPanel>
 
         <!-- Lista de paquetes -->
         <DockPanel Grid.Row="1">
-            <TextBlock DockPanel.Dock="Top" Text="PAQUETES" Style="{StaticResource SectionLabel}" />
+            <TextBlock DockPanel.Dock="Top" Text="{l:T imagegen.packages.header}" Style="{StaticResource SectionLabel}" />
             <DataGrid ItemsSource="{Binding Packages}" SelectedItem="{Binding SelectedRow}"
                       AutomationProperties.AutomationId="PkgGrid">
                 <DataGrid.Columns>
                     <!-- MinWidth para que la columna flexible no quede aplastada por las
                          fijas: con Estado en 300 px, el nombre del paquete quedaba pegado
                          a la columna siguiente. -->
-                    <DataGridTextColumn Header="Paquete" Binding="{Binding DisplayName}"
+                    <DataGridTextColumn Header="{l:T imagegen.packages.col.package}" Binding="{Binding DisplayName}"
                                         Width="*" MinWidth="200">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
@@ -153,7 +154,7 @@
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
 
-                    <DataGridTextColumn Header="Familia" Binding="{Binding Family}" Width="90" />
+                    <DataGridTextColumn Header="{l:T imagegen.packages.col.family}" Binding="{Binding Family}" Width="90" />
 
                     <!-- Ancho fijo a propósito: con Width="Auto" el DataGrid mide la columna
                          contra el contenido inicial y el texto más largo queda cortado.
@@ -165,7 +166,7 @@
                          así y las aserciones de humo no lo vieron, porque el DataGrid
                          recorta SIN poner puntos suspensivos. TextTrimming los agrega, para
                          que un desborde futuro se note a simple vista. -->
-                    <DataGridTextColumn Header="Estado" Binding="{Binding StatusText}" Width="260">
+                    <DataGridTextColumn Header="{l:T catalog.col.state}" Binding="{Binding StatusText}" Width="260">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Foreground"
@@ -176,8 +177,8 @@
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
 
-                    <DataGridTextColumn Header="En disco" Binding="{Binding SizeText}" Width="90" />
-                    <DataGridTextColumn Header="Parámetros" Binding="{Binding ParamsText}" Width="130" />
+                    <DataGridTextColumn Header="{l:T imagegen.packages.col.onDisk}" Binding="{Binding SizeText}" Width="90" />
+                    <DataGridTextColumn Header="{l:T imagegen.packages.col.params}" Binding="{Binding ParamsText}" Width="130" />
 
                     <DataGridTextColumn Header="VRAM" Binding="{Binding VramLabel}" Width="110">
                         <DataGridTextColumn.ElementStyle>
@@ -194,7 +195,7 @@
 
         <!-- Los tres archivos del paquete seleccionado -->
         <StackPanel Grid.Row="2" Margin="0,12,0,0">
-            <TextBlock Text="ARCHIVOS DEL PAQUETE SELECCIONADO" Style="{StaticResource SectionLabel}" />
+            <TextBlock Text="{l:T imagegen.packages.files}" Style="{StaticResource SectionLabel}" />
             <TextBlock Text="{Binding SelectedDetail}" Foreground="#94a3b8" FontSize="11"
                        Margin="0,0,0,8" AutomationProperties.AutomationId="PkgDetail" />
 
@@ -204,11 +205,11 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="Difusión" VerticalAlignment="Center" FontSize="12" />
+                <TextBlock Grid.Column="0" Text="{l:T imagegen.packages.diffusion}" VerticalAlignment="Center" FontSize="12" />
                 <TextBox Grid.Column="1" Text="{Binding DiffusionPath, Mode=OneWay}"
                          Style="{StaticResource RutaBox}"
                          AutomationProperties.AutomationId="PkgDiffusionPath" />
-                <Button Grid.Column="2" Content="Examinar…" Command="{Binding BrowseDiffusionCommand}"
+                <Button Grid.Column="2" Content="{l:T common.browse}" Command="{Binding BrowseDiffusionCommand}"
                         Style="{StaticResource NeutralPkgButton}" Margin="8,0,0,0" />
             </Grid>
 
@@ -222,7 +223,7 @@
                 <TextBox Grid.Column="1" Text="{Binding TextEncoderPath, Mode=OneWay}"
                          Style="{StaticResource RutaBox}"
                          AutomationProperties.AutomationId="PkgTextEncoderPath" />
-                <Button Grid.Column="2" Content="Examinar…" Command="{Binding BrowseTextEncoderCommand}"
+                <Button Grid.Column="2" Content="{l:T common.browse}" Command="{Binding BrowseTextEncoderCommand}"
                         Style="{StaticResource NeutralPkgButton}" Margin="8,0,0,0" />
             </Grid>
 
@@ -236,13 +237,13 @@
                 <TextBox Grid.Column="1" Text="{Binding VaePath, Mode=OneWay}"
                          Style="{StaticResource RutaBox}"
                          AutomationProperties.AutomationId="PkgVaePath" />
-                <Button Grid.Column="2" Content="Examinar…" Command="{Binding BrowseVaeCommand}"
+                <Button Grid.Column="2" Content="{l:T common.browse}" Command="{Binding BrowseVaeCommand}"
                         Style="{StaticResource NeutralPkgButton}" Margin="8,0,0,0" />
             </Grid>
 
             <!-- El motor. Va acá y no en la configuración general porque es de las
                  imágenes, y esta ventana está detrás de la barrera de compilación. -->
-            <TextBlock Text="MOTOR DE GENERACIÓN" Style="{StaticResource SectionLabel}" Margin="0,14,0,6" />
+            <TextBlock Text="{l:T imagegen.packages.engine}" Style="{StaticResource SectionLabel}" Margin="0,14,0,6" />
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="120" />
@@ -253,7 +254,7 @@
                 <TextBox Grid.Column="1" Text="{Binding EnginePath, Mode=OneWay}"
                          Style="{StaticResource RutaBox}"
                          AutomationProperties.AutomationId="PkgEnginePath" />
-                <Button Grid.Column="2" Content="Examinar…" Command="{Binding BrowseEngineCommand}"
+                <Button Grid.Column="2" Content="{l:T common.browse}" Command="{Binding BrowseEngineCommand}"
                         Style="{StaticResource NeutralPkgButton}" Margin="8,0,0,0" />
             </Grid>
             <TextBlock Text="{Binding EngineStatusText}" FontSize="11" Margin="120,4,0,0"
@@ -273,7 +274,7 @@
 
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <TextBlock FontSize="12">
-                        <Run Text="Descargar el paquete recomendado (Z-Image Turbo Q4_K) — " />
+                        <Run Text="{l:T imagegen.packages.recommended}" />
                         <Run Text="{Binding RecommendedSizeText, Mode=OneWay}" FontWeight="SemiBold" />
                     </TextBlock>
                     <TextBlock Text="{Binding DownloadStatus}" Foreground="#94a3b8" FontSize="11"
@@ -286,10 +287,10 @@
                                  Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}" />
                 </StackPanel>
 
-                <Button Grid.Column="1" Content="Descargar" Command="{Binding DownloadRecommendedCommand}"
+                <Button Grid.Column="1" Content="{l:T catalog.download}" Command="{Binding DownloadRecommendedCommand}"
                         Style="{StaticResource PkgButton}" Margin="12,0,0,0"
                         AutomationProperties.AutomationId="PkgDownloadButton" />
-                <Button Grid.Column="2" Content="Cancelar" Command="{Binding CancelDownloadCommand}"
+                <Button Grid.Column="2" Content="{l:T common.cancel}" Command="{Binding CancelDownloadCommand}"
                         Style="{StaticResource DangerPkgButton}" Margin="8,0,0,0"
                         Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}" />
             </Grid>
@@ -308,7 +309,7 @@
                            TextWrapping="Wrap"
                            AutomationProperties.AutomationId="PkgMessage" />
             </StackPanel>
-            <Button Grid.Column="1" Content="Usar este paquete" Command="{Binding UseSelectedCommand}"
+            <Button Grid.Column="1" Content="{l:T imagegen.packages.use}" Command="{Binding UseSelectedCommand}"
                     Style="{StaticResource PkgButton}"
                     AutomationProperties.AutomationId="PkgUseButton" />
         </Grid>

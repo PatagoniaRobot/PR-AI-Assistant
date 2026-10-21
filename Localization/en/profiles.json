@@ -1,0 +1,56 @@
+// Usage profiles (the two factory ones and the manager) and the automatic execution
+// profile. The factory ones are rebuilt from here on every start: they follow the app
+// language.
+{
+  "profiles.window.title": "Usage profiles — PR-AI Assistant",
+  "profiles.title": "Usage profiles",
+  "profiles.subtitle": "Factory profiles cannot be edited or deleted. Clone one to start from its settings.",
+  "profiles.factoryTag": "factory",
+  "profiles.readOnly": "Factory profile: read-only. Use «Clone» to create an editable copy.",
+  "profiles.name": "NAME",
+  "profiles.systemPrompt": "SYSTEM PROMPT",
+  "profiles.temperature": "TEMPERATURE",
+  "profiles.context": "CONTEXT (TOKENS)",
+  "profiles.accent": "ACCENT COLOR",
+  "profiles.capabilities": "CAPABILITIES",
+  "profiles.cap.web": "Web search enabled",
+  "profiles.cap.download": "Model download enabled",
+  "profiles.cap.images": "Image generation enabled",
+  "profiles.cap.images.tooltip": "Investigation Mode always disables it, and the institutional edition does not include it at all.",
+  "profiles.cap.files": "Attach files and images",
+  "profiles.cap.files.tooltip": "Investigation Mode always enables it: loading evidence is part of the institutional framework and a profile cannot remove it.",
+  "profiles.cap.log": "Mandatory audit log",
+  "profiles.forcedHint": "In Investigation Mode these three are forced — no web, no downloads, mandatory log — whatever the profile says.",
+  "profiles.clone": "Clone",
+  "profiles.save": "Save",
+  "profiles.delete": "Delete",
+
+  "profiles.copyName": "{0} (copy)",
+  "profiles.created": "Profile «{0}» created. You can edit it now.",
+  "profiles.emptyName": "The name cannot be empty.",
+  "profiles.saved": "Profile «{0}» saved.",
+  "profiles.saveFailed": "It could not be saved: the profile is a factory one or no longer exists.",
+  "profiles.delete.title": "Delete profile",
+  "profiles.delete.message": "Delete the profile «{0}»?\n\nThis cannot be undone.",
+  "profiles.deleted": "Profile «{0}» deleted.",
+  "profiles.deleteFailed": "It could not be deleted: factory profiles are permanent.",
+
+  "profiles.factory.forensic": "Forensic",
+  "profiles.factory.general": "General",
+  "profiles.factory.forensic.prompt": "You are a technical analysis assistant that works under the doctrine 'inferred ≠ verified'.\n\nCore rule: always distinguish, explicitly, between what the data PROVES and what the\ndata SUGGESTS. They are different things and are never presented together without a label.\n\n1. Mark each statement as VERIFIED (it follows directly from the data provided)\n   or INFERRED (it is a hypothesis compatible with the data, but not proven by it).\n2. Do not fill gaps. If a piece of data is missing to support a conclusion, say so:\n   'There is no data to determine X'. The absence of information is a finding,\n   not a space to fill.\n3. Do not offer general knowledge as if it were evidence of the case.\n4. Cite the concrete source of every verified statement: artifact, table, record, offset.\n5. When something is ambiguous, list the alternative hypotheses instead of picking one.\n6. Precise technical language, without embellishment. Answer in English; technical terms in their original language.",
+  "profiles.factory.general.prompt": "You are a general assistant. Answer concisely and directly.\n\n- Get to the point: no preambles and no summaries of what you were asked.\n- If you do not know something, say so instead of improvising.\n- Use lists or tables only when they improve clarity.\n- Answer in English, with technical terms in their original language.",
+
+  "exec.auto": "Automatic",
+  "exec.noModel.catalog": "no models yet: go in and download one from the catalog",
+  "exec.noModel.copy": "no models yet: copy a .gguf file into the Models folder",
+  "exec.auto.unreadable": "automatic: the model could not be read, using 8k and everything on the GPU",
+  "exec.auto.summary": "automatic: {0}",
+
+  "model.downloadedName": "{0} (downloaded)",
+  "model.tag.downloaded": "Downloaded",
+
+  "exec.profile.performance": "Performance",
+  "exec.profile.balanced": "Balanced",
+  "exec.profile.quality": "Max. Quality",
+  "model.tag.gpuRecommended": "GPU recommended"
+}

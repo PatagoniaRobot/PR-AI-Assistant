@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using PRImager.AIAssistant.Helpers;
+using PRImager.AIAssistant.Localization;
 using PRImager.AIAssistant.Services;
 using PRImager.AIAssistant.Services.Enums;
 using PRImager.AIAssistant.Services.ImageGen;
@@ -93,7 +94,7 @@ public sealed class GeneratedImageViewModel
     public string Caption => Metadata.ShortSummary;
 
     public string Tooltip =>
-        (string.IsNullOrWhiteSpace(Metadata.Prompt) ? "(sin prompt)" : Metadata.Prompt) +
+        (string.IsNullOrWhiteSpace(Metadata.Prompt) ? Loc.T("imagegen.noPrompt") : Metadata.Prompt) +
         "\n\n" + Metadata.ShortSummary +
         $"\n{Metadata.ElapsedSeconds.ToString("0.#", CultureInfo.CurrentCulture)} s" +
         $"\n\n{FileName}";
@@ -149,7 +150,7 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
     /// </summary>
     private readonly SynchronizationContext? _uiContext;
 
-    private GpuVramInfo _gpu = GpuVramInfo.Unavailable("Sin consultar.");
+    private GpuVramInfo _gpu = GpuVramInfo.Unavailable(Loc.T("imagegen.gpuNotQueried"));
     private ImageServerConfig? _activeConfig;
     private CancellationTokenSource? _generationCts;
     private Task? _generationTask;
@@ -239,9 +240,9 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
     /// </summary>
     public IReadOnlyList<ImageSizeOption> SizeOptions { get; } = new[]
     {
-        new ImageSizeOption(512, "512 — rápido"),
-        new ImageSizeOption(768, "768 — intermedio"),
-        new ImageSizeOption(1024, "1024 — detallado")
+        new ImageSizeOption(512, Loc.F("imagegen.size.fast", 512)),
+        new ImageSizeOption(768, Loc.F("imagegen.size.medium", 768)),
+        new ImageSizeOption(1024, Loc.F("imagegen.size.detailed", 1024))
     };
 
     private ImageSizeOption _selectedSize = null!;   // lo fija el constructor
@@ -303,9 +304,7 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Lo que el usuario tiene que entender del selector de tamaño, medido en E4.0.
     /// </summary>
-    public string SizeHint =>
-        "Un tamaño mayor cuesta tiempo, no memoria: con el VAE en tiles, 1024×1024 " +
-        "usa apenas 216 MB más que 512×512, pero tarda unas tres veces más.";
+    public string SizeHint => Loc.T("imagegen.sizeHint");
 
     private void OnSizeChanged()
     {
@@ -406,10 +405,10 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
         {
             var p = Package;
             if (p is null)
-                return "No hay ningún paquete de modelo seleccionado. Elegí uno en «Modelos de imagen».";
+                return Loc.T("imagegen.package.none");
             return p.IsComplete
-                ? $"{p.DisplayName} — {p.DefaultSteps} pasos, CFG {p.DefaultCfgScale:0.#}"
-                : $"{p.DisplayName} — incompleto: {p.MissingText}";
+                ? Loc.F("imagegen.package.ready", p.DisplayName, p.DefaultSteps, p.DefaultCfgScale)
+                : Loc.F("imagegen.package.incomplete", p.DisplayName, p.MissingText);
         }
     }
 
@@ -487,8 +486,8 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
     }
 
     public string GpuText => _gpu.Available
-        ? $"{_gpu.Name} — {_gpu.FreeMb / 1024.0:N1} GB libres de {_gpu.TotalMb / 1024.0:N1} GB"
-        : _gpu.UnavailableReason ?? "VRAM desconocida";
+        ? Loc.F("imagegen.gpu", _gpu.Name, _gpu.FreeMb / 1024.0, _gpu.TotalMb / 1024.0)
+        : _gpu.UnavailableReason ?? Loc.T("imagegen.vramUnknown");
 
     private ImageVramVerdict? _verdict;
 
@@ -573,7 +572,7 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
 
         if (!HasPackage)
         {
-            StatusMessage = "Elegí un paquete de modelo de imagen para poder generar.";
+            StatusMessage = Loc.T("imagegen.status.pickPackage");
         }
         else
         {
@@ -586,9 +585,7 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
             var motor = _enginePathResolver();
             if (!File.Exists(motor))
             {
-                StatusMessage = $"No se encontró el motor de imágenes en:\n{motor}\n\n" +
-                                "Elegilo desde «Modelos de imagen» o descomprimí ahí " +
-                                "stable-diffusion.cpp.";
+                StatusMessage = Loc.F("imagegen.status.engineMissing", motor);
             }
         }
     }
@@ -658,7 +655,7 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
         try { await _manager.StopAsync().ConfigureAwait(true); }
         catch (Exception) { /* detener no debe fallar ruidosamente */ }
 
-        StatusMessage = "Motor de imágenes detenido. Vuelve a arrancar solo al generar.";
+        StatusMessage = Loc.T("imagegen.status.engineStopped");
     }
 
     // ------------------------------------------------------------------ generación
@@ -727,20 +724,20 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
             Directory.CreateDirectory(carpetaSalida);
             var destino = ImageOutputFolder.BuildPath(carpetaSalida, semilla);
 
-            StatusMessage = $"Generando {Width}×{Height} con semilla {semilla}…";
+            StatusMessage = Loc.F("imagegen.status.generating", Width, Height, semilla);
 
             var resultado = await _client.GenerateAsync(request, destino, ct).ConfigureAwait(true);
             cron.Stop();
 
             if (resultado.WasCancelled)
             {
-                StatusMessage = "Generación cancelada.";
+                StatusMessage = Loc.T("imagegen.status.cancelled");
                 return;
             }
 
             if (!resultado.Success || resultado.ImagePath is null)
             {
-                StatusMessage = resultado.ErrorMessage ?? "No se pudo generar la imagen.";
+                StatusMessage = resultado.ErrorMessage ?? Loc.T("imagegen.status.failed");
                 return;
             }
 
@@ -761,9 +758,8 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
                 request.Steps, request.CfgScale, semilla, paquete.Id, cron.Elapsed.TotalSeconds));
 
             StatusMessage = sidecar is null
-                ? $"Imagen lista en {cron.Elapsed.TotalSeconds:N1} s. " +
-                  "No se pudo escribir la metadata al lado del archivo."
-                : $"Imagen lista en {cron.Elapsed.TotalSeconds:N1} s.";
+                ? Loc.F("imagegen.status.readyNoSidecar", cron.Elapsed.TotalSeconds)
+                : Loc.F("imagegen.status.ready", cron.Elapsed.TotalSeconds);
 
             // La VRAM libre cambió: el motor cargó y liberó los pesos. Se vuelve a leer
             // para que el semáforo hable del estado real y no del de hace un minuto.
@@ -773,11 +769,11 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
         }
         catch (OperationCanceledException)
         {
-            StatusMessage = "Generación cancelada.";
+            StatusMessage = Loc.T("imagegen.status.cancelled");
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error inesperado al generar: {ex.Message}";
+            StatusMessage = Loc.F("imagegen.status.unexpected", ex.Message);
         }
         finally
         {
@@ -803,7 +799,7 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
 
         if (cambióElModelo)
         {
-            StatusMessage = "Cambiando el modelo de imagen…";
+            StatusMessage = Loc.T("imagegen.status.switchingModel");
             await _manager.StopAsync(ct).ConfigureAwait(true);
         }
 
@@ -813,7 +809,7 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
             return true;
         }
 
-        StatusMessage = "Iniciando el motor de imágenes…";
+        StatusMessage = Loc.T("imagegen.status.startingEngine");
 
         var error = await _manager.StartAsync(config, ct).ConfigureAwait(true);
         if (error is not null)
@@ -824,8 +820,7 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
 
         if (!await _manager.WaitForReadyAsync(TimeSpan.FromSeconds(60), ct).ConfigureAwait(true))
         {
-            StatusMessage = "El motor de imágenes no llegó a responder. Revisá que sd-server " +
-                            "pueda arrancar con este paquete.";
+            StatusMessage = Loc.T("imagegen.status.engineNoAnswer");
             return false;
         }
 
@@ -866,7 +861,7 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
     private void Cancel()
     {
         if (!IsGenerating) return;
-        StatusMessage = "Cancelando: se detiene el motor y se vuelve a levantar…";
+        StatusMessage = Loc.T("imagegen.status.cancelling");
         _generationCts?.Cancel();
     }
 
@@ -887,8 +882,8 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
 
             var restante = p.EstimatedSecondsRemaining;
             ProgressText = restante > 0
-                ? $"Paso {p.Step} de {p.TotalSteps} — faltan ~{restante:N0} s"
-                : $"Paso {p.Step} de {p.TotalSteps}";
+                ? Loc.F("imagegen.progress.eta", p.Step, p.TotalSteps, restante)
+                : Loc.F("imagegen.progress", p.Step, p.TotalSteps);
         }
 
         if (_uiContext is null) Aplicar();
@@ -950,7 +945,7 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            StatusMessage = $"No se pudo abrir la carpeta: {ex.Message}";
+            StatusMessage = Loc.F("imagegen.openFolderFailed", ex.Message);
         }
     }
 
@@ -964,7 +959,7 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
         {
             if (!File.Exists(item.ImagePath))
             {
-                StatusMessage = "El archivo ya no está en disco.";
+                StatusMessage = Loc.T("imagegen.fileGone");
                 return;
             }
 
@@ -976,7 +971,7 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            StatusMessage = $"No se pudo abrir la imagen: {ex.Message}";
+            StatusMessage = Loc.F("imagegen.openImageFailed", ex.Message);
         }
     }
 

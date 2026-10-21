@@ -161,7 +161,7 @@ public class UsageProfileService
     /// </summary>
     public UsageProfile Clone(UsageProfile source, string newName)
     {
-        string baseName = string.IsNullOrWhiteSpace(newName) ? $"{source.Name} (copia)" : newName.Trim();
+        string baseName = string.IsNullOrWhiteSpace(newName) ? Loc.F("profiles.copyName", source.Name) : newName.Trim();
         var clone = source.CloneAsEditable(GenerateUniqueId(baseName), baseName);
         _store.Profiles.Add(clone);
         Save();
@@ -231,7 +231,7 @@ public class UsageProfileService
     private static UsageProfile CreateForensicProfile() => new()
     {
         Id = ForensicProfileId,
-        Name = "Forense",
+        Name = Loc.T("profiles.factory.forensic"),
         Temperature = 0.2,
         ContextTokens = 8192,
         WebSearchEnabled = false,
@@ -246,13 +246,13 @@ public class UsageProfileService
         MandatoryLog = true,
         AccentColor = "#1E5F74",
         IsFactory = true,
-        SystemPrompt = ForensicSystemPrompt
+        SystemPrompt = Loc.T("profiles.factory.forensic.prompt")
     };
 
     private static UsageProfile CreateGeneralProfile() => new()
     {
         Id = GeneralProfileId,
-        Name = "General",
+        Name = Loc.T("profiles.factory.general"),
         Temperature = 0.7,
         ContextTokens = 8192,
         WebSearchEnabled = true,
@@ -262,30 +262,6 @@ public class UsageProfileService
         MandatoryLog = false,
         AccentColor = "#B85C38",
         IsFactory = true,
-        SystemPrompt = GeneralSystemPrompt
+        SystemPrompt = Loc.T("profiles.factory.general.prompt")
     };
-
-    private const string ForensicSystemPrompt =
-@"Sos un asistente de análisis técnico que opera bajo la doctrina 'inferido ≠ verificado'.
-
-Regla central: distinguí siempre, de forma explícita, entre lo que el dato PRUEBA y lo que
-el dato SUGIERE. Son cosas distintas y nunca se presentan juntas sin etiquetar.
-
-1. Marcá cada afirmación como VERIFICADO (se desprende directamente del dato aportado)
-   o INFERIDO (es una hipótesis compatible con el dato, pero no probada por él).
-2. No completes huecos. Si falta un dato para sostener una conclusión, declaralo:
-   'No hay dato que permita determinar X'. La ausencia de información es un hallazgo,
-   no un espacio a rellenar.
-3. No aportes conocimiento general como si fuera evidencia del caso.
-4. Citá la fuente concreta de cada afirmación verificada: artefacto, tabla, registro, offset.
-5. Ante ambigüedad, enumerá las hipótesis alternativas en vez de elegir una.
-6. Lenguaje técnico preciso, sin adornos. Respondé en español; términos técnicos en su idioma original.";
-
-    private const string GeneralSystemPrompt =
-@"Sos un asistente general. Respondé de forma concisa y directa.
-
-- Andá al grano: sin preámbulos ni resúmenes de lo que te preguntaron.
-- Si no sabés algo, decilo en vez de improvisar.
-- Usá listas o tablas solo cuando mejoren la claridad.
-- Respondé en español, con términos técnicos en su idioma original.";
 }

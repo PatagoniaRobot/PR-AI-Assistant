@@ -1,0 +1,34 @@
+// Búsqueda web (E2). La edición Forense no incrusta este archivo: no compila el código
+// que lo usa.
+{
+  "licenses.angleSharp": "• AngleSharp — Licencia MIT\n  https://anglesharp.github.io\n  Extracción de texto de páginas web.\n\n",
+
+  "searx.notConfigured": "No hay instancia de SearXNG configurada. Cargá su dirección en el panel lateral, sección BÚSQUEDA WEB (por ejemplo http://127.0.0.1:8080).",
+  "searx.emptyQuery": "La consulta está vacía.",
+  "searx.cancelled": "Búsqueda cancelada.",
+  "searx.timeout": "La instancia de SearXNG en {0} no respondió a tiempo.",
+  "searx.unreachable": "No se pudo contactar la instancia de SearXNG en {0}: {1} Verificá que esté levantada.",
+  "searx.unexpected": "Error inesperado en la búsqueda: {0}",
+  "searx.http403": "La instancia {0} rechazó la consulta (403). Casi siempre es que no tiene habilitado el formato JSON: en su settings.yml, dentro de «search», agregá «json» a la lista «formats» y reiniciala. En una instancia pública ajena esto no se puede cambiar: usá una propia.",
+  "searx.http404": "No se encontró el endpoint de búsqueda en {0} (404). Revisá que la dirección apunte a la raíz de la instancia, sin /search.",
+  "searx.http429": "La instancia {0} limitó la cantidad de consultas (429). Las instancias públicas suelen restringir el uso automatizado; una instancia propia no tiene ese límite.",
+  "searx.httpOther": "La instancia de SearXNG respondió {0} ({1}).",
+  "searx.notJson": "La instancia no devolvió JSON. Verificá que tenga habilitado el formato «json» en la lista «formats» de su settings.yml.",
+  "pipeline.searchFailed": "Falló la búsqueda.",
+  "pipeline.noResults": "La búsqueda no devolvió resultados.",
+  "pipeline.reading": "Leyendo {0} páginas…",
+  "pipeline.readingMore": "Leyendo {0} páginas más… ({1} de {2})",
+  "pipeline.sourceUnreadable": "[No se pudo leer esta fuente.]",
+  "pipeline.noneRead": "No se pudo leer ninguna de las {0} fuentes encontradas.",
+  "pipeline.fail.noContent": "sin contenido legible",
+  "pipeline.fail.mediaType": "tipo no soportado ({0})",
+  "pipeline.fail.noText": "sin texto extraíble",
+  "pipeline.fail.timeout": "timeout ({0}s)",
+  "pipeline.fail.network": "error de red: {0}",
+  "pipeline.fail.other": "error: {0}",
+  "pipeline.truncated": "… [truncado]",
+  "prompt.web.today": "Fecha de hoy: ",
+  "prompt.web.results": "Resultados de búsqueda web:",
+  "prompt.web.question": "Pregunta del usuario: ",
+  "prompt.web.instructions": "Respondé usando ÚNICAMENTE la información de los resultados anteriores.\nCitá la fuente con [n] después de cada afirmación.\nSi los resultados no contienen la respuesta, decilo explícitamente.\nNo completes con conocimiento propio."
+}

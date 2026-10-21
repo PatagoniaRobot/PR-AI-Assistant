@@ -1,0 +1,38 @@
+// Modo Investigación: el formulario del perito y la Declaración de Cumplimiento.
+{
+  "form.subtitle": "Complete los datos para iniciar la sesión forense",
+  "form.perito": "Nombre del perito *",
+  "form.perito.example": "Ej: Téc. Claudio Andino",
+  "form.badge": "Legajo / N° credencial *",
+  "form.badge.example": "Ej: LP-4521",
+  "form.case": "N° de causa / expediente *",
+  "form.case.example": "Ej: CASO-2026-0142",
+  "form.court": "Juzgado / Fiscalía (opcional)",
+  "form.court.example": "Ej: Fiscalía N°5 Neuquén",
+  "form.description": "Descripción breve (opcional)",
+  "form.description.example": "Ej: Análisis de dispositivo Samsung S23 Ultra",
+  "form.required": "* Campos obligatorios",
+  "form.continue": "Continuar",
+  "form.back": "Volver",
+
+  "declaration.title": "Declaración de Cumplimiento",
+  "declaration.subtitle": "PR-AI Assistant — Modo Investigación",
+  "declaration.intro": "El presente módulo de inteligencia artificial opera bajo los siguientes principios:",
+  "declaration.p1.title": "CERO ALTERACIÓN",
+  "declaration.p1.text": ": PR-AI Assistant NO accede, modifica ni toca la evidencia digital original bajo ninguna circunstancia. Trabaja exclusivamente con datos ya extraídos y hasheados por los módulos forenses de PRImager.",
+  "declaration.p2.text": ": El orden de volatilidad y las buenas prácticas de recolección de evidencia digital se respetan en todo momento. La IA es una herramienta de ASISTENCIA, no de recolección.",
+  "declaration.p3.title": "TRAZABILIDAD",
+  "declaration.p3.text": ": Toda interacción con el modelo de IA queda registrada con timestamp UTC, hash SHA-256, e identificación del perito operante. Este registro es inalterable.",
+  "declaration.p4.title": "VALIDACIÓN HUMANA",
+  "declaration.p4.text": ": Ninguna respuesta del modelo constituye evidencia ni conclusión pericial. Todo output debe ser verificado por el perito antes de incorporarse al informe.",
+  "declaration.perito": "Perito: ",
+  "declaration.badge": " | Legajo: ",
+  "declaration.case": "Causa: ",
+  "declaration.date": "Fecha: ",
+  "declaration.accept": "Acepto y declaro haber leído los términos anteriores",
+  "declaration.enter": "Ingresar al Análisis",
+  "declaration.backToForm": "Volver al formulario",
+  // Lo que se hashea al aceptar y queda en el registro forense. {0} perito, {1} legajo,
+  // {2} causa, {3} fecha.
+  "declaration.hashText": "DECLARACIÓN DE CUMPLIMIENTO – PR-AI ASSISTANT\n1. CERO ALTERACIÓN: PR-AI Assistant NO accede, modifica ni toca la evidencia digital original.\n2. RFC 3227: El orden de volatilidad y las buenas prácticas se respetan en todo momento.\n3. TRAZABILIDAD: Toda interacción queda registrada con timestamp UTC, hash SHA-256, e identificación del perito.\n4. VALIDACIÓN HUMANA: Ninguna respuesta constituye evidencia ni conclusión pericial.\nPerito: {0} | Legajo: {1} | Causa: {2}\nFecha: {3}"
+}

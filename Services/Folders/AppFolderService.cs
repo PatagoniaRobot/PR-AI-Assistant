@@ -133,8 +133,8 @@ public sealed class AppFolderService
         {
             folders.Add(Build(
                 AppFolderKind.LanguageModels,
-                "Modelos de lenguaje descargados",
-                "Los .gguf que se bajan desde el catálogo de HuggingFace.",
+                Loc.T("folders.kind.languageModels"),
+                Loc.T("folders.kind.languageModels.description"),
                 descargas,
                 ModelDirectoryResolver.ResolveModelsDirectory(_settings),
                 LanguageModelPatterns));
@@ -145,16 +145,16 @@ public sealed class AppFolderService
         {
             folders.Add(Build(
                 AppFolderKind.ImageModels,
-                "Modelos de imagen",
-                "Los tres archivos de cada paquete: difusión, text encoder y VAE.",
+                Loc.T("folders.kind.imageModels"),
+                Loc.T("folders.kind.imageModels.description"),
                 _imageModels.ResolveModelsDirectory(),
                 ImageGen.ImageModelService.DefaultModelsDirectory,
                 ImageModelPatterns));
 
             folders.Add(Build(
                 AppFolderKind.GeneratedImages,
-                "Imágenes generadas",
-                "Cada PNG con su .json al lado, que es lo que la hace reproducible.",
+                Loc.T("folders.kind.generatedImages"),
+                Loc.T("folders.kind.generatedImages.description"),
                 _imageModels.ResolveOutputDirectory(),
                 ImageGen.ImageOutputFolder.DefaultDirectory,
                 GeneratedImagePatterns));

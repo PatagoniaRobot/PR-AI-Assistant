@@ -108,17 +108,5 @@ public partial class ChatView : UserControl
     /// <summary>
     /// Abrir el archivo HTML de ayuda en el navegador predeterminado.
     /// </summary>
-    private void OpenHelp_Click(object sender, RoutedEventArgs e)
-    {
-        string helpPath = System.IO.Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory, "Help", "Help_PRAIA.html");
-        if (System.IO.File.Exists(helpPath))
-        {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = helpPath,
-                UseShellExecute = true
-            });
-        }
-    }
+    private void OpenHelp_Click(object sender, RoutedEventArgs e) => Helpers.HelpLauncher.Open();
 }

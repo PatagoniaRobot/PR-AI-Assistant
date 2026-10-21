@@ -16,8 +16,10 @@ namespace PRImager.AIAssistant.Services;
 /// </summary>
 public static class AttachmentPrompt
 {
-    public const string OpeningMarker = "--- ARCHIVOS ADJUNTOS AL MENSAJE ---";
-    public const string ClosingMarker = "--- FIN DE LOS ARCHIVOS ADJUNTOS ---";
+    // En el idioma de la aplicación: el modelo los lee, y mezclar idiomas en la consulta
+    // empuja a que conteste en el que no es.
+    public static string OpeningMarker => Loc.T("prompt.attachments.open");
+    public static string ClosingMarker => Loc.T("prompt.attachments.close");
 
     /// <summary>
     /// Devuelve el bloque a anteponer al mensaje, o cadena vacía si no hay nada que
@@ -32,7 +34,7 @@ public static class AttachmentPrompt
 
         var sb = new StringBuilder();
         sb.AppendLine(OpeningMarker);
-        sb.AppendLine("El usuario adjuntó los siguientes archivos a esta consulta.");
+        sb.AppendLine(Loc.T("prompt.attachments.intro"));
         sb.AppendLine();
 
         foreach (string t in textos)

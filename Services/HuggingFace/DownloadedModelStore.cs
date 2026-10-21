@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using PRImager.AIAssistant.Localization;
 
 namespace PRImager.AIAssistant.Services.HuggingFace;
 
@@ -35,7 +36,7 @@ public sealed class DownloadedModelInfo
 
     /// <summary>Motivo por el que no se puede eliminar, o vacío si se puede.</summary>
     public string BlockedReason => IsActive
-        ? "Es el modelo activo. Elegí otro modelo antes de eliminarlo."
+        ? Loc.T("catalog.delete.blockedActive")
         : "";
 
     public bool CanDelete => BlockedReason.Length == 0;
@@ -158,23 +159,23 @@ public sealed class DownloadedModelStore
         // Las tres barreras se revalidan acá y no solo en la UI: el estado pudo
         // cambiar entre que se dibujó la lista y que el usuario confirmó.
         if (string.IsNullOrWhiteSpace(_downloadDirectory))
-            return HfResult<ModelDeletionRecord>.Fail("Esta edición no gestiona modelos descargados.");
+            return HfResult<ModelDeletionRecord>.Fail(Loc.T("catalog.delete.noStore"));
 
         if (_catalogFileNames.Contains(model.FileName))
             return HfResult<ModelDeletionRecord>.Fail(
-                $"{model.FileName} forma parte del catálogo distribuido con el producto y no se elimina desde acá.");
+                Loc.F("catalog.delete.bundled", model.FileName));
 
         if (!IsInsideDownloadDirectory(model.FullPath))
             return HfResult<ModelDeletionRecord>.Fail(
-                "El archivo está fuera de la carpeta de descargas. Solo se eliminan modelos descargados.");
+                Loc.T("catalog.delete.outside"));
 
         string active = _activeSelectionKey() ?? "";
         if (PathsMatch(active, model.FullPath) || string.Equals(active, model.FileName, StringComparison.OrdinalIgnoreCase))
             return HfResult<ModelDeletionRecord>.Fail(
-                $"{model.FileName} es el modelo activo. Elegí otro modelo antes de eliminarlo.");
+                Loc.F("catalog.delete.active", model.FileName));
 
         if (!File.Exists(model.FullPath))
-            return HfResult<ModelDeletionRecord>.Fail($"{model.FileName} ya no está en la carpeta.");
+            return HfResult<ModelDeletionRecord>.Fail(Loc.F("catalog.delete.gone", model.FileName));
 
         long size;
         try { size = new FileInfo(model.FullPath).Length; }
@@ -188,8 +189,7 @@ public sealed class DownloadedModelStore
         {
             // El caso real es tener el modelo cargado en llama-server
             return HfResult<ModelDeletionRecord>.Fail(
-                $"No se pudo eliminar {model.FileName}: {ex.Message}. " +
-                "Si el modelo está cargado, cerrá la sesión y volvé a intentar.");
+                Loc.F("catalog.delete.ioError", model.FileName, ex.Message));
         }
 
         var accesorios = new List<string>();

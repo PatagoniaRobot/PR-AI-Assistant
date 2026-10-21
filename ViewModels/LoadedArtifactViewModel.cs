@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows.Input;
+using PRImager.AIAssistant.Controls;
 using PRImager.AIAssistant.Helpers;
 
 namespace PRImager.AIAssistant.ViewModels;
@@ -29,7 +30,7 @@ public class LoadedArtifactViewModel : ObservableObject
     public bool IsImage { get; init; }
 
     /// <summary>Ícono para la tira de adjuntos.</summary>
-    public string Icon => IsImage ? "🖼" : "📄";
+    public IconKind IconKind => IsImage ? IconKind.Image : IconKind.Document;
 
     /// <summary>Tamaño formateado para mostrar en UI.</summary>
     public string FileSizeFormatted => FileSize < 1024

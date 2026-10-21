@@ -49,7 +49,7 @@ public sealed class ImageGenClient : IDisposable
         {
             // El servidor acepta prompt vacío y crea el job igual (verificado en E4.0),
             // así que la validación tiene que estar de este lado.
-            return ImageGenResult.Fail("Escribí un prompt antes de generar.");
+            return ImageGenResult.Fail(Loc.T("imagegen.client.emptyPrompt"));
         }
 
         // Este límite se comprueba acá y no solo en la interfaz porque no es una
@@ -60,13 +60,11 @@ public sealed class ImageGenClient : IDisposable
         if (lado > ImageVramArbiter.MaxSafeDimension)
         {
             return ImageGenResult.Fail(
-                $"El motor no soporta {request.Width}×{request.Height}. El máximo es " +
-                $"{ImageVramArbiter.MaxSafeDimension} píxeles de lado: por encima se cae con un " +
-                "error de CUDA y hay que reiniciarlo.");
+                Loc.F("imagegen.client.tooLarge", request.Width, request.Height, ImageVramArbiter.MaxSafeDimension));
         }
 
         if (!_manager.IsReady)
-            return ImageGenResult.Fail("El motor de imágenes no está listo.");
+            return ImageGenResult.Fail(Loc.T("imagegen.client.notReady"));
 
         // El manager necesita saber cuántos pasos se pidieron para poder distinguir la
         // barra del muestreo de las otras que el motor dibuja igual —la carga de tensores
@@ -103,15 +101,15 @@ public sealed class ImageGenClient : IDisposable
             var json = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
             if (!resp.IsSuccessStatusCode)
-                return ImageGenResult.Fail($"El motor rechazó la solicitud (HTTP {(int)resp.StatusCode}).");
+                return ImageGenResult.Fail(Loc.F("imagegen.client.rejected", (int)resp.StatusCode));
 
             using var doc = JsonDocument.Parse(json);
             if (!doc.RootElement.TryGetProperty("id", out var idProp))
-                return ImageGenResult.Fail("El motor no devolvió un identificador de trabajo.");
+                return ImageGenResult.Fail(Loc.T("imagegen.client.noJobId"));
 
             jobId = idProp.GetString() ?? "";
             if (string.IsNullOrEmpty(jobId))
-                return ImageGenResult.Fail("El motor devolvió un identificador de trabajo vacío.");
+                return ImageGenResult.Fail(Loc.T("imagegen.client.emptyJobId"));
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -119,7 +117,7 @@ public sealed class ImageGenClient : IDisposable
         }
         catch (Exception ex)
         {
-            return ImageGenResult.Fail($"No se pudo contactar al motor de imágenes: {ex.Message}");
+            return ImageGenResult.Fail(Loc.F("imagegen.client.unreachable", ex.Message));
         }
 
         // --- polling ---
@@ -141,14 +139,14 @@ public sealed class ImageGenClient : IDisposable
                     case ImageJobStatus.Failed:
                         return ImageGenResult.Fail(
                             string.IsNullOrWhiteSpace(error)
-                                ? "El motor no pudo generar la imagen."
-                                : $"El motor no pudo generar la imagen: {error}");
+                                ? Loc.T("imagegen.client.failed")
+                                : Loc.F("imagegen.client.failedReason", error));
 
                     case ImageJobStatus.Cancelled:
                         return ImageGenResult.Cancelled();
 
                     case ImageJobStatus.Unknown:
-                        return ImageGenResult.Fail("Se perdió el contacto con el motor de imágenes.");
+                        return ImageGenResult.Fail(Loc.T("imagegen.client.lost"));
                 }
 
                 try { await Task.Delay(250, ct).ConfigureAwait(false); }
@@ -173,7 +171,7 @@ public sealed class ImageGenClient : IDisposable
         }
         catch (Exception ex)
         {
-            return ImageGenResult.Fail($"Error mientras se generaba la imagen: {ex.Message}");
+            return ImageGenResult.Fail(Loc.F("imagegen.client.errorWhileGenerating", ex.Message));
         }
     }
 
@@ -259,7 +257,7 @@ public sealed class ImageGenClient : IDisposable
     private static async Task<ImageGenResult> WriteImageAsync(
         string? json, string outputPath, long seedPedida, CancellationToken ct)
     {
-        if (json is null) return ImageGenResult.Fail("El motor informó éxito sin devolver la imagen.");
+        if (json is null) return ImageGenResult.Fail(Loc.T("imagegen.client.noImage"));
 
         try
         {
@@ -269,16 +267,16 @@ public sealed class ImageGenClient : IDisposable
                 images.ValueKind != JsonValueKind.Array ||
                 images.GetArrayLength() == 0)
             {
-                return ImageGenResult.Fail("El motor informó éxito sin devolver la imagen.");
+                return ImageGenResult.Fail(Loc.T("imagegen.client.noImage"));
             }
 
             var primera = images[0];
             if (!primera.TryGetProperty("b64_json", out var b64Prop))
-                return ImageGenResult.Fail("La respuesta del motor no trae los datos de la imagen.");
+                return ImageGenResult.Fail(Loc.T("imagegen.client.noImageData"));
 
             var b64 = b64Prop.GetString();
             if (string.IsNullOrEmpty(b64))
-                return ImageGenResult.Fail("La respuesta del motor trae la imagen vacía.");
+                return ImageGenResult.Fail(Loc.T("imagegen.client.emptyImage"));
 
             var bytes = Convert.FromBase64String(b64);
 
@@ -299,7 +297,7 @@ public sealed class ImageGenClient : IDisposable
         }
         catch (Exception ex)
         {
-            return ImageGenResult.Fail($"No se pudo guardar la imagen: {ex.Message}");
+            return ImageGenResult.Fail(Loc.F("imagegen.client.saveFailed", ex.Message));
         }
     }
 

@@ -35,7 +35,7 @@ public sealed class ImagePackageRow : ObservableObject
 
     /// <summary>Lo que se dibuja en la columna de estado.</summary>
     public string StatusText => Package.IsComplete
-        ? "Listo para usar"
+        ? Loc.T("imagegen.packages.ready")
         : Package.MissingText;
 
     /// <summary>Gris para los incompletos, para que se lean como no utilizables.</summary>
@@ -59,7 +59,7 @@ public sealed class ImagePackageRow : ObservableObject
         return $"{b / 1024:N0} KB";
     }
 
-    public string ParamsText => $"{Package.DefaultSteps} pasos · CFG {Package.DefaultCfgScale:0.#}";
+    public string ParamsText => Loc.F("imagegen.packages.params", Package.DefaultSteps, Package.DefaultCfgScale);
 
     /// <summary>
     /// Semáforo del paquete a 1024×1024 con las palancas de producción. Se evalúa el
@@ -78,13 +78,13 @@ public sealed class ImagePackageRow : ObservableObject
     public string VramColor => Package.IsComplete ? Verdict.Color : "#6B7280";
 
     public string RamText => Package.IsComplete
-        ? $"~{FormatearTamano(Package.TotalSizeBytes)} de RAM"
+        ? Loc.F("imagegen.packages.ram", FormatearTamano(Package.TotalSizeBytes))
         : "—";
 
     public string Tooltip => Package.IsComplete
-        ? Verdict.Explanation +
-          "\n\nCon los pesos en RAM, el tamaño del paquete afecta a la RAM y no a la VRAM."
-        : "Faltan archivos:\n" + string.Join("\n", Package.MissingComponents.Select(c => "  · " + c));
+        ? Verdict.Explanation + "\n\n" + Loc.T("imagegen.packages.ramNote")
+        : Loc.T("imagegen.packages.missingFiles") + "\n" +
+          string.Join("\n", Package.MissingComponents.Select(c => "  · " + ImageModelPackage.RoleText(c)));
 }
 
 /// <summary>
@@ -101,7 +101,7 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
     private readonly GpuInfoService _gpuInfo;
     private readonly Func<ImagePackageDownloader> _downloaderFactory;
 
-    private GpuVramInfo _gpu = GpuVramInfo.Unavailable("Sin consultar.");
+    private GpuVramInfo _gpu = GpuVramInfo.Unavailable(Loc.T("imagegen.gpuNotQueried"));
     private CancellationTokenSource? _downloadCts;
 
     public ImagePackageSelectorViewModel(
@@ -156,8 +156,8 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
         {
             var p = _service.SelectedPackage;
             return p is null
-                ? "Ningún paquete seleccionado"
-                : $"En uso: {p.DisplayName}";
+                ? Loc.T("imagegen.packages.noneSelected")
+                : Loc.F("imagegen.packages.inUse", p.DisplayName);
         }
     }
 
@@ -174,9 +174,8 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
             if (SelectedRow is null) return "";
             var p = SelectedRow.Package;
             return p.IsComplete
-                ? $"{p.DisplayName} — {ImagePackageRow.FormatearTamano(p.TotalSizeBytes)} en disco, " +
-                  $"{p.DefaultSteps} pasos, CFG {p.DefaultCfgScale:0.#}"
-                : $"{p.DisplayName} — incompleto: {p.MissingText}";
+                ? Loc.F("imagegen.packages.detail", p.DisplayName, ImagePackageRow.FormatearTamano(p.TotalSizeBytes), p.DefaultSteps, p.DefaultCfgScale)
+                : Loc.F("imagegen.package.incomplete", p.DisplayName, p.MissingText);
         }
     }
 
@@ -191,15 +190,14 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
     public string EnginePath => _service.ResolveEnginePath();
 
     public string EngineStatusText => File.Exists(EnginePath)
-        ? "Motor encontrado."
-        : "No se encontró el motor. Descargá stable-diffusion.cpp (build CUDA) y elegí sd-server.exe.";
+        ? Loc.T("imagegen.engine.found")
+        : Loc.T("imagegen.engine.notFound");
 
     public string EngineStatusColor => File.Exists(EnginePath) ? "#10B981" : "#F59E0B";
 
     private void BrowseEngine()
     {
-        var elegido = _dialogs.OpenFiles("Elegir sd-server.exe",
-            "Motor de imágenes (sd-server.exe)|sd-server.exe|Ejecutables (*.exe)|*.exe|Todos los archivos|*.*");
+        var elegido = _dialogs.OpenFiles(Loc.T("imagegen.engine.pickTitle"), Loc.T("imagegen.engine.pickFilter"));
 
         if (elegido is not { Length: > 0 }) return;
 
@@ -212,8 +210,8 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
     // --- Estado de la GPU ---
 
     public string GpuText => _gpu.Available
-        ? $"{_gpu.Name} — {_gpu.FreeMb / 1024.0:N1} GB libres de {_gpu.TotalMb / 1024.0:N1} GB"
-        : _gpu.UnavailableReason ?? "VRAM desconocida";
+        ? Loc.F("imagegen.gpu", _gpu.Name, _gpu.FreeMb / 1024.0, _gpu.TotalMb / 1024.0)
+        : _gpu.UnavailableReason ?? Loc.T("imagegen.vramUnknown");
 
     // --- Descarga ---
 
@@ -320,10 +318,10 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
     private void Browse(string role)
     {
         var filtro = role == "VAE"
-            ? "Modelos de VAE (*.safetensors;*.gguf)|*.safetensors;*.gguf|Todos los archivos|*.*"
-            : "Modelos GGUF (*.gguf)|*.gguf|Todos los archivos|*.*";
+            ? Loc.T("imagegen.packages.vaeFilter")
+            : Loc.T("imagegen.packages.ggufFilter");
 
-        var elegido = _dialogs.OpenFiles($"Elegir el {role}", filtro);
+        var elegido = _dialogs.OpenFiles(Loc.F("imagegen.packages.pickRole", ImageModelPackage.RoleText(role)), filtro);
         if (elegido is { Length: > 0 })
             SetComponentPath(role, elegido[0]);
     }
@@ -334,11 +332,11 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
 
         if (!_service.Select(SelectedRow.Id))
         {
-            Message = "No se puede usar un paquete incompleto: " + SelectedRow.Package.MissingText + ".";
+            Message = Loc.F("imagegen.packages.cantUseIncomplete", SelectedRow.Package.MissingText);
             return;
         }
 
-        Message = $"Paquete en uso: {SelectedRow.DisplayName}.";
+        Message = Loc.F("imagegen.packages.nowInUse", SelectedRow.DisplayName);
         OnPropertyChanged(nameof(ActivePackageText));
         OnPropertyChanged(nameof(ActivePackageId));
     }
@@ -348,7 +346,7 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
         IsDownloading = true;
         Message = "";
         DownloadPercent = 0;
-        DownloadStatus = "Preparando la descarga…";
+        DownloadStatus = Loc.T("imagegen.packages.preparing");
 
         _downloadCts = new CancellationTokenSource();
         using var descargador = _downloaderFactory();
@@ -369,25 +367,25 @@ public sealed class ImagePackageSelectorViewModel : ObservableObject
 
             if (r.WasCancelled)
             {
-                Message = "Descarga cancelada. No quedaron archivos a medias.";
+                Message = Loc.T("imagegen.packages.cancelled");
             }
             else if (!r.Success)
             {
-                Message = r.ErrorMessage ?? "No se pudo descargar el paquete.";
+                Message = r.ErrorMessage ?? Loc.T("imagegen.packages.downloadFailed");
             }
             else
             {
                 _service.Save(r.Package!);
                 _service.Select(r.Package!.Id);
                 Message = r.AlreadyPresent.Count > 0
-                    ? $"Paquete listo. Ya estaban en disco: {string.Join(", ", r.AlreadyPresent)}."
-                    : "Paquete descargado y listo para usar.";
+                    ? Loc.F("imagegen.packages.readyPartial", string.Join(", ", r.AlreadyPresent))
+                    : Loc.T("imagegen.packages.downloaded");
                 Refresh();
             }
         }
         catch (Exception ex)
         {
-            Message = $"Error inesperado durante la descarga: {ex.Message}";
+            Message = Loc.F("imagegen.packages.unexpected", ex.Message);
         }
         finally
         {

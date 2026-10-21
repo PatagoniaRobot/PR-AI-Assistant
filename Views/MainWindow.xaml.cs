@@ -25,12 +25,12 @@ public class FileDialogService : IFileDialogService
 
     public string[]? OpenImages(string title)
     {
-        return OpenFiles(title, "Imágenes|*.jpg;*.jpeg;*.png;*.bmp;*.gif|Todos los archivos|*.*");
+        return OpenFiles(title, Loc.T("files.filter.images"));
     }
 
     public string[]? OpenTextFiles(string title)
     {
-        return OpenFiles(title, "Archivos de texto|*.txt;*.csv;*.json;*.xml;*.log;*.html;*.md|Todos los archivos|*.*");
+        return OpenFiles(title, Loc.T("files.filter.text"));
     }
 
     public string? SaveFile(string title, string filter, string defaultFileName)
@@ -89,8 +89,8 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         // Inicializando servicios base que conforman la app forense standalone (una sola vez)
-        string appDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PRImager", "AIAssistant");
-        string configFile = Path.Combine(appDataFolder, "settings.json");
+        string configFile = App.SettingsFile;
+        string appDataFolder = Path.GetDirectoryName(configFile)!;
         string logsDir = Path.Combine(appDataFolder, "Logs");
 
         _configManager = new ConfigManager(configFile);

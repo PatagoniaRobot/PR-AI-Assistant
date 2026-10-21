@@ -44,11 +44,11 @@ public sealed class ImageVramVerdict
 
     public string Label => Fit switch
     {
-        ImageVramFit.Green => "Entra",
-        ImageVramFit.Yellow => "Entra justo",
-        ImageVramFit.Red => "No entra",
-        ImageVramFit.Blocked => "No soportado",
-        _ => "VRAM desconocida"
+        ImageVramFit.Green => Loc.T("imagegen.vram.fits"),
+        ImageVramFit.Yellow => Loc.T("imagegen.vram.tight"),
+        ImageVramFit.Red => Loc.T("imagegen.vram.noFit"),
+        ImageVramFit.Blocked => Loc.T("imagegen.vram.unsupported"),
+        _ => Loc.T("imagegen.vramUnknown")
     };
 
     /// <summary>Mismos colores que el semáforo de modelos, para que se lea igual.</summary>
@@ -184,11 +184,7 @@ public static class ImageVramArbiter
                 Fit = ImageVramFit.Blocked,
                 RequiredMb = 0,
                 FreeMb = gpu?.FreeMb ?? 0,
-                Explanation =
-                    $"El motor no soporta {request.Width}×{request.Height}: por encima de " +
-                    $"{MaxSafeDimension} píxeles de lado se cae con un error de CUDA y hay que " +
-                    "reiniciarlo. No es falta de memoria — pasa igual con la GPU vacía. " +
-                    $"Probá con {MaxSafeDimension} o menos."
+                Explanation = Loc.F("imagegen.vram.blocked", request.Width, request.Height, MaxSafeDimension)
             };
         }
 
@@ -201,8 +197,8 @@ public static class ImageVramArbiter
                 Fit = ImageVramFit.Unknown,
                 RequiredMb = required,
                 FreeMb = 0,
-                Explanation = $"Necesita ~{Mb(required)}. " +
-                              (gpu?.UnavailableReason ?? "No se pudo detectar la VRAM libre.")
+                Explanation = Loc.F("imagegen.vram.needs", Mb(required)) + " " +
+                              (gpu?.UnavailableReason ?? Loc.T("imagegen.vram.noFreeInfo"))
             };
         }
 
@@ -216,7 +212,7 @@ public static class ImageVramArbiter
                 Fit = ImageVramFit.Green,
                 RequiredMb = required,
                 FreeMb = libre,
-                Explanation = $"Necesita ~{Mb(required)} y hay {Mb(libre)} libres. Entra con margen."
+                Explanation = Loc.F("imagegen.vram.green", Mb(required), Mb(libre))
             };
         }
 
@@ -227,8 +223,7 @@ public static class ImageVramArbiter
                 Fit = ImageVramFit.Yellow,
                 RequiredMb = required,
                 FreeMb = libre,
-                Explanation = $"Necesita ~{Mb(required)} y hay {Mb(libre)} libres. Entra justo: " +
-                              "el motor se va a apretar y puede tardar algo más."
+                Explanation = Loc.F("imagegen.vram.yellow", Mb(required), Mb(libre))
             };
         }
 
@@ -243,7 +238,7 @@ public static class ImageVramArbiter
             RequiredMb = required,
             FreeMb = libre,
             RecommendedConfig = sugerida,
-            Explanation = $"Necesita ~{Mb(required)} y solo hay {Mb(libre)} libres. {comoArreglarlo}"
+            Explanation = Loc.F("imagegen.vram.red", Mb(required), Mb(libre), comoArreglarlo)
         };
     }
 
@@ -282,9 +277,9 @@ public static class ImageVramArbiter
         if (sugerida is not null)
         {
             var cambios = new System.Collections.Generic.List<string>();
-            if (sugerida.VaeTiling && !actual.VaeTiling) cambios.Add("dividir el VAE en tiles");
-            if (sugerida.OffloadToCpu && !actual.OffloadToCpu) cambios.Add("mover los pesos a RAM");
-            return "Entra si se activa " + string.Join(" y ", cambios) + ".";
+            if (sugerida.VaeTiling && !actual.VaeTiling) cambios.Add(Loc.T("imagegen.vram.fix.tiling"));
+            if (sugerida.OffloadToCpu && !actual.OffloadToCpu) cambios.Add(Loc.T("imagegen.vram.fix.offload"));
+            return Loc.F("imagegen.vram.fix", string.Join(Loc.T("imagegen.vram.fix.and"), cambios));
         }
 
         // Ni con todo puesto. Lo único que queda es bajar la resolución: se calcula
@@ -293,12 +288,10 @@ public static class ImageVramArbiter
         for (int lado = MaxSafeDimension; lado >= 256; lado -= 128)
         {
             if (EstimateRequiredMb(lado, lado, conTodo, pesos) + SafetyMarginMb <= libre)
-                return $"Ni con todos los ajustes entra. El tamaño más grande que entraría " +
-                       $"ahora es {lado}×{lado}; también podés cerrar el modelo de lenguaje.";
+                return Loc.F("imagegen.vram.maxSize", lado);
         }
 
-        return "No hay VRAM libre suficiente ni para la imagen más chica. " +
-               "Cerrá el modelo de lenguaje u otras aplicaciones que usen la GPU.";
+        return Loc.T("imagegen.vram.none");
     }
 
     private static string Mb(int mb) => mb >= 1024 ? $"{mb / 1024.0:F1} GB" : $"{mb} MB";

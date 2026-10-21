@@ -101,7 +101,7 @@ public class AsyncRelayCommand : ICommand
         {
             // Las excepciones no deben ser tragadas silenciosamente.
             // Para MVVM puro, lo ideal es propagarla al hilo principal o un log global
-            throw new InvalidOperationException("Falló la ejecución del comando asíncrono", ex);
+            throw new InvalidOperationException(Loc.T("app.asyncCommandFailed"), ex);
         }
         finally
         {
@@ -155,7 +155,7 @@ public class AsyncRelayCommand<T> : ICommand
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Falló la ejecución del comando asíncrono", ex);
+            throw new InvalidOperationException(Loc.T("app.asyncCommandFailed"), ex);
         }
         finally
         {

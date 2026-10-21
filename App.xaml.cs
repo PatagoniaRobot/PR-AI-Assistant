@@ -32,7 +32,44 @@ public partial class App : Application
         }
 
         base.OnStartup(e);
+
+        // El idioma, antes de crear la primera ventana: el XAML resuelve los textos al
+        // cargarse. Se lee la configuración acá —MainWindow la vuelve a leer— porque es
+        // lo único que hace falta antes de que exista.
+        Localization.Loc.Initialize(new Services.ConfigManager(SettingsFile).Load().Language);
+
         new Views.MainWindow().Show();
+    }
+
+    /// <summary>Dónde vive settings.json. Lo usan App y MainWindow.</summary>
+    public static string SettingsFile => System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "PRImager", "AIAssistant", "settings.json");
+
+    private static bool _restartRequested;
+
+    /// <summary>
+    /// Cierra y vuelve a abrir la aplicación: para cambiar el idioma. La copia nueva se
+    /// lanza recién en <see cref="OnExit"/>, con los motores ya cerrados por la ventana
+    /// principal y el mutex de copia única suelto; antes, la nueva encontraría a la vieja
+    /// todavía abierta y se cerraría trayéndola al frente.
+    /// </summary>
+    public static void Restart()
+    {
+        _restartRequested = true;
+        Current.MainWindow?.Close();
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        if (_restartRequested && Environment.ProcessPath is { } exe)
+        {
+            _singleInstance?.ReleaseMutex();
+            _singleInstance?.Dispose();
+            _singleInstance = null;
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe) { UseShellExecute = true });
+        }
+        base.OnExit(e);
     }
 
     /// <summary>Trae al frente la copia que ya está abierta, como hacen casi todos los programas.</summary>
@@ -62,8 +99,8 @@ public partial class App : Application
         {
             System.Diagnostics.Debug.WriteLine($"[UNHANDLED UI] {e.Exception}");
             System.Windows.MessageBox.Show(
-                $"Error inesperado:\n{e.Exception.Message}\n\nLa aplicación continuará ejecutándose.",
-                "PR-AI Assistant — Error",
+                Localization.Loc.F("app.unexpectedError", e.Exception.Message),
+                Localization.Loc.T("app.errorTitle"),
                 System.Windows.MessageBoxButton.OK,
                 System.Windows.MessageBoxImage.Warning);
             e.Handled = true;

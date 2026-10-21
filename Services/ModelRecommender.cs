@@ -108,7 +108,7 @@ public static class ModelRecommender
                     if (m == null) return NoData();
                     if (m.FullGpuBytes <= vram && m.WeightsCpuBytes <= ram)
                     {
-                        string cache = kv == KvCacheType.Q8_0 ? " · caché comprimida" : "";
+                        string cache = kv == KvCacheType.Q8_0 ? Loc.T("rec.compressedCache") : "";
                         return new RunRecommendation
                         {
                             ContextTokens = ctx,
@@ -119,10 +119,9 @@ public static class ModelRecommender
                             FullyOnGpu = true,
                             GpuBytes = m.FullGpuBytes,
                             RamBytes = m.WeightsCpuBytes,
-                            Summary = $"todo en la placa · contexto {K(ctx)}{cache}",
-                            Explanation = $"Entra entero en la placa con {K(ctx)} de contexto" +
-                                          (kv == KvCacheType.Q8_0 ? ", guardando la caché de la conversación comprimida (q8_0, la mitad de memoria)" : "") +
-                                          $": ocupa {Gb(m.FullGpuBytes)} de los {Gb(vram)} disponibles. Es la forma más rápida."
+                            Summary = Loc.F("rec.full.summary", K(ctx), cache),
+                            Explanation = Loc.F(kv == KvCacheType.Q8_0 ? "rec.full.explanationQ8" : "rec.full.explanation",
+                                                K(ctx), Gb(m.FullGpuBytes), Gb(vram))
                         };
                     }
                 }
@@ -146,7 +145,7 @@ public static class ModelRecommender
             if (best.m != null)
             {
                 int pct = best.layers * 100 / best.m.Layers;
-                string cache = best.kv == KvCacheType.Q8_0 ? " · caché comprimida" : "";
+                string cache = best.kv == KvCacheType.Q8_0 ? Loc.T("rec.compressedCache") : "";
                 return new RunRecommendation
                 {
                     ContextTokens = baseCtx,
@@ -156,9 +155,8 @@ public static class ModelRecommender
                     Fits = true,
                     GpuBytes = best.m.GpuBytesFor(best.layers),
                     RamBytes = best.m.CpuBytesFor(best.layers),
-                    Summary = $"{best.layers} de {best.m.Layers} capas en la placa · contexto {K(baseCtx)}{cache}",
-                    Explanation = $"No entra entero en la placa: van {best.layers} de {best.m.Layers} capas ({pct} %) " +
-                                  $"y el resto a la RAM. Anda, pero más lento que entero en la placa."
+                    Summary = Loc.F("rec.split.summary", best.layers, best.m.Layers, K(baseCtx), cache),
+                    Explanation = Loc.F("rec.split.explanation", best.layers, best.m.Layers, pct)
                 };
             }
         }
@@ -168,8 +166,8 @@ public static class ModelRecommender
         if (cpu <= ram)
         {
             string why = hw.UsableGpu == null
-                ? (hw.GpuNotUsableReason ?? "Sin placa de video utilizable") + "."
-                : "No alcanza la placa ni para una parte que valga la pena.";
+                ? (hw.GpuNotUsableReason ?? Loc.T("rec.cpu.noGpu")) + "."
+                : Loc.T("rec.cpu.gpuTooSmall");
             return new RunRecommendation
             {
                 ContextTokens = baseCtx,
@@ -177,9 +175,8 @@ public static class ModelRecommender
                 Threads = threads,
                 Fits = true,
                 RamBytes = cpu,
-                Summary = $"solo CPU · contexto {K(baseCtx)} · {threads} hilos",
-                Explanation = $"{why} Corre en el procesador con {threads} hilos y ocupa {Gb(cpu)} de RAM: " +
-                              "anda, pero lento. Un modelo más chico responde más rápido."
+                Summary = Loc.F("rec.cpu.summary", K(baseCtx), threads),
+                Explanation = Loc.F("rec.cpu.explanation", why, threads, Gb(cpu))
             };
         }
 
@@ -187,16 +184,15 @@ public static class ModelRecommender
         {
             ContextTokens = baseCtx,
             Fits = false,
-            Summary = "no entra en esta PC",
-            Explanation = $"Necesita ~{Gb(cpu)} entre placa y RAM y la PC tiene {Gb(vram)} de placa y " +
-                          $"{Gb(ram)} de RAM disponibles. Elegí una cuantización más chica."
+            Summary = Loc.T("rec.noFit.summary"),
+            Explanation = Loc.F("rec.noFit.explanation", Gb(cpu), Gb(vram), Gb(ram))
         };
     }
 
     private static readonly KvCacheType[] KvOptions = { KvCacheType.F16, KvCacheType.Q8_0 };
 
     private static RunRecommendation NoData() =>
-        new() { Fits = false, Summary = "sin datos", Explanation = "La cabecera no trae las capas del modelo." };
+        new() { Fits = false, Summary = Loc.T("rec.noData.summary"), Explanation = Loc.T("rec.noData.explanation") };
 
     private static int LayersThatFit(ModelMemory m, long vram)
     {

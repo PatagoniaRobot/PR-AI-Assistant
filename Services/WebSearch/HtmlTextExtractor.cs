@@ -69,7 +69,7 @@ public sealed class HtmlTextExtractor
         text = Normalize(text);
 
         if (text.Length > maxChars)
-            text = text.Substring(0, maxChars) + "… [truncado]";
+            text = text.Substring(0, maxChars) + Loc.T("pipeline.truncated");
 
         return text;
     }

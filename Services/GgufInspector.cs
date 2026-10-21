@@ -342,37 +342,34 @@ public static class GgufInspector
     private static GgufVerdict SplitVerdict(ulong part, ulong total) => new()
     {
         Kind = GgufKind.SplitPart,
-        Reason = $"Es la parte {part} de {total} de un modelo partido en varios archivos. " +
-                 "Sola no carga, y la aplicación todavía no baja modelos partidos."
+        Reason = Loc.F("gguf.split", part, total)
     };
 
     private static GgufVerdict ProjectorVerdict() => new()
     {
         Kind = GgufKind.Projector,
-        Reason = "Es un proyector de visión (mmproj), no un modelo. Se baja junto al modelo " +
-                 "del mismo repositorio para que pueda ver imágenes; solo no hace nada."
+        Reason = Loc.T("gguf.projector")
     };
 
     private static GgufVerdict DraftVerdict(GgufHeader? h) => new()
     {
         Kind = GgufKind.DraftHead,
-        Reason = "Es una cabeza de borrador para acelerar al modelo grande del mismo " +
-                 "repositorio, no un modelo: no carga sola." +
+        Reason = Loc.T("gguf.draft") +
                  (h?.BlockCount is { } b
-                     ? $" Declara {b} capas y trae {h.TensorCount} tensores; un modelo completo trae varios por capa."
+                     ? " " + Loc.F("gguf.draft.detail", b, h.TensorCount)
                      : "")
     };
 
     private static GgufVerdict AdapterVerdict() => new()
     {
         Kind = GgufKind.Adapter,
-        Reason = "Es un adaptador LoRA: modifica a un modelo base, no carga solo."
+        Reason = Loc.T("gguf.adapter")
     };
 
     private static GgufVerdict VocabVerdict() => new()
     {
         Kind = GgufKind.VocabOnly,
-        Reason = "Trae solo el vocabulario, sin los pesos del modelo: no carga."
+        Reason = Loc.T("gguf.vocab")
     };
 
     // --- lectura del formato ---

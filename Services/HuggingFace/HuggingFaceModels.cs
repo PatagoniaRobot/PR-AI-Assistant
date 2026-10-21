@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using PRImager.AIAssistant.Localization;
 
 namespace PRImager.AIAssistant.Services.HuggingFace;
 
@@ -18,7 +19,7 @@ public sealed class HfRepo
     public int Likes { get; set; }
 
     /// <summary>Licencia declarada, o "no declarada".</summary>
-    public string License { get; set; } = "no declarada";
+    public string License { get; set; } = Loc.T("hf.licenseUndeclared");
 
     /// <summary>True si el repo requiere aceptar términos para descargar.</summary>
     public bool IsGated { get; set; }
@@ -53,7 +54,7 @@ public sealed class HfFile
     public long SizeBytes { get; set; }
 
     public string SizeText => SizeBytes <= 0
-        ? "tamaño desconocido"
+        ? Loc.T("hf.sizeUnknown")
         : SizeBytes >= 1024L * 1024 * 1024
             ? $"{SizeBytes / (1024.0 * 1024 * 1024):F2} GB"
             : $"{SizeBytes / (1024.0 * 1024):F0} MB";

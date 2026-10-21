@@ -1,0 +1,55 @@
+// Perfiles de uso (los dos de fábrica y el gestor) y el perfil de ejecución automático.
+// Los de fábrica se rearman desde acá en cada arranque: cambian de idioma con la app.
+{
+  "profiles.window.title": "Perfiles de uso — PR-AI Assistant",
+  "profiles.title": "Perfiles de uso",
+  "profiles.subtitle": "Los perfiles de fábrica no se editan ni se borran. Cloná uno para partir de su configuración.",
+  "profiles.factoryTag": "de fábrica",
+  "profiles.readOnly": "Perfil de fábrica: solo lectura. Usá «Clonar» para crear una copia editable.",
+  "profiles.name": "NOMBRE",
+  "profiles.systemPrompt": "PROMPT DE SISTEMA",
+  "profiles.temperature": "TEMPERATURA",
+  "profiles.context": "CONTEXTO (TOKENS)",
+  "profiles.accent": "COLOR DE ACENTO",
+  "profiles.capabilities": "CAPACIDADES",
+  "profiles.cap.web": "Búsqueda web habilitada",
+  "profiles.cap.download": "Descarga de modelos habilitada",
+  "profiles.cap.images": "Generación de imágenes habilitada",
+  "profiles.cap.images.tooltip": "El Modo Investigación siempre la deshabilita, y la edición institucional no la incluye en absoluto.",
+  "profiles.cap.files": "Adjuntar archivos e imágenes",
+  "profiles.cap.files.tooltip": "El Modo Investigación siempre la habilita: cargar evidencia es parte del marco institucional y un perfil no puede quitarla.",
+  "profiles.cap.log": "Registro de auditoría obligatorio",
+  "profiles.forcedHint": "En Modo Investigación estas tres quedan forzadas — sin web, sin descargas, con registro obligatorio — sin importar lo que diga el perfil.",
+  "profiles.clone": "Clonar",
+  "profiles.save": "Guardar",
+  "profiles.delete": "Eliminar",
+
+  "profiles.copyName": "{0} (copia)",
+  "profiles.created": "Perfil «{0}» creado. Ya podés editarlo.",
+  "profiles.emptyName": "El nombre no puede estar vacío.",
+  "profiles.saved": "Perfil «{0}» guardado.",
+  "profiles.saveFailed": "No se pudo guardar: el perfil es de fábrica o ya no existe.",
+  "profiles.delete.title": "Eliminar perfil",
+  "profiles.delete.message": "¿Eliminar el perfil «{0}»?\n\nEsta acción no se puede deshacer.",
+  "profiles.deleted": "Perfil «{0}» eliminado.",
+  "profiles.deleteFailed": "No se pudo eliminar: los perfiles de fábrica son permanentes.",
+
+  "profiles.factory.forensic": "Forense",
+  "profiles.factory.general": "General",
+  "profiles.factory.forensic.prompt": "Sos un asistente de análisis técnico que opera bajo la doctrina 'inferido ≠ verificado'.\n\nRegla central: distinguí siempre, de forma explícita, entre lo que el dato PRUEBA y lo que\nel dato SUGIERE. Son cosas distintas y nunca se presentan juntas sin etiquetar.\n\n1. Marcá cada afirmación como VERIFICADO (se desprende directamente del dato aportado)\n   o INFERIDO (es una hipótesis compatible con el dato, pero no probada por él).\n2. No completes huecos. Si falta un dato para sostener una conclusión, declaralo:\n   'No hay dato que permita determinar X'. La ausencia de información es un hallazgo,\n   no un espacio a rellenar.\n3. No aportes conocimiento general como si fuera evidencia del caso.\n4. Citá la fuente concreta de cada afirmación verificada: artefacto, tabla, registro, offset.\n5. Ante ambigüedad, enumerá las hipótesis alternativas en vez de elegir una.\n6. Lenguaje técnico preciso, sin adornos. Respondé en español; términos técnicos en su idioma original.",
+  "profiles.factory.general.prompt": "Sos un asistente general. Respondé de forma concisa y directa.\n\n- Andá al grano: sin preámbulos ni resúmenes de lo que te preguntaron.\n- Si no sabés algo, decilo en vez de improvisar.\n- Usá listas o tablas solo cuando mejoren la claridad.\n- Respondé en español, con términos técnicos en su idioma original.",
+
+  "exec.auto": "Automático",
+  "exec.noModel.catalog": "todavía no hay modelos: entrá y bajá uno desde el catálogo",
+  "exec.noModel.copy": "todavía no hay modelos: copiá un archivo .gguf en la carpeta Models",
+  "exec.auto.unreadable": "automático: no se pudo leer el modelo, se usan 8k y todo a la placa",
+  "exec.auto.summary": "automático: {0}",
+
+  "model.downloadedName": "{0} (descargado)",
+  "model.tag.downloaded": "Descargado",
+
+  "exec.profile.performance": "Rendimiento",
+  "exec.profile.balanced": "Equilibrado",
+  "exec.profile.quality": "Máx. Calidad",
+  "model.tag.gpuRecommended": "GPU recomendada"
+}

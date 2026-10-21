@@ -1,0 +1,81 @@
+// Textos generales de la aplicación: estado del servidor, mensajes del sistema en el
+// chat, archivos, exportación y primer arranque.
+{
+  "common.browse": "Examinar…",
+  "common.cancel": "Cancelar",
+  "common.close": "Cerrar",
+
+  "server.stopped": "Detenido",
+  "server.starting": "Iniciando...",
+  "server.loadingModel": "Cargando modelo...",
+  "server.ready": "Listo",
+  "server.error": "Error",
+  "server.unknown": "Desconocido",
+
+  "model.manualProfileInfo": "ctx: {0} · capas GPU: {1}",
+  "model.notFound": "(modelo no encontrado)",
+  "caps.vision": "Visión",
+  "caps.audio": "Audio",
+  "hardware.yourPc": "Tu PC: {0}",
+
+  "maxTokens.fast": "{0} (rápido)",
+  "maxTokens.normal": "{0} (normal)",
+  "maxTokens.long": "{0} (largo)",
+  "maxTokens.max": "{0} (máximo)",
+
+  "message.localModel": "modelo local",
+  "message.disclaimer": "\n\n---\n[PR-AI Assistant – Generado por IA]\nEste contenido fue generado por inteligencia artificial ({0}) ejecutándose localmente. Debe ser verificado por el perito antes de incorporarse a cualquier informe o actuación judicial.",
+  "message.webSourcesHeader": "Fuentes web ({0} de {1} leídas)",
+  "message.historyTrimmed": "Se recortaron {0} mensajes anteriores para mantener el contexto dentro del límite.",
+  "message.thinkingElapsed": "Pensando... {0:F1}s",
+  "message.errorSuffix": "\n\n[Error: {0}]",
+
+  "profile.change.title": "Cambio de perfil",
+  "profile.change.message": "Vas a cambiar el perfil de «{0}» a «{1}».\n\nLa conversación en curso se generó con el perfil anterior.\n\nSí — cambiar y limpiar el historial\nNo — cambiar y conservar el historial\nCancelar — seguir con el perfil actual",
+  "profile.overriddenByInvestigation": "El Modo Investigación tiene precedencia: se usa el prompt institucional y se fuerza el registro de auditoría.",
+
+  "firstRun.withCatalog": "Bajá uno desde el catálogo: lee tu PC, marca la versión que conviene y, cuando termina la descarga, queda elegido. También podés copiar un archivo de modelo (.gguf) en {0} y tocar «Volver a buscar modelos» en el menú.",
+  "firstRun.profileBlocks": "El perfil «{0}» no permite bajar modelos. Pasá al perfil General para usar el catálogo, o copiá un archivo de modelo (.gguf) en {1} y tocá «Volver a buscar modelos» en el menú.",
+  "firstRun.copyOnly": "Para usar el asistente, copiá un archivo de modelo (.gguf) en {0} y tocá «Volver a buscar modelos» en el menú.",
+
+  "web.toggle.notCompiled": "Esta compilación no incluye búsqueda web.",
+  "web.toggle.investigation": "Búsqueda web deshabilitada: el Modo Investigación no permite acceso a red.",
+  "web.toggle.profileBlocks": "El perfil «{0}» no habilita la búsqueda web.",
+  "web.toggle.on": "Búsqueda web activa: la consulta se enriquecerá con resultados frescos.",
+  "web.toggle.off": "Activar búsqueda web para esta consulta.",
+  "web.freshness.day": "Último día",
+  "web.freshness.week": "Última semana",
+  "web.freshness.month": "Último mes",
+  "web.freshness.any": "Sin filtro",
+  "web.config.ok": "Instancia configurada. Las consultas salen hacia {0}.",
+  "web.config.missing": "Sin instancia. Indicá la dirección de un SearXNG, por ejemplo http://127.0.0.1:8080. Ver la ayuda para levantar uno propio.",
+  "web.config.invalid": "La dirección no es válida. Debe ser una URL http o https, por ejemplo http://127.0.0.1:8080.",
+  "web.message.failed": "Búsqueda web: {0} Se responde sin fuentes web.",
+  "web.message.partial": "Se leyeron {0} de {1} fuentes. Las que fallaron figuran en el panel de fuentes.",
+  "web.message.interrupted": "Búsqueda web interrumpida: {0}. Se responde sin fuentes web.",
+
+  "session.peritoFormat": "Perito: {0} | {1}",
+  "session.caseFormat": "Causa: {0}",
+  "context.availableFormat": "Disponible: {0} / {1}",
+
+  "files.pick.forensic": "Seleccione archivos de contexto forense",
+  "files.pick.attachment": "Seleccione archivos para adjuntar al mensaje",
+  "files.pick.images": "Seleccione imágenes para el análisis",
+  "files.rejected.title": "Ingesta rechazada",
+  "files.rejected.file": "Archivo rechazado: {0}\n{1}",
+  "files.rejected.image": "Imagen rechazada: {0}\n{1}",
+  "files.loadError": "Error al cargar {0}:\n{1}",
+  "files.contentHeader": "--- ARCHIVO: {0} [{1}] ---",
+  "files.truncated": "[TRUNCADO: {0} → {1} caracteres]",
+
+  "export.title": "Exportar sesión",
+  "export.filter": "Texto plano (*.txt)|*.txt|HTML (*.html)|*.html|JSON (*.json)|*.json",
+  "export.done": "Sesión exportada: {0}\nHash SHA-256: {1}",
+  "export.failed": "Error al exportar: {0}",
+
+  "app.unexpectedError": "Error inesperado:\n{0}\n\nLa aplicación continuará ejecutándose.",
+  "app.errorTitle": "PR-AI Assistant — Error",
+  "app.asyncCommandFailed": "Falló la ejecución del comando asíncrono",
+  "files.filter.images": "Imágenes|*.jpg;*.jpeg;*.png;*.bmp;*.gif|Todos los archivos|*.*",
+  "files.filter.text": "Archivos de texto|*.txt;*.csv;*.json;*.xml;*.log;*.html;*.md|Todos los archivos|*.*"
+}

@@ -43,6 +43,12 @@ namespace PRImager.AIAssistant.Services.Models
         public string MmprojFileName { get; set; } = "";
 
         // UI
+        /// <summary>
+        /// Idioma: "auto" sigue a Windows, "es" o "en" lo fijan. Se lee al arrancar
+        /// (Localization.Loc); cambiarlo pide volver a abrir la aplicación.
+        /// </summary>
+        public string Language { get; set; } = "auto";
+
         public double WindowWidth { get; set; } = 1200;
         public double WindowHeight { get; set; } = 800;
 

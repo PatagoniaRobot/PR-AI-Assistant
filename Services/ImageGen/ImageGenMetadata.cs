@@ -160,7 +160,7 @@ public sealed class ImageGenMetadata
     /// <summary>Resumen de una línea para la galería.</summary>
     [JsonIgnore]
     public string ShortSummary =>
-        $"{Width}×{Height} · {Steps} pasos · CFG {CfgScale.ToString("0.#", CultureInfo.InvariantCulture)} · semilla {Seed}";
+        Loc.F("imagegen.metadata.summary", Width, Height, Steps, CfgScale.ToString("0.#", CultureInfo.InvariantCulture), Seed);
 }
 
 public sealed class ImageGenModelInfo

@@ -67,20 +67,17 @@ public sealed class SearxngSearchProvider : IWebSearchProvider, IDisposable
     {
         if (!TryBuildBaseUri(_baseUrlProvider(), out var baseUri) || baseUri == null)
         {
-            return WebSearchResponse.Fail(
-                "No hay instancia de SearXNG configurada. " +
-                "Cargá su dirección en el panel lateral, sección BÚSQUEDA WEB " +
-                "(por ejemplo http://127.0.0.1:8080).");
+            return WebSearchResponse.Fail(Loc.T("searx.notConfigured"));
         }
 
         if (string.IsNullOrWhiteSpace(query))
-            return WebSearchResponse.Fail("La consulta está vacía.");
+            return WebSearchResponse.Fail(Loc.T("searx.emptyQuery"));
 
         // Uri.ToString() deja barra final, así que concatenar "/search" produciría
         // "//search". Una instancia servida directo lo tolera; detrás de un proxy
         // inverso es un 404.
         string root = baseUri.GetLeftPart(UriPartial.Path).TrimEnd('/');
-        string url = $"{root}/search?q={Uri.EscapeDataString(query)}&format=json&categories=general&language=es";
+        string url = $"{root}/search?q={Uri.EscapeDataString(query)}&format=json&categories=general&language={Loc.Language}";
 
         string? range = freshness.ToApiValue();
         if (range != null) url += $"&time_range={range}";
@@ -100,22 +97,19 @@ public sealed class SearxngSearchProvider : IWebSearchProvider, IDisposable
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            return WebSearchResponse.Fail("Búsqueda cancelada.");
+            return WebSearchResponse.Fail(Loc.T("searx.cancelled"));
         }
         catch (TaskCanceledException)
         {
-            return WebSearchResponse.Fail(
-                $"La instancia de SearXNG en {baseUri} no respondió a tiempo.");
+            return WebSearchResponse.Fail(Loc.F("searx.timeout", baseUri));
         }
         catch (HttpRequestException ex)
         {
-            return WebSearchResponse.Fail(
-                $"No se pudo contactar la instancia de SearXNG en {baseUri}: {ex.Message} " +
-                "Verificá que esté levantada.");
+            return WebSearchResponse.Fail(Loc.F("searx.unreachable", baseUri, ex.Message));
         }
         catch (Exception ex)
         {
-            return WebSearchResponse.Fail($"Error inesperado en la búsqueda: {ex.Message}");
+            return WebSearchResponse.Fail(Loc.F("searx.unexpected", ex.Message));
         }
     }
 
@@ -126,22 +120,10 @@ public sealed class SearxngSearchProvider : IWebSearchProvider, IDisposable
     /// </summary>
     private static string DescribeHttpFailure(HttpStatusCode code, Uri baseUri) => code switch
     {
-        HttpStatusCode.Forbidden =>
-            $"La instancia {baseUri} rechazó la consulta (403). Casi siempre es que no " +
-            "tiene habilitado el formato JSON: en su settings.yml, dentro de «search», " +
-            "agregá «json» a la lista «formats» y reiniciala. En una instancia pública " +
-            "ajena esto no se puede cambiar: usá una propia.",
-
-        HttpStatusCode.NotFound =>
-            $"No se encontró el endpoint de búsqueda en {baseUri} (404). " +
-            "Revisá que la dirección apunte a la raíz de la instancia, sin /search.",
-
-        HttpStatusCode.TooManyRequests =>
-            $"La instancia {baseUri} limitó la cantidad de consultas (429). " +
-            "Las instancias públicas suelen restringir el uso automatizado; " +
-            "una instancia propia no tiene ese límite.",
-
-        _ => $"La instancia de SearXNG respondió {(int)code} ({code})."
+        HttpStatusCode.Forbidden => Loc.F("searx.http403", baseUri),
+        HttpStatusCode.NotFound => Loc.F("searx.http404", baseUri),
+        HttpStatusCode.TooManyRequests => Loc.F("searx.http429", baseUri),
+        _ => Loc.F("searx.httpOther", (int)code, code)
     };
 
     /// <summary>
@@ -183,9 +165,7 @@ public sealed class SearxngSearchProvider : IWebSearchProvider, IDisposable
         {
             // Una instancia con el formato JSON deshabilitado puede devolver 200 con
             // HTML. Decirlo así es más útil que volcar el error del parser.
-            return WebSearchResponse.Fail(
-                "La instancia no devolvió JSON. Verificá que tenga habilitado el " +
-                "formato «json» en la lista «formats» de su settings.yml.");
+            return WebSearchResponse.Fail(Loc.T("searx.notJson"));
         }
     }
 

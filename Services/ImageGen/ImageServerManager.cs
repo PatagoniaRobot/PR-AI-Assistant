@@ -145,15 +145,13 @@ public sealed class ImageServerManager : IDisposable
 
         if (!File.Exists(config.ServerExecutablePath))
         {
-            return $"No se encontró el motor de generación de imágenes en:\n{config.ServerExecutablePath}\n\n" +
-                   "Descargá stable-diffusion.cpp (build CUDA + runtime) y descomprimilo en esa carpeta.";
+            return Loc.F("imagegen.server.engineMissing", config.ServerExecutablePath);
         }
 
         var falta = config.FirstMissingModelFile();
         if (falta is not null)
         {
-            return $"Falta un archivo del modelo de imagen:\n{falta}\n\n" +
-                   "Un modelo de imagen son tres archivos: difusión, text encoder y VAE.";
+            return Loc.F("imagegen.server.fileMissing", falta);
         }
 
         // Si ya hay algo escuchando, se reutiliza SOLO si tiene cargado el mismo modelo
@@ -174,9 +172,7 @@ public sealed class ImageServerManager : IDisposable
                 return null;
             }
 
-            return $"El puerto {config.Port} ya está ocupado por otro sd-server que tiene cargado " +
-                   $"'{cargado}' en lugar de '{esperado}'.\n\n" +
-                   "Cerrá esa instancia o configurá otro puerto.";
+            return Loc.F("imagegen.server.portBusy", config.Port, cargado, esperado);
         }
 
         await StopInternalAsync(ct);
@@ -249,7 +245,7 @@ public sealed class ImageServerManager : IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         var config = _currentConfig;
-        if (config is null) return "No hay un servidor de imágenes configurado.";
+        if (config is null) return Loc.T("imagegen.server.notConfigured");
 
         OnLog("Cancelando: se detiene sd-server y se vuelve a levantar.");
         await StopInternalAsync(ct);
@@ -265,7 +261,7 @@ public sealed class ImageServerManager : IDisposable
         StartHealthCheck();
         return await WaitForReadyAsync(TimeSpan.FromSeconds(30), ct)
             ? null
-            : "El motor de imágenes no volvió a responder después de cancelar.";
+            : Loc.T("imagegen.server.noAnswerAfterCancel");
     }
 
     public void Dispose()
@@ -335,7 +331,7 @@ public sealed class ImageServerManager : IDisposable
         catch (Exception ex)
         {
             OnLog($"Error al iniciar sd-server: {ex.Message}");
-            return $"No se pudo iniciar el motor de imágenes: {ex.Message}";
+            return Loc.F("imagegen.server.startFailed", ex.Message);
         }
     }
 

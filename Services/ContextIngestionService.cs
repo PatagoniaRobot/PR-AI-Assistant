@@ -60,7 +60,7 @@ public class ContextIngestionService
             return new IngestionResult 
             { 
                 IsAccepted = false, 
-                RejectionReason = $"Archivo no encontrado: {filePath}" 
+                RejectionReason = Loc.F("ingest.notFound", filePath)  
             };
 
         var ext = Path.GetExtension(filePath);
@@ -70,7 +70,7 @@ public class ContextIngestionService
             return new IngestionResult
             {
                 IsAccepted = false,
-                RejectionReason = $"Tipo de archivo prohibido ({ext}). No se aceptan archivos binarios. Use hex dump o metadatos.",
+                RejectionReason = Loc.F("ingest.prohibited", ext),
                 ContentType = "binary"
             };
 
@@ -86,7 +86,7 @@ public class ContextIngestionService
         return new IngestionResult
         {
             IsAccepted = false,
-            RejectionReason = $"Tipo de archivo no reconocido ({ext}). Use archivos de texto o imágenes.",
+            RejectionReason = Loc.F("ingest.unknownType", ext),
             ContentType = "unknown"
         };
     }
@@ -98,7 +98,7 @@ public class ContextIngestionService
     public IngestionResult ValidateText(string content)
     {
         if (string.IsNullOrWhiteSpace(content))
-            return new IngestionResult { IsAccepted = false, RejectionReason = "Contenido vacío" };
+            return new IngestionResult { IsAccepted = false, RejectionReason = Loc.T("ingest.empty") };
 
         var contentType = DetectContentType(content);
         var limit = contentType switch
@@ -131,7 +131,7 @@ public class ContextIngestionService
             return new IngestionResult
             {
                 IsAccepted = false,
-                RejectionReason = $"Máximo {MaxImagesPerSubmission} imágenes por envío. Se recibieron {imagePaths.Count}."
+                RejectionReason = Loc.F("ingest.tooManyImages", MaxImagesPerSubmission, imagePaths.Count)
             };
 
         foreach (var path in imagePaths)
@@ -160,7 +160,7 @@ public class ContextIngestionService
             return new IngestionResult
             {
                 IsAccepted = false,
-                RejectionReason = $"Formato de imagen no soportado ({ext}). Use JPG, PNG, BMP, GIF o WebP.",
+                RejectionReason = Loc.F("ingest.imageFormat", ext),
                 ContentType = "image"
             };
 
@@ -168,7 +168,7 @@ public class ContextIngestionService
             return new IngestionResult
             {
                 IsAccepted = false,
-                RejectionReason = $"Imagen demasiado grande ({fileInfo.Length / 1024.0 / 1024.0:F1} MB). Máximo: {MaxImageSizeBytes / 1024.0 / 1024.0:F0} MB. Reduzca la resolución.",
+                RejectionReason = Loc.F("ingest.imageTooLarge", fileInfo.Length / 1024.0 / 1024.0, MaxImageSizeBytes / 1024.0 / 1024.0),
                 ContentType = "image"
             };
 
@@ -194,7 +194,7 @@ public class ContextIngestionService
             return new IngestionResult
             {
                 IsAccepted = false,
-                RejectionReason = $"Error al leer archivo: {ex.Message}"
+                RejectionReason = Loc.F("ingest.readError", ex.Message)
             };
         }
     }
