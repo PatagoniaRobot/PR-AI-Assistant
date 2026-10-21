@@ -361,7 +361,7 @@ cd ..\praia-baseline
 dotnet build -c Debug
 
 cd <repo>\Tests\SeleccionDeModelos
-dotnet run -p:EdicionApp=Debug -p:RaizApp=D:\PROYECTOS\PR-Tools\praia-baseline
+dotnet run -p:EdicionApp=Debug -p:RaizApp=<ruta-absoluta>\praia-baseline
 ```
 
 **`RaizApp` tiene que ser una ruta absoluta.** MSBuild resuelve las relativas contra

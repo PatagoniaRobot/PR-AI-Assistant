@@ -2,7 +2,7 @@
 {
   "form.subtitle": "Complete los datos para iniciar la sesión forense",
   "form.perito": "Nombre del perito *",
-  "form.perito.example": "Ej: Téc. Claudio Andino",
+  "form.perito.example": "Ej: Téc. Juana Pérez",
   "form.badge": "Legajo / N° credencial *",
   "form.badge.example": "Ej: LP-4521",
   "form.case": "N° de causa / expediente *",

@@ -11,8 +11,8 @@ respectivas licencias.
 
 No todos los componentes están presentes en todas las ediciones. La edición
 institucional (Forense) no incluye AngleSharp, porque no compila la búsqueda web,
-ni nada de la generación de imágenes. Los modelos de lenguaje pueden no estar
-presentes si el usuario aporta el suyo.
+ni nada de la generación de imágenes. La aplicación se publica sin modelos de
+lenguaje: los elige y descarga cada usuario (sección 2).
 
 La sección 7 cubre componentes que la aplicación USA pero NO distribuye: el motor
 de generación de imágenes y sus modelos los descarga el usuario. Se listan igual
@@ -23,7 +23,7 @@ porque hacen falta para saber bajo qué términos se está trabajando.
 --------------------------------------------------------------------------------
 
   1. llama.cpp / ggml .................... MIT
-  2. Modelos Gemma 4 (Google DeepMind) ... Apache License 2.0
+  2. Modelos de lenguaje ................ no distribuidos, ver la sección
   3. NVIDIA CUDA Runtime ................. NVIDIA CUDA Toolkit EULA
   4. LLVM OpenMP Runtime Library ......... Apache License 2.0 with LLVM Exceptions
   5. .NET Runtime (Microsoft) ............ MIT
@@ -68,43 +68,18 @@ SOFTWARE.
 
 
 ================================================================================
-2. Modelos Gemma 4 — Google DeepMind
+2. Modelos de lenguaje — no distribuidos
 ================================================================================
 
-Cuando la distribución incluye modelos, se trata de Gemma 4 en sus variantes
-E2B y E4B (archivos .gguf), junto con sus proyectores multimodales (mmproj).
+PR-AI Assistant se publica SIN modelos de lenguaje. Cada usuario los elige y los
+descarga desde la propia aplicación, que busca en HuggingFace y muestra la
+licencia declarada de cada modelo antes de bajarlo.
 
-Modelos:  https://huggingface.co/google/gemma-4-E2B-it
-          https://huggingface.co/google/gemma-4-E4B-it
-Ficha:    https://ai.google.dev/gemma/docs/core/model_card_4
-
-Gemma 4 se distribuye bajo la Licencia Apache 2.0. A diferencia de las
-versiones anteriores de Gemma —Gemma 1, 2, 3 y 3n—, NO está sujeto a los
-"Gemma Terms of Use" ni a su Prohibited Use Policy. Los propios Gemma Terms of
-Use excluyen expresamente a Gemma 4 de su alcance.
-
-Copyright 2026 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
-El texto completo de la Licencia Apache 2.0 está en el archivo LICENSE que
-acompaña a esta distribución.
-
-NOTA PARA QUIEN CARGUE OTROS MODELOS. PR-AI Assistant permite usar modelos
-aportados por el usuario. Esos modelos NO son distribuidos por Patagonia Robot
-y se rigen por sus propias licencias, que el usuario debe verificar. En
-particular, los modelos Gemma anteriores a la versión 4 sí están sujetos a los
-Gemma Terms of Use, con obligaciones que se propagan a los usuarios finales.
+Esos modelos NO son distribuidos por Patagonia Robot y se rigen por sus propias
+licencias, que el usuario debe verificar. Algunas imponen condiciones que se
+propagan a los usuarios finales —por ejemplo, los modelos Gemma anteriores a la
+versión 4 están sujetos a los "Gemma Terms of Use"—, y otras restringen el uso
+comercial.
 
 
 ================================================================================

@@ -22,7 +22,15 @@ partial class Banco
         string raiz = Path.Combine(Path.GetTempPath(), "BancoRecomendacion", "perfil");
         if (Directory.Exists(raiz)) Directory.Delete(raiz, true);
         Directory.CreateDirectory(raiz);
-        File.Copy(Path.Combine(Repo, "Config", "model_catalog.json"), Path.Combine(raiz, "model_catalog.json"));
+        // El catálogo de fábrica viene sin modelos desde que la aplicación se publica sin
+        // ellos: se le agrega el Gemma acá, con los perfiles de ejecución reales.
+        var catalogo = System.Text.Json.Nodes.JsonNode.Parse(
+            File.ReadAllText(Path.Combine(Repo, "Config", "model_catalog.json")))!;
+        catalogo["models"] = System.Text.Json.Nodes.JsonNode.Parse("""
+            [{ "id": "e4b", "display_name": "Gemma 4 E4B", "model_file_name": "gemma-4-E4B-it-Q4_K_M.gguf",
+               "mmproj_file_name": "mmproj-E4B-BF16.gguf", "requires_gpu": true, "capabilities": ["Vision"] }]
+            """);
+        File.WriteAllText(Path.Combine(raiz, "model_catalog.json"), catalogo.ToJsonString());
 
         // El motor de chat es el de Tools\ del repositorio: el backend sale de sus .dll, y
         // la carpeta del banco no las tiene. Sin esto, la PC «no tiene placa».

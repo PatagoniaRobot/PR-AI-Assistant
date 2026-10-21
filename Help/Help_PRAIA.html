@@ -58,7 +58,7 @@
                 <h2>Descripción</h2>
                 <p><strong>PR-AI Assistant</strong> es un asistente de inteligencia artificial diseñado específicamente para el triaje forense digital. Forma parte de la suite <strong>PRImager Forensic Core</strong>.</p>
                 <p>Su característica principal es la ejecución <strong>100% local</strong> de modelos de lenguaje (LLMs) y modelos de visión (VLMs), garantizando la privacidad absoluta de los datos, el cumplimiento estricto de la cadena de custodia y la no alteración de la evidencia digital. Ningún dato sale de la máquina del perito.</p>
-                <p>El motor de inferencia es <strong>llama.cpp</strong>, ejecutando modelos de la familia <strong>Google Gemma 4</strong> (licencia Apache 2.0) con soporte para aceleración GPU NVIDIA (CUDA) y operación en CPU para equipos sin GPU dedicada.</p>
+                <p>El motor de inferencia es <strong>llama.cpp</strong>, con los modelos GGUF que elige y descarga cada usuario: la aplicación se publica sin modelos y recomienda la cuantización que conviene a cada PC. Acelera con la placa de video —CUDA en NVIDIA, Vulkan en AMD e Intel— y también corre en CPU en equipos sin placa dedicada.</p>
             </div>
 
             <div class="card">
@@ -162,7 +162,7 @@
                 <p>Es la forma recomendada. Requiere <strong>Docker Desktop</strong> (gratuito). Una sola vez:</p>
 <pre style="background:#1a1a2e; padding:16px; border-radius:6px; font-size:12px; color:#10B981; overflow-x:auto;">
 docker run -d --name searxng -p 8080:8080 ^
-  -v "D:\PROYECTOS\PR-Tools\searxng:/etc/searxng" ^
+  -v "C:\searxng:/etc/searxng" ^
   --restart unless-stopped searxng/searxng
 </pre>
                 <p>El contenedor genera un archivo <code>settings.yml</code> en la carpeta indicada. Hay que <strong>habilitar el formato JSON</strong>, que viene desactivado de fábrica:</p>
@@ -321,7 +321,7 @@ PR-AI-Assistant/
                 <h2>Licencias de Terceros</h2>
                 <ul>
                     <li><strong>llama.cpp</strong> — Motor de inferencia de modelos GGUF. Ejecutado como proceso externo (<code>llama-server.exe</code>). Distribuido sin modificaciones bajo licencia <strong style="color:#E2E8F0">MIT</strong>. No existe vinculación directa (linking) con el ejecutable principal.</li>
-                    <li><strong>Google Gemma 4</strong> — Familia de modelos de lenguaje. Distribuidos bajo licencia <strong style="color:#E2E8F0">Apache 2.0</strong>, que permite uso comercial sin restricciones.</li>
+                    <li><strong>Modelos de lenguaje</strong> — <em>No se distribuyen con la aplicación:</em> cada usuario los descarga desde el catálogo, que muestra la licencia de cada modelo antes de bajarlo. Cada modelo se rige por su propia licencia.</li>
                     <li><strong>NVIDIA cuBLAS</strong> — Bibliotecas de aceleración matemática para GPU. Distribuidas bajo los términos de licencia de <strong style="color:#E2E8F0">NVIDIA CUDA Toolkit EULA</strong>.</li>
                     <li><strong>AngleSharp</strong> — Extracción de texto de páginas web para la búsqueda web. Licencia <strong style="color:#E2E8F0">MIT</strong>. Solo se incluye en la edición comercial; la edición institucional no lo distribuye.</li>
                     <li><strong>stable-diffusion.cpp</strong> — Motor de generación de imágenes, ejecutado como proceso externo (<code>sd-server.exe</code>). Licencia <strong style="color:#E2E8F0">MIT</strong>. <em>No se distribuye con la aplicación:</em> lo descarga el usuario.</li>
@@ -339,7 +339,7 @@ PR-AI-Assistant/
                 <h2>Description</h2>
                 <p><strong>PR-AI Assistant</strong> is an artificial intelligence assistant specifically designed for digital forensic triage. It is part of the <strong>PRImager Forensic Core</strong> suite.</p>
                 <p>Its main feature is the <strong>100% local</strong> execution of language models (LLMs) and vision models (VLMs), ensuring absolute data privacy, strict chain of custody compliance, and no alteration of digital evidence. No data ever leaves the examiner's machine.</p>
-                <p>The inference engine is <strong>llama.cpp</strong>, running models from the <strong>Google Gemma 4</strong> family (Apache 2.0 license) with NVIDIA GPU acceleration (CUDA) support and CPU fallback for machines without a dedicated GPU.</p>
+                <p>The inference engine is <strong>llama.cpp</strong>, with the GGUF models each user chooses and downloads: the application ships without models and recommends the quantization that suits each PC. It accelerates with the graphics card —CUDA on NVIDIA, Vulkan on AMD and Intel— and also runs on the CPU on machines without a dedicated card.</p>
             </div>
 
             <div class="card">
@@ -443,7 +443,7 @@ PR-AI-Assistant/
                 <p>This is the recommended approach. It requires <strong>Docker Desktop</strong> (free). Once only:</p>
 <pre style="background:#1a1a2e; padding:16px; border-radius:6px; font-size:12px; color:#10B981; overflow-x:auto;">
 docker run -d --name searxng -p 8080:8080 ^
-  -v "D:\PROYECTOS\PR-Tools\searxng:/etc/searxng" ^
+  -v "C:\searxng:/etc/searxng" ^
   --restart unless-stopped searxng/searxng
 </pre>
                 <p>The container generates a <code>settings.yml</code> file in that folder. You must <strong>enable the JSON format</strong>, which is disabled by default:</p>
@@ -602,7 +602,7 @@ PR-AI-Assistant/
                 <h2>Third-Party Licenses</h2>
                 <ul>
                     <li><strong>llama.cpp</strong> — GGUF model inference engine. Executed as an external process (<code>llama-server.exe</code>). Distributed unmodified under <strong style="color:#E2E8F0">MIT</strong> license. No direct linking exists with the main executable.</li>
-                    <li><strong>Google Gemma 4</strong> — Language model family. Distributed under <strong style="color:#E2E8F0">Apache 2.0</strong> license, allowing unrestricted commercial use.</li>
+                    <li><strong>Language models</strong> — <em>Not distributed with the application:</em> each user downloads them from the catalog, which shows each model's license before downloading. Each model is governed by its own license.</li>
                     <li><strong>NVIDIA cuBLAS</strong> — GPU math acceleration libraries. Distributed under the terms of the <strong style="color:#E2E8F0">NVIDIA CUDA Toolkit EULA</strong>.</li>
                     <li><strong>AngleSharp</strong> — Web page text extraction for web search. <strong style="color:#E2E8F0">MIT</strong> license. Included only in the commercial edition; the institutional edition does not ship it.</li>
                     <li><strong>stable-diffusion.cpp</strong> — Image generation engine, executed as an external process (<code>sd-server.exe</code>). <strong style="color:#E2E8F0">MIT</strong> license. <em>Not shipped with the application:</em> the user downloads it.</li>
