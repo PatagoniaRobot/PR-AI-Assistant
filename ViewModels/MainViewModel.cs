@@ -1092,7 +1092,21 @@ public class MainViewModel : ObservableObject
     /// levantaría su propio sd-server y pelearían por el mismo puerto.
     /// </summary>
     private Views.ImageGen.ImageGenerationWindow? _imageGenWindow;
+    private ImageGen.ImageGenerationViewModel? _imageGenViewModel;
 #endif
+
+    /// <summary>True si la ventana de imágenes tiene sd-server arriba o arrancando.</summary>
+    private bool IsImageEngineRunning
+    {
+        get
+        {
+#if IMAGE_GEN
+            return _imageGenViewModel?.IsEngineRunning == true;
+#else
+            return false;
+#endif
+        }
+    }
 
     /// <summary>
     /// Abre la ventana de generación de imágenes, **no modal**.
@@ -1127,7 +1141,20 @@ public class MainViewModel : ObservableObject
             Owner = System.Windows.Application.Current.MainWindow
         };
         _imageGenWindow = window;
-        window.Closed += (_, _) => _imageGenWindow = null;
+        _imageGenViewModel = vm;
+
+        // «Detener» tiene que habilitarse cuando arranca el motor de imágenes aunque el chat
+        // esté parado. El aviso llega desde el hilo del manager.
+        EventHandler alCambiarMotor = (_, _) => System.Windows.Application.Current?.Dispatcher.BeginInvoke(
+            () => ((AsyncRelayCommand)StopServerCommand).RaiseCanExecuteChanged());
+        vm.EngineRunningChanged += alCambiarMotor;
+        window.Closed += (_, _) =>
+        {
+            vm.EngineRunningChanged -= alCambiarMotor;
+            _imageGenWindow = null;
+            _imageGenViewModel = null;
+            ((AsyncRelayCommand)StopServerCommand).RaiseCanExecuteChanged();
+        };
 
         _orchestrator.Logger.LogCustom("IMAGE_GEN_OPENED", $"perfil={_selectedUsageProfile?.Id}");
         window.Show();
@@ -1568,13 +1595,17 @@ public class MainViewModel : ObservableObject
             && _selectedModelItem != null && _selectedModelItem.IsAvailable;
     }
 
-    // Solo se puede detener si el servidor está activo en alguna fase
+    // Se puede detener si alguno de los dos motores está activo en alguna fase: el del
+    // chat o el de imágenes.
     private bool CanExecuteStopServer()
     {
-        return ServerStatus == ServerStatus.Ready
-            || ServerStatus == ServerStatus.Starting
-            || ServerStatus == ServerStatus.LoadingModel;
+        return IsChatServerActive || IsImageEngineRunning;
     }
+
+    private bool IsChatServerActive =>
+        ServerStatus == ServerStatus.Ready
+        || ServerStatus == ServerStatus.Starting
+        || ServerStatus == ServerStatus.LoadingModel;
 
     private async Task ExecuteStartServerAsync()
     {
@@ -1603,16 +1634,28 @@ public class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Detiene los dos motores. Hasta el 20 de octubre de 2026 paraba solo llama-server y
+    /// sd-server seguía vivo mientras la ventana de imágenes estuviera abierta.
+    /// </summary>
     private async Task ExecuteStopServerAsync()
     {
-        try
+        if (IsChatServerActive)
         {
-            await _orchestrator.StopServerAsync();
+            try
+            {
+                await _orchestrator.StopServerAsync();
+            }
+            catch
+            {
+                // Ignorar errores cerrando
+            }
         }
-        catch 
-        {
-            // Ignorar errores cerrando
-        }
+
+#if IMAGE_GEN
+        if (_imageGenViewModel is { IsEngineRunning: true } imagenes)
+            await imagenes.StopEngineAsync();
+#endif
     }
 
     private async Task ExecuteLoadFilesAsync()

@@ -41,6 +41,14 @@ public class LlamaServerManager : IDisposable
     private int _restartInFlight;
 
     /// <summary>
+    /// El usuario pidió detener. Se levanta ANTES de matar el proceso: el evento Exited
+    /// llega mientras el estado todavía dice Ready, y sin esto se leía como una caída y
+    /// el reinicio automático lanzaba otro llama-server —que además quedaba sin dueño:
+    /// el siguiente arranque lo adoptaba por el puerto y «Detener» ya no lo alcanzaba—.
+    /// </summary>
+    private volatile bool _stopRequested;
+
+    /// <summary>
     /// Tope de reinicios automáticos. Reiniciar sin límite convierte un modelo que no
     /// carga en un bucle perpetuo que relee el .gguf cada medio minuto y mantiene la
     /// carpeta de modelos tomada.
@@ -145,6 +153,7 @@ public class LlamaServerManager : IDisposable
         {
             OnLog($"Ya hay un servicio escuchando en {config.Host}:{config.Port}. Se usará la instancia existente.");
             _currentConfig = config;
+            _stopRequested = false;
             _modelLoadedOnce = true;
             CurrentStatus = ServerStatus.Ready;
             StartHealthCheck();
@@ -155,6 +164,7 @@ public class LlamaServerManager : IDisposable
         await StopInternalAsync(ct);
 
         _currentConfig = config;
+        _stopRequested = false;
         _consecutiveFailures = 0;
         _modelLoadedOnce = false;
         _restartsDone = 0;
@@ -173,6 +183,7 @@ public class LlamaServerManager : IDisposable
     public async Task StopAsync(CancellationToken ct = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        _stopRequested = true;
         await StopInternalAsync(ct);
         CurrentStatus = ServerStatus.Stopped;
     }
@@ -401,7 +412,7 @@ public class LlamaServerManager : IDisposable
     /// </remarks>
     private void OnProcessExited()
     {
-        if (_disposed) return;
+        if (_disposed || _stopRequested) return;
         if (CurrentStatus == ServerStatus.Stopped) return;
 
         if (!_modelLoadedOnce)
@@ -424,7 +435,7 @@ public class LlamaServerManager : IDisposable
     private void RestartOrGiveUp(string reason)
     {
         var config = _currentConfig;
-        if (config is null) return;
+        if (config is null || _stopRequested) return;
 
         // Un solo reinicio en vuelo. La caída de un servidor que estaba listo llega por
         // dos caminos a la vez —el evento Exited y los health checks que empiezan a
@@ -458,7 +469,7 @@ public class LlamaServerManager : IDisposable
                 // tiene el puerto, el nuevo no puede escuchar y se va también.
                 await WaitForProcessExitAsync(TimeSpan.FromSeconds(10));
 
-                if (_disposed || CurrentStatus == ServerStatus.Stopped) return;
+                if (_disposed || _stopRequested || CurrentStatus == ServerStatus.Stopped) return;
 
                 _consecutiveFailures = 0;
                 _modelLoadedOnce = false;

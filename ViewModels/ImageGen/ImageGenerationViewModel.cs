@@ -11,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using PRImager.AIAssistant.Helpers;
 using PRImager.AIAssistant.Services;
+using PRImager.AIAssistant.Services.Enums;
 using PRImager.AIAssistant.Services.ImageGen;
 
 namespace PRImager.AIAssistant.ViewModels.ImageGen;
@@ -194,6 +195,7 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
         _selectedOrientation = Orientations[1];                            // cuadrada
 
         _manager.ProgressReported += OnProgressReported;
+        _manager.StatusChanged += OnManagerStatusChanged;
 
         GenerateCommand = new AsyncRelayCommand(GenerateAsync, () => CanGenerate);
         CancelCommand = new RelayCommand(Cancel, () => IsGenerating);
@@ -620,6 +622,45 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
         catch (Exception) { /* cerrar no debe fallar ruidosamente */ }
     }
 
+    /// <summary>
+    /// True mientras sd-server está arriba o arrancando. El «Detener» de la ventana
+    /// principal lo mira para habilitarse aunque el chat esté parado.
+    /// </summary>
+    public bool IsEngineRunning => _manager.CurrentStatus is
+        ServerStatus.Starting or ServerStatus.LoadingModel or ServerStatus.Ready;
+
+    /// <summary>Cambió <see cref="IsEngineRunning"/>. Llega desde el hilo del manager.</summary>
+    public event EventHandler? EngineRunningChanged;
+
+    private void OnManagerStatusChanged(object? sender, ServerStatusChangedEventArgs e)
+        => EngineRunningChanged?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>
+    /// Baja el motor con la ventana abierta: es el «Detener» de la ventana principal, que
+    /// hasta el 20 de octubre de 2026 paraba solo llama-server y dejaba sd-server vivo con
+    /// su RAM. Mismo orden que <see cref="ShutdownAsync"/> —esperar la cancelación antes de
+    /// parar, o el relanzamiento gana la carrera— pero la ventana sigue usable: la próxima
+    /// generación lo vuelve a levantar sola (<c>AsegurarMotorAsync</c> ve que no está listo).
+    /// </summary>
+    public async Task StopEngineAsync()
+    {
+        if (_shutdown) return;
+
+        _generationCts?.Cancel();
+
+        var enCurso = _generationTask;
+        if (enCurso is not null)
+        {
+            try { await enCurso.ConfigureAwait(true); }
+            catch (Exception) { /* ya se informó en el propio flujo */ }
+        }
+
+        try { await _manager.StopAsync().ConfigureAwait(true); }
+        catch (Exception) { /* detener no debe fallar ruidosamente */ }
+
+        StatusMessage = "Motor de imágenes detenido. Vuelve a arrancar solo al generar.";
+    }
+
     // ------------------------------------------------------------------ generación
 
     private async Task GenerateAsync()
@@ -951,6 +992,7 @@ public sealed class ImageGenerationViewModel : ObservableObject, IDisposable
         _disposed = true;
 
         _manager.ProgressReported -= OnProgressReported;
+        _manager.StatusChanged -= OnManagerStatusChanged;
         _generationCts?.Cancel();
         _generationCts?.Dispose();
         _client.Dispose();
