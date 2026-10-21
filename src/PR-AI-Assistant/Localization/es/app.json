@@ -24,7 +24,7 @@
   "maxTokens.max": "{0} (máximo)",
 
   "message.localModel": "modelo local",
-  "message.disclaimer": "\n\n---\n[PR-AI Assistant – Generado por IA]\nEste contenido fue generado por inteligencia artificial ({0}) ejecutándose localmente. Debe ser verificado por el perito antes de incorporarse a cualquier informe o actuación judicial.",
+  "message.disclaimer": "Este contenido fue generado por inteligencia artificial ({0}) ejecutándose localmente. Debe ser verificado por el perito antes de incorporarse a cualquier informe o actuación judicial.",
   "message.webSourcesHeader": "Fuentes web ({0} de {1} leídas)",
   "message.historyTrimmed": "Se recortaron {0} mensajes anteriores para mantener el contexto dentro del límite.",
   "message.thinkingElapsed": "Pensando... {0:F1}s",
