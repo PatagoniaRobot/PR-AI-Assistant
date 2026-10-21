@@ -89,6 +89,62 @@ public class ModeSelectionViewModel : ObservableObject
         private set => SetProperty(ref _isRestartPending, value);
     }
 
+    // === Interruptor de la generación de imágenes ===
+
+    /// <summary>
+    /// True si el binario trae la generación de imágenes. En la edición Forense el
+    /// interruptor no se dibuja: no hay nada que encender.
+    /// </summary>
+    public bool IsImageGenCompiledIn =>
+#if IMAGE_GEN
+        true;
+#else
+        false;
+#endif
+
+#if IMAGE_GEN
+    private readonly Services.ImageGen.ImageModelService _imageModels = new();
+#endif
+
+    /// <summary>
+    /// Encender o apagar la generación de imágenes antes de entrar. Apagada, la sección del
+    /// chat queda desactivada y el motor de imágenes no arranca nunca (pedido del usuario,
+    /// 21 de octubre de 2026: «por ahí el usuario no quiera que se active porque no la
+    /// necesita»). Se guarda con la configuración de imágenes, detrás de la barrera.
+    /// </summary>
+    public bool IsImageGenOn
+    {
+        get
+        {
+#if IMAGE_GEN
+            return _imageModels.GenerationEnabled;
+#else
+            return false;
+#endif
+        }
+        set
+        {
+#if IMAGE_GEN
+            if (value == _imageModels.GenerationEnabled) return;
+            _imageModels.GenerationEnabled = value;
+
+            // Una ventana de imágenes que quedó abierta de antes de volver al inicio se
+            // cierra, y con ella el motor: apagado tiene que querer decir apagado.
+            if (!value)
+            {
+                foreach (var w in System.Windows.Application.Current.Windows
+                             .OfType<Views.ImageGen.ImageGenerationWindow>().ToList())
+                    w.Close();
+            }
+
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ImageGenSwitchText));
+#endif
+        }
+    }
+
+    public string ImageGenSwitchText => IsImageGenOn ? Loc.T("mode.images.on") : Loc.T("mode.images.off");
+
     // === Modelo y perfil de ejecución (catálogo v2) ===
 
     /// <summary>Modelos disponibles para el selector de la UI.</summary>

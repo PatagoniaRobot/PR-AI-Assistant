@@ -223,6 +223,55 @@
                 <TextBlock Text="{Binding SelectedModelContextInfo}"
                            Foreground="#64748b" FontFamily="{StaticResource MonoFont}" FontSize="12" Margin="0,8,0,0"
                            TextWrapping="Wrap" TextAlignment="Center" />
+
+                <!-- Interruptor de la generación de imágenes. Apagada, el motor no arranca
+                     nunca y la sección del chat queda desactivada. No existe en Forense. -->
+                <StackPanel Margin="0,24,0,0"
+                            Visibility="{Binding IsImageGenCompiledIn, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="{l:T sidebar.images.header}" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <Border Background="#0f172a" BorderBrush="#334155" BorderThickness="1" CornerRadius="8" Padding="14,10">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <c:Icon Grid.Column="0" Kind="GenerateImage" Size="20" VerticalAlignment="Center" Margin="0,0,12,0" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{l:T mode.images.title}" Foreground="#e2e8f0" FontSize="13" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding ImageGenSwitchText}" Foreground="#94a3b8" FontSize="11"
+                                           TextWrapping="Wrap" Margin="0,2,12,0"
+                                           AutomationProperties.AutomationId="ImageGenSwitchText" />
+                            </StackPanel>
+                            <!-- Interruptor de pastilla: verde y a la derecha = encendida. -->
+                            <ToggleButton Grid.Column="2" IsChecked="{Binding IsImageGenOn}" Cursor="Hand"
+                                          VerticalAlignment="Center"
+                                          AutomationProperties.AutomationId="ImageGenSwitch"
+                                          AutomationProperties.Name="{l:T mode.images.switch}"
+                                          ToolTip="{l:T mode.images.switch}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="track" Width="44" Height="24" CornerRadius="12"
+                                                Background="#334155" Padding="3">
+                                            <Ellipse x:Name="thumb" Width="18" Height="18" Fill="#cbd5e1"
+                                                     HorizontalAlignment="Left" />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="track" Property="Background" Value="#10B981" />
+                                                <Setter TargetName="thumb" Property="HorizontalAlignment" Value="Right" />
+                                                <Setter TargetName="thumb" Property="Fill" Value="White" />
+                                            </Trigger>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="track" Property="Opacity" Value="0.85" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                        </Grid>
+                    </Border>
+                </StackPanel>
             </StackPanel>
 
             <!-- Separador -->

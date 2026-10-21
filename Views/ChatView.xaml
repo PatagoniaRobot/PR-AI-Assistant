@@ -984,7 +984,7 @@
                                             </StackPanel>
                                         </Button>
                                     </Grid>
-                                    <TextBlock Text="{l:T sidebar.images.disabled}"
+                                    <TextBlock Text="{Binding ImageGenDisabledText}"
                                                Foreground="#F59E0B" FontSize="10" TextWrapping="Wrap" Margin="0,6,0,0"
                                                AutomationProperties.AutomationId="ImageGenDisabledNotice"
                                                Visibility="{Binding IsImageGenAvailable, Converter={StaticResource InverseBoolToVis}}" />

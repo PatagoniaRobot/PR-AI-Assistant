@@ -567,8 +567,32 @@ public class MainViewModel : ObservableObject
     /// aplica, y la regla de precedencia vive en un único lugar por diseño (1.2 del
     /// maestro). <see cref="IsImageGenCompiledIn"/> se usa para otra cosa: esconder la
     /// sección entera de la barra lateral en lugar de mostrarla deshabilitada.
+    ///
+    /// Encima del perfil está el interruptor de la pantalla de inicio: apagado, no hay
+    /// imágenes aunque el perfil las permita. El perfil puede quitar; el interruptor también.
     /// </summary>
-    public bool IsImageGenAvailable => _effectiveProfile?.ImageGenEnabled ?? false;
+    public bool IsImageGenAvailable => (_effectiveProfile?.ImageGenEnabled ?? false) && IsImageGenSwitchedOn;
+
+    /// <summary>El interruptor de la pantalla de inicio (<c>ModeSelectionViewModel.IsImageGenOn</c>).</summary>
+    private bool IsImageGenSwitchedOn
+    {
+        get
+        {
+#if IMAGE_GEN
+            return ImageModelServiceCompartido.GenerationEnabled;
+#else
+            return false;
+#endif
+        }
+    }
+
+    /// <summary>
+    /// Por qué la sección de imágenes está desactivada: lo apagó el usuario al entrar, o
+    /// el perfil no lo permite. Son dos arreglos distintos y el aviso tiene que decir cuál.
+    /// </summary>
+    public string ImageGenDisabledText => IsImageGenCompiledIn && !IsImageGenSwitchedOn
+        ? Loc.T("sidebar.images.switchedOff")
+        : Loc.T("sidebar.images.disabled");
 
     /// <summary>
     /// Carga de archivos efectivamente disponible (perfil + modo).

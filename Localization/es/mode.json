@@ -13,6 +13,10 @@
   "mode.consultation.bullet3": "Sandbox completamente aislado",
   "mode.consultation.badge": "SANDBOX AISLADO",
   "mode.licenses": "Licencias",
+  "mode.images.title": "Generación de imágenes",
+  "mode.images.on": "Encendida: podés crear imágenes desde el chat. El motor arranca solo cuando generás una.",
+  "mode.images.off": "Apagada: el motor de imágenes no se enciende nunca y la sección del chat queda desactivada. Conviene si no la necesitás.",
+  "mode.images.switch": "Encender o apagar la generación de imágenes",
   "mode.language": "Idioma",
 
   "language.auto": "Automático (Windows)",

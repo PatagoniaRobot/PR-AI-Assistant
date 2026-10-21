@@ -42,6 +42,7 @@
   "sidebar.images.packages": "Modelos de imagen",
   "sidebar.images.packages.tooltip": "Elegí o descargá el paquete de modelo de imagen. Son tres archivos: difusión, text encoder y VAE.",
   "sidebar.images.disabled": "El perfil activo no habilita la generación de imágenes.",
+  "sidebar.images.switchedOff": "La generación de imágenes está apagada. Se enciende desde la pantalla de inicio.",
   "sidebar.images.model.none": "Todavía no hay ningún modelo de imagen descargado.",
   "sidebar.images.engineOn": "Motor de imágenes encendido",
   "sidebar.images.engineOff": "Motor de imágenes apagado",

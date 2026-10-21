@@ -99,6 +99,22 @@ public sealed class ImageModelService
         }
     }
 
+    /// <summary>
+    /// El interruptor de la pantalla de inicio. Apagado, la generación de imágenes no se
+    /// ofrece y el motor no arranca nunca, aunque el perfil la permita: para quien no la
+    /// necesita y no quiere que ocupe memoria. Pedido del usuario el 21 de octubre de 2026.
+    /// Encendido por defecto, como estaba antes de que existiera.
+    /// </summary>
+    public bool GenerationEnabled
+    {
+        get => _store.GenerationEnabled ?? true;
+        set
+        {
+            _store.GenerationEnabled = value;
+            Persist();
+        }
+    }
+
     /// <summary>Carpeta efectiva de los modelos de imagen.</summary>
     public string ResolveModelsDirectory() =>
         string.IsNullOrWhiteSpace(_store.ModelsDirectory)
@@ -452,6 +468,9 @@ public sealed class ImageModelService
 
         /// <summary>Null = la carpeta de fábrica de las imágenes generadas.</summary>
         public string? OutputDirectory { get; set; }
+
+        /// <summary>Null = encendida, que es como estaba antes del interruptor.</summary>
+        public bool? GenerationEnabled { get; set; }
     }
 }
 

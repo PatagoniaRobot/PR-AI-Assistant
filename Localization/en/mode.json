@@ -13,6 +13,10 @@
   "mode.consultation.bullet3": "Fully isolated sandbox",
   "mode.consultation.badge": "ISOLATED SANDBOX",
   "mode.licenses": "Licenses",
+  "mode.images.title": "Image generation",
+  "mode.images.on": "On: you can create images from the chat. The engine only starts when you generate one.",
+  "mode.images.off": "Off: the image engine never starts and the chat section is disabled. Useful if you do not need it.",
+  "mode.images.switch": "Turn image generation on or off",
   "mode.language": "Language",
 
   "language.auto": "Automatic (Windows)",
