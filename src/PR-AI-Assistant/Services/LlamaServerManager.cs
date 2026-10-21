@@ -646,12 +646,33 @@ public class LlamaServerManager : IDisposable
             if (DetectedBackend == Detecting || DetectedBackend.StartsWith("CPU"))
                 DetectedBackend = GpuDetecting;
         }
+        // Detección de Vulkan: carga su backend ANTES que el de CPU, así que hay que marcarlo
+        // acá o la línea del CPU lo pisa y el pie dice «CPU» con todo en la placa
+        else if (line.Contains("load_backend: loaded Vulkan backend"))
+        {
+            if (DetectedBackend == Detecting || DetectedBackend.StartsWith("CPU"))
+                DetectedBackend = GpuDetecting;
+        }
         else if (line.Contains("Device 0:") && (DetectedBackend == GpuDetecting || DetectedBackend == Detecting))
         {
             // Extraer nombre del dispositivo: "Device 0: NVIDIA GeForce RTX 3060, compute capability 8.6"
             int index = line.IndexOf("Device 0:");
             string info = line.Substring(index + 9).Split(',')[0].Trim();
             DetectedBackend = $"GPU: {info}";
+        }
+        else if (line.Contains("using device ") && DetectedBackend == GpuDetecting)
+        {
+            // Vulkan no imprime «Device 0:». Lo nombra al cargar el modelo:
+            // "llama_model_load_from_file_impl: using device Vulkan0 (NVIDIA GeForce RTX 5060 Ti) (0000:01:00.0) - 15279 MiB free"
+            int open = line.IndexOf('(', line.IndexOf("using device "));
+            int close = open < 0 ? -1 : line.IndexOf(')', open);
+            if (close > open + 1)
+                DetectedBackend = $"GPU: {line.Substring(open + 1, close - open - 1).Trim()}";
+        }
+        else if (line.Contains("load_tensors: offloaded 0/") && DetectedBackend == GpuDetecting)
+        {
+            // Backend de placa cargado pero sin placa que lo use: corre en CPU
+            DetectedBackend = Loc.T("backend.cpu");
         }
         // Detección de CPU como fallback
         else if (line.Contains("load_backend: loaded CPU backend"))
