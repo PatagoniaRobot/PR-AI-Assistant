@@ -64,7 +64,7 @@ The full guide is under **Help**, on the start screen, in both languages.
 | RAM             | 8 GB, with small models                    | 16 GB or more                   |
 | Graphics card   | Not required: runs on the CPU, more slowly | 8 GB of video memory or more    |
 | For images      | A graphics card                            | 12 GB of video memory or more   |
-| Disk            | About 0.5 GB, plus the models you download |                                 |
+| Disk            | About 1 GB, plus the models you download   |                                 |
 | Internet        | Only to download models and for web search |                                 |
 
 ## Privacy

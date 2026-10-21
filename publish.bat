@@ -36,12 +36,13 @@ if /I "%~1"=="forense" (
     echo  Build institucional: sin busqueda web, sin descarga de modelos, sin imagenes.
 )
 echo.
-echo IMPORTANTE: Para distribuir, copiar junto al .exe:
+echo Config\, Prompts\, Help\ y Tools\ salen solos al lado del .exe: los motores
+echo NO van dentro del ejecutable (por eso pesaba 944 MB y no tenia motor).
+echo Verificar que esten %OUTDIR%\Tools\llama-server.exe y Tools\vulkan\.
+echo.
+echo IMPORTANTE: Para distribuir, agregar junto al .exe:
 echo   - Carpeta Models\ VACIA: la aplicacion se publica sin modelos, cada
 echo     usuario baja los suyos (ver DISTRIBUCION.md)
-echo   - Carpeta Prompts\ (con system_forense.txt)
-echo   - Carpeta Config\ (con model_catalog.json, settings.json)
-echo   - Carpeta Tools\ (con llama-server.exe y dependencias)
 echo.
 echo TOOLS: la release de llama.cpp trae 21 ejecutables y la aplicacion usa UNO,
 echo llama-server.exe. Los otros 20 se sacaron (77,5 MB) junto con ggml-rpc.dll.

@@ -68,7 +68,7 @@ La guía completa está en **Ayuda**, en la pantalla de inicio, en los dos idiom
 | RAM             | 8 GB, con modelos chicos                      | 16 GB o más                    |
 | Placa de video  | No hace falta: corre en el procesador, más lento | 8 GB de memoria de video o más |
 | Para imágenes   | Una placa de video                            | 12 GB de memoria de video o más |
-| Disco           | Alrededor de 0,5 GB, más los modelos que bajes |                                |
+| Disco           | Alrededor de 1 GB, más los modelos que bajes   |                                |
 | Internet        | Solo para bajar modelos y para la búsqueda web |                                |
 
 ## Privacidad

@@ -129,7 +129,11 @@
   <ItemGroup>
     <None Update="Prompts\**" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Config\**" CopyToOutputDirectory="PreserveNewest" />
-    <None Update="Tools\**" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Los motores van AL LADO del ejecutable, nunca dentro. Con PublishSingleFile y
+         IncludeNativeLibrariesForSelfExtract, sus .dll y .exe se metían en el bundle:
+         766 MB de peso muerto (944 MB el .exe) y Tools\ ausente de la carpeta publicada,
+         así que llama-server.exe no existía en disco. Maestro, 6.7. -->
+    <None Update="Tools\**" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
     <!-- La ayuda se abre desde BaseDirectory\Help. Sin esto no se copiaba en el
          build y la carpeta publicada quedaba con una copia manual desactualizada. -->
     <None Update="Help\**" CopyToOutputDirectory="PreserveNewest" />

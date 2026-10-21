@@ -92,7 +92,7 @@ de imagen.
 | RAM | 8 GB, con modelos chicos y en CPU | 16 GB o más |
 | GPU para el chat | no hace falta: corre en CPU, más lento | NVIDIA con 8 GB o más de VRAM |
 | GPU para imágenes | una placa: NVIDIA con CUDA, AMD o Intel con Vulkan | 12 GB de VRAM o más |
-| Disco | ~0,5 GB la aplicación, más los modelos que se bajen | |
+| Disco | ~0,9 GB el paquete completo (~0,25 GB el liviano), más los modelos que se bajen | |
 | Red | solo para bajar modelos y para la búsqueda web | |
 
 **Limitaciones conocidas, a la vista y no escondidas:**
